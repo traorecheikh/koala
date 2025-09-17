@@ -141,32 +141,15 @@ class DashboardView extends GetView<DashboardController> {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withBlue(
-              (theme.colorScheme.primary.blue * 0.8).round(),
-            ),
-            theme.colorScheme.secondary.withOpacity(0.9),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24.r),
+        color: theme.colorScheme.primary,
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.3),
-            blurRadius: 25,
-            spreadRadius: 3,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: theme.colorScheme.secondary.withOpacity(0.2),
-            blurRadius: 40,
-            spreadRadius: 5,
-            offset: const Offset(0, 20),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -353,27 +336,19 @@ class DashboardView extends GetView<DashboardController> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 88.h,
+        height: 80.h,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.15),
-              color.withOpacity(0.05),
-              theme.colorScheme.surface,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20.r),
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: theme.colorScheme.outline.withOpacity(0.08),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -381,38 +356,24 @@ class DashboardView extends GetView<DashboardController> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 36.w,
-              height: 36.w,
+              width: 32.w,
+              height: 32.w,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    color.withOpacity(0.2),
-                    color.withOpacity(0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(10.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.1),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
                 icon,
-                size: 20.sp,
+                size: 18.sp,
                 color: color,
               ),
             ),
             SizedBox(height: 8.h),
             Text(
               label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
             ),

@@ -2,21 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Modern, professional theme configuration for Koala Financial App
-/// Following modern financial app design patterns with gradients and depth
+/// Following modern financial app design patterns (inspired by Revolut, Monzo, etc.)
 class AppTheme {
-  // Brand Colors - Modern Financial App Palette with gradient support
+  // Brand Colors - Modern Financial App Palette (No gradients, flat design)
   static const Color _primaryColor = Color(0xFF1A73E8); // Google-style blue
   static const Color _primaryVariant = Color(0xFF1557B0);
   static const Color _secondaryColor = Color(0xFF34A853); // Success green
   static const Color _secondaryVariant = Color(0xFF2D8F46);
-  static const Color _tertiaryColor = Color(0xFF9C27B0); // Purple accent
 
-  // Gradient Colors for modern design
-  static const Color _gradientStart = Color(0xFF1A73E8);
-  static const Color _gradientMiddle = Color(0xFF4285F4);
-  static const Color _gradientEnd = Color(0xFF34A853);
-
-  // Surface Colors - Modern with depth support
+  // Surface Colors - Clean, modern surfaces
   static const Color _surfaceLight = Color(0xFFFBFBFB);
   static const Color _surfaceDark = Color(0xFF121212);
   static const Color _cardLight = Color(0xFFFFFFFF);
@@ -33,58 +27,30 @@ class AppTheme {
   static const Color _warningColor = Color(0xFFFBBC04);
   static const Color _errorColor = Color(0xFFEA4335);
 
-  // Gradient helpers for modern UI
-  static LinearGradient get primaryGradient => const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [_gradientStart, _gradientMiddle, _gradientEnd],
-  );
-
-  static LinearGradient get cardGradient => LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [_cardLight, _surfaceLight],
-  );
-
-  static LinearGradient get successGradient => LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [_successColor, _successColor.withOpacity(0.8)],
-  );
-
-  static LinearGradient get errorGradient => LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [_errorColor, _errorColor.withOpacity(0.8)],
-  );
-
   /// Light Theme Configuration
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
 
-      // Color Scheme - Enhanced with tertiary color and better depth
+      // Color Scheme - Clean, accessible colors
       colorScheme: const ColorScheme.light(
         primary: _primaryColor,
         primaryContainer: Color(0xFFE8F0FE),
         secondary: _secondaryColor,
         secondaryContainer: Color(0xFFE6F4EA),
-        tertiary: _tertiaryColor,
-        tertiaryContainer: Color(0xFFF3E5F5),
         surface: _surfaceLight,
         surfaceVariant: Color(0xFFF8F9FA),
         background: _surfaceLight,
         error: _errorColor,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onTertiary: Colors.white,
         onSurface: _textPrimaryLight,
         onSurfaceVariant: _textSecondaryLight,
         onBackground: _textPrimaryLight,
         onError: Colors.white,
         outline: Color(0xFFDADCE0),
-        shadow: Color(0x1A000000), // Enhanced shadow opacity
+        shadow: Color(0x0A000000),
       ),
 
       // Typography
@@ -103,42 +69,38 @@ class AppTheme {
         ),
       ),
 
-      // Card Theme - Modern card design with depth and gradients
+      // Card Theme - Modern card design with subtle borders
       cardTheme: CardThemeData(
-        elevation: 4,
-        shadowColor: _primaryColor.withOpacity(0.1),
+        elevation: 0,
         color: _cardLight,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFE8EAED), width: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFE8EAED), width: 1),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       ),
 
-      // Elevated Button Theme - Modern button design with gradients
+      // Elevated Button Theme - Modern button design
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 6,
-          shadowColor: _primaryColor.withOpacity(0.3),
+          elevation: 0,
           backgroundColor: _primaryColor,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 52),
+          minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
 
-      // Outlined Button Theme - Enhanced with better shadows
+      // Outlined Button Theme - Consistent with elevated buttons
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 52),
-          side: const BorderSide(color: _primaryColor, width: 1.5),
+          minimumSize: const Size(double.infinity, 48),
+          side: const BorderSide(color: _primaryColor, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 2,
-          shadowColor: _primaryColor.withOpacity(0.1),
         ),
       ),
 
@@ -187,27 +149,24 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
 
-      // Color Scheme - Enhanced dark theme with tertiary color
+      // Color Scheme - Modern dark theme
       colorScheme: const ColorScheme.dark(
         primary: _primaryColor,
         primaryContainer: Color(0xFF1A73E8),
         secondary: _secondaryColor,
         secondaryContainer: Color(0xFF2D5016),
-        tertiary: _tertiaryColor,
-        tertiaryContainer: Color(0xFF4A148C),
         surface: _surfaceDark,
         surfaceVariant: Color(0xFF2C2C2C),
         background: _surfaceDark,
         error: _errorColor,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onTertiary: Colors.white,
         onSurface: _textPrimaryDark,
         onSurfaceVariant: _textSecondaryDark,
         onBackground: _textPrimaryDark,
         onError: Colors.white,
         outline: Color(0xFF5F6368),
-        shadow: Color(0x6D000000), // Enhanced shadow for better depth
+        shadow: Color(0x4D000000),
       ),
 
       // Typography
@@ -226,42 +185,38 @@ class AppTheme {
         ),
       ),
 
-      // Card Theme - Dark mode cards with enhanced depth
+      // Card Theme - Dark mode cards
       cardTheme: CardThemeData(
-        elevation: 6,
-        shadowColor: Colors.black.withOpacity(0.3),
+        elevation: 0,
         color: _cardDark,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF5F6368), width: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF5F6368), width: 1),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       ),
 
-      // Elevated Button Theme - Dark mode buttons with gradients
+      // Elevated Button Theme - Dark mode buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 8,
-          shadowColor: _primaryColor.withOpacity(0.4),
+          elevation: 0,
           backgroundColor: _primaryColor,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 52),
+          minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
 
-      // Outlined Button Theme - Dark mode enhanced outlined buttons
+      // Outlined Button Theme - Dark mode outlined buttons
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 52),
-          side: const BorderSide(color: _primaryColor, width: 1.5),
+          minimumSize: const Size(double.infinity, 48),
+          side: const BorderSide(color: _primaryColor, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 3,
-          shadowColor: _primaryColor.withOpacity(0.2),
         ),
       ),
 
