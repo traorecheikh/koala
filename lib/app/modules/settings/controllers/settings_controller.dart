@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/data/services/local_data_service.dart';
 import 'package:koala/app/data/services/local_settings_service.dart';
-import 'package:koala/app/shared/widgets/about_bottom_sheet.dart';
-import 'package:koala/app/shared/widgets/change_pin_bottom_sheet.dart';
-import 'package:koala/app/shared/widgets/financial_info_bottom_sheet.dart';
-import 'package:koala/app/shared/widgets/help_center_bottom_sheet.dart';
-import 'package:koala/app/shared/widgets/local_backup_bottom_sheet.dart';
-import 'package:koala/app/shared/widgets/personal_info_bottom_sheet.dart';
 
 /// Controller for managing app settings and user preferences
 class SettingsController extends GetxController {
@@ -45,39 +39,39 @@ class SettingsController extends GetxController {
 
   // ==== NAVIGATION METHODS ====
 
-  /// Edit user profile - opens personal info bottom sheet
+  /// Edit user profile - navigates to profile edit page
   void editProfile() {
-    PersonalInfoBottomSheet.show();
+    Get.toNamed('/profile/edit');
   }
 
-  /// Edit financial information - opens financial info bottom sheet
+  /// Edit financial information - navigates to financial info page
   void editFinancialInfo() {
-    FinancialInfoBottomSheet.show();
+    Get.toNamed('/profile/financial');
   }
 
-  /// Change PIN code - opens PIN change bottom sheet
+  /// Change PIN code - navigates to PIN change page
   void changePIN() {
-    ChangePinBottomSheet.show();
+    Get.toNamed('/security/change-pin');
   }
 
-  /// Open help center - opens help center bottom sheet
+  /// Open help center - navigates to help center page
   void openHelpCenter() {
-    HelpCenterBottomSheet.show();
+    Get.toNamed('/help');
   }
 
-  /// Send feedback - opens feedback bottom sheet via help center
+  /// Send feedback - navigates to feedback page
   void sendFeedback() {
-    HelpCenterBottomSheet.show();
+    Get.toNamed('/feedback');
   }
 
-  /// Show about dialog - opens about bottom sheet
+  /// Show about page - navigates to about page
   void showAbout() {
-    AboutBottomSheet.show();
+    Get.toNamed('/about');
   }
 
-  /// Manage local backups - opens backup management bottom sheet
+  /// Manage local backups - navigates to backup management page
   void manageBackups() {
-    LocalBackupBottomSheet.show();
+    Get.toNamed('/settings/backups');
   }
 
   /// Navigate to import/export
