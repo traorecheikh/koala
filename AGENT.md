@@ -152,6 +152,7 @@
 100. Your mission: solve the user’s problem **fully**, **logically**, and **without excuses**.
 📱 UX Laws (Expérience Utilisateur)
 
+NEVER USE GRADIENT ITS OUTDATED AND UGLY IF ITS A MOBILE APP
 Lois de Fit[AGENT.md](AGENT.md)ts – Plus une cible est grande/proche, plus elle est facile à atteindre.
 
 Lois de Hick – Trop d’options ralentissent la décision.

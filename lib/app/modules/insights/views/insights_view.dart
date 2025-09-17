@@ -38,10 +38,7 @@ class InsightsView extends GetView<InsightsController> {
               Tab(text: 'Catégories'),
               Tab(text: 'Tendances'),
             ],
-            labelStyle: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14.sp,
-            ),
+            labelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp),
             unselectedLabelStyle: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 13.sp,
@@ -68,10 +65,10 @@ class InsightsView extends GetView<InsightsController> {
         children: [
           FadeInDown(child: _buildFinancialOverview(context)),
           SizedBox(height: 24.h),
-          FadeInUp(
-            delay: const Duration(milliseconds: 200),
-            child: _buildInsightsList(context),
-          ),
+          // FadeInUp(
+          //   delay: const Duration(milliseconds: 200),
+          //   child: _buildInsightsList(context),
+          // ),
         ],
       ),
     );
@@ -103,7 +100,7 @@ class InsightsView extends GetView<InsightsController> {
             ),
           ),
           SizedBox(height: 16.h),
-          
+
           // Budget usage
           Row(
             children: [
@@ -118,33 +115,37 @@ class InsightsView extends GetView<InsightsController> {
                       ),
                     ),
                     SizedBox(height: 4.h),
-                    Obx(() => Text(
-                      '${controller.totalSpent.value.toStringAsFixed(0)} / ${controller.budgetLimit.value.toStringAsFixed(0)} XOF',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
+                    Obx(
+                      () => Text(
+                        '${controller.totalSpent.value.toStringAsFixed(0)} / ${controller.budgetLimit.value.toStringAsFixed(0)} XOF',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
-              Obx(() => CircularProgressIndicator(
-                value: controller.budgetUsagePercentage.clamp(0.0, 1.0),
-                backgroundColor: Colors.white.withOpacity(0.3),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  controller.budgetUsagePercentage > 0.8 
-                      ? Colors.red.shade300
-                      : Colors.white,
+              Obx(
+                () => CircularProgressIndicator(
+                  value: controller.budgetUsagePercentage.clamp(0.0, 1.0),
+                  backgroundColor: Colors.white.withOpacity(0.3),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    controller.budgetUsagePercentage > 0.8
+                        ? Colors.red.shade300
+                        : Colors.white,
+                  ),
+                  strokeWidth: 6.w,
                 ),
-                strokeWidth: 6.w,
-              )),
+              ),
             ],
           ),
-          
+
           SizedBox(height: 16.h),
           Container(height: 1, color: Colors.white.withOpacity(0.3)),
           SizedBox(height: 16.h),
-          
+
           // Savings progress
           Row(
             children: [
@@ -159,23 +160,27 @@ class InsightsView extends GetView<InsightsController> {
                       ),
                     ),
                     SizedBox(height: 4.h),
-                    Obx(() => Text(
-                      '${controller.currentSavings.value.toStringAsFixed(0)} / ${controller.savingsGoal.value.toStringAsFixed(0)} XOF',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                    Obx(
+                      () => Text(
+                        '${controller.currentSavings.value.toStringAsFixed(0)} / ${controller.savingsGoal.value.toStringAsFixed(0)} XOF',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
-              Obx(() => Text(
-                '${(controller.savingsPercentage * 100).toStringAsFixed(1)}%',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+              Obx(
+                () => Text(
+                  '${(controller.savingsPercentage * 100).toStringAsFixed(1)}%',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              )),
+              ),
             ],
           ),
         ],
@@ -183,39 +188,39 @@ class InsightsView extends GetView<InsightsController> {
     );
   }
 
-  Widget _buildInsightsList(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recommandations IA',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 16.h),
-        Obx(() {
-          if (controller.insights.isEmpty) {
-            return _buildNoInsightsState(context);
-          }
-          return ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: controller.insights.length,
-            separatorBuilder: (context, index) => SizedBox(height: 12.h),
-            itemBuilder: (context, index) {
-              final insight = controller.insights[index];
-              return FadeInUp(
-                delay: Duration(milliseconds: index * 100),
-                child: _buildInsightCard(context, insight),
-              );
-            },
-          );
-        }),
-      ],
-    );
-  }
+  // Widget _buildInsightsList(BuildContext context) {
+  //   final theme = Theme.of(context);
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(
+  //         'Recommandations IA',
+  //         style: theme.textTheme.titleLarge?.copyWith(
+  //           fontWeight: FontWeight.w600,
+  //         ),
+  //       ),
+  //       SizedBox(height: 16.h),
+  //       Obx(() {
+  //         if (controller.insights.isEmpty) {
+  //           return _buildNoInsightsState(context);
+  //         }
+  //         return ListView.separated(
+  //           shrinkWrap: true,
+  //           physics: const NeverScrollableScrollPhysics(),
+  //           itemCount: controller.insights.length,
+  //           separatorBuilder: (context, index) => SizedBox(height: 12.h),
+  //           itemBuilder: (context, index) {
+  //             final insight = controller.insights[index];
+  //             return FadeInUp(
+  //               delay: Duration(milliseconds: index * 100),
+  //               child: _buildInsightCard(context, insight),
+  //             );
+  //           },
+  //         );
+  //       }),
+  //     ],
+  //   );
+  // }
 
   /// Clean, professional insight card design inspired by modern financial apps
   Widget _buildInsightCard(BuildContext context, Map<String, dynamic> insight) {
@@ -566,14 +571,17 @@ class InsightsView extends GetView<InsightsController> {
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, Map<String, dynamic> category) {
+  Widget _buildCategoryCard(
+    BuildContext context,
+    Map<String, dynamic> category,
+  ) {
     final theme = Theme.of(context);
     final amount = category['amount'] as double;
     final percentage = category['percentage'] as double;
     final trend = category['trend'] as String;
     final previousAmount = category['previousAmount'] as double;
     final change = amount - previousAmount;
-    
+
     Color getTrendColor() {
       switch (trend) {
         case 'up':
@@ -667,11 +675,7 @@ class InsightsView extends GetView<InsightsController> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      getTrendIcon(),
-                      size: 16.sp,
-                      color: getTrendColor(),
-                    ),
+                    Icon(getTrendIcon(), size: 16.sp, color: getTrendColor()),
                     SizedBox(width: 4.w),
                     Text(
                       '${change > 0 ? '+' : ''}${change.toStringAsFixed(0)}',
@@ -816,7 +820,13 @@ class InsightsView extends GetView<InsightsController> {
     );
   }
 
-  Widget _buildTrendItem(BuildContext context, String title, String value, IconData icon, Color color) {
+  Widget _buildTrendItem(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     final theme = Theme.of(context);
     return Row(
       children: [
@@ -871,17 +881,19 @@ class InsightsView extends GetView<InsightsController> {
             ),
             SizedBox(height: 20.h),
             ...['Cette semaine', 'Ce mois', 'Cette année'].map((timeframe) {
-              return Obx(() => RadioListTile<String>(
-                title: Text(timeframe),
-                value: timeframe,
-                groupValue: controller.selectedTimeframe.value,
-                onChanged: (value) {
-                  if (value != null) {
-                    controller.changeTimeframe(value);
-                    Get.back();
-                  }
-                },
-              ));
+              return Obx(
+                () => RadioListTile<String>(
+                  title: Text(timeframe),
+                  value: timeframe,
+                  groupValue: controller.selectedTimeframe.value,
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.changeTimeframe(value);
+                      Get.back();
+                    }
+                  },
+                ),
+              );
             }).toList(),
           ],
         ),

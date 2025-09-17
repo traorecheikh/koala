@@ -20,7 +20,7 @@ import 'package:koala/app/modules/transactions/views/transactions_view.dart';
 import 'package:koala/app/routes/app_routes.dart';
 
 class AppPages {
-  static const initial = Routes.splash;
+  static const initial = Routes.loans;
 
   static final routes = [
     GetPage(
@@ -38,7 +38,11 @@ class AppPages {
       page: () => const OnboardingView(),
       binding: OnboardingBinding(),
     ),
-    GetPage(name: Routes.home, page: () => const HomeView(), binding: HomeBinding()),
+    GetPage(
+      name: Routes.home,
+      page: () => const HomeView(),
+      binding: HomeBinding(),
+    ),
     GetPage(
       name: Routes.dashboard,
       page: () => const DashboardView(),
