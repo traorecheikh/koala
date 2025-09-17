@@ -1,198 +1,205 @@
 import 'package:flutter/material.dart';
-import 'package:koala/app/core/theme/app_colors.dart';
-import 'package:koala/app/core/theme/app_dimensions.dart';
-import 'package:koala/app/core/theme/app_text_styles.dart';
 import 'package:koala/app/data/models/transaction_model.dart';
 
+/// Modern transaction card widget with beautiful design
 class TransactionCard extends StatelessWidget {
   final TransactionModel transaction;
   final VoidCallback? onTap;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
 
-  const TransactionCard({
-    super.key,
-    required this.transaction,
-    this.onTap,
-    this.onEdit,
-    this.onDelete,
-  });
+  const TransactionCard({super.key, required this.transaction, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: Key(transaction.id),
-      background: _buildSwipeBackground(true),
-      secondaryBackground: _buildSwipeBackground(false),
-      onDismissed: (direction) {
-        if (direction == DismissDirection.startToEnd && onEdit != null) {
-          onEdit!();
-        } else if (direction == DismissDirection.endToStart &&
-            onDelete != null) {
-          onDelete!();
-        }
-      },
-      child: Card(
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.md,
-          vertical: AppDimensions.xs,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          border: Border.all(color: Colors.grey[100]!, width: 1),
         ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimensions.md),
-            child: Row(
-              children: [
-                _buildTypeIcon(),
-                const SizedBox(width: AppDimensions.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        transaction.description,
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppDimensions.xs),
-                      if (transaction.merchant != null)
-                        Text(
-                          transaction.merchant!,
-                          style: AppTextStyles.caption,
-                        ),
-                      Text(
-                        _formatDate(transaction.date),
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+        child: Row(
+          children: [
+            _buildTransactionIcon(),
+            const SizedBox(width: 16),
+            Expanded(child: _buildTransactionDetails()),
+            _buildAmountAndDate(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionIcon() {
+    Color backgroundColor;
+    Color iconColor;
+    IconData iconData;
+
+    switch (transaction.type) {
+      case TransactionType.income:
+        backgroundColor = Colors.green.withOpacity(0.1);
+        iconColor = Colors.green;
+        iconData = Icons.add_circle;
+        break;
+      case TransactionType.expense:
+        backgroundColor = Colors.red.withOpacity(0.1);
+        iconColor = Colors.red;
+        iconData = Icons.remove_circle;
+        break;
+      case TransactionType.transfer:
+        backgroundColor = Colors.blue.withOpacity(0.1);
+        iconColor = Colors.blue;
+        iconData = Icons.swap_horiz;
+        break;
+      case TransactionType.loan:
+        backgroundColor = Colors.orange.withOpacity(0.1);
+        iconColor = Colors.orange;
+        iconData = Icons.handshake;
+        break;
+      case TransactionType.repayment:
+        backgroundColor = Colors.purple.withOpacity(0.1);
+        iconColor = Colors.purple;
+        iconData = Icons.payment;
+        break;
+    }
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(iconData, color: iconColor, size: 24),
+    );
+  }
+
+  Widget _buildTransactionDetails() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          transaction.description,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            if (transaction.category.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  transaction.category,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${transaction.type == TransactionType.expense ? '-' : '+'}${transaction.amount.toStringAsFixed(0)} XOF',
-                      style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: _getAmountColor(),
-                      ),
-                    ),
-                    const SizedBox(height: AppDimensions.xs),
-                    if (transaction.category.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.sm,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getCategoryColor().withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                        ),
-                        child: Text(
-                          transaction.category,
-                          style: AppTextStyles.caption.copyWith(
-                            color: _getCategoryColor(),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                  ],
+              ),
+              const SizedBox(width: 8),
+            ],
+            if (transaction.merchant != null &&
+                transaction.merchant!.isNotEmpty)
+              Flexible(
+                child: Text(
+                  transaction.merchant!,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAmountAndDate() {
+    Color amountColor;
+    String amountPrefix;
+
+    switch (transaction.type) {
+      case TransactionType.income:
+        amountColor = Colors.green;
+        amountPrefix = '+';
+        break;
+      case TransactionType.expense:
+        amountColor = Colors.red;
+        amountPrefix = '-';
+        break;
+      default:
+        amountColor = Colors.grey[700]!;
+        amountPrefix = '';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '$amountPrefix${_formatAmount(transaction.amount)} XOF',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: amountColor,
           ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Text(
+          _formatDate(transaction.date),
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+        ),
+      ],
     );
   }
 
-  Widget _buildTypeIcon() {
-    IconData iconData;
-    Color iconColor;
-
-    switch (transaction.type) {
-      case TransactionType.income:
-        iconData = Icons.arrow_downward;
-        iconColor = AppColors.success;
-        break;
-      case TransactionType.expense:
-        iconData = Icons.arrow_upward;
-        iconColor = AppColors.error;
-        break;
-      case TransactionType.transfer:
-        iconData = Icons.swap_horiz;
-        iconColor = AppColors.info;
-        break;
-      case TransactionType.loan:
-        iconData = Icons.account_balance;
-        iconColor = AppColors.warning;
-        break;
-      default:
-        iconData = Icons.help_outline;
-        iconColor = AppColors.textSecondary;
-    }
-
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Icon(iconData, color: iconColor, size: 20),
-    );
-  }
-
-  Widget _buildSwipeBackground(bool isEdit) {
-    return Container(
-      alignment: isEdit ? Alignment.centerLeft : Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.lg),
-      color: isEdit ? AppColors.info : AppColors.error,
-      child: Icon(isEdit ? Icons.edit : Icons.delete, color: AppColors.white),
-    );
-  }
-
-  Color _getAmountColor() {
-    switch (transaction.type) {
-      case TransactionType.income:
-        return AppColors.success;
-      case TransactionType.expense:
-        return AppColors.error;
-      case TransactionType.transfer:
-        return AppColors.info;
-      case TransactionType.loan:
-        return AppColors.warning;
-      default:
-        return AppColors.textPrimary;
-    }
-  }
-
-  Color _getCategoryColor() {
-    // Simple hash-based color assignment
-    final hash = transaction.category.hashCode;
-    final colors = [
-      AppColors.primary,
-      AppColors.success,
-      AppColors.warning,
-      AppColors.info,
-      AppColors.secondary,
-    ];
-    return colors[hash.abs() % colors.length];
+  String _formatAmount(double amount) {
+    // Format amount with thousands separator
+    final formatted = amount.toInt().toString();
+    final RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+    return formatted.replaceAllMapped(reg, (Match match) => '${match[1]} ');
   }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
     final transactionDate = DateTime(date.year, date.month, date.day);
 
     if (transactionDate == today) {
-      return 'Aujourd\'hui ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } else if (transactionDate == today.subtract(const Duration(days: 1))) {
-      return 'Hier ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+      return 'Aujourd\'hui';
+    } else if (transactionDate == yesterday) {
+      return 'Hier';
+    } else if (now.difference(date).inDays < 7) {
+      final weekdays = [
+        'Lundi',
+        'Mardi',
+        'Mercredi',
+        'Jeudi',
+        'Vendredi',
+        'Samedi',
+        'Dimanche',
+      ];
+      return weekdays[date.weekday - 1];
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

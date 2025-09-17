@@ -8,4 +8,5 @@ abstract class Routes {
   static const insights = '/insights';
   static const settings = '/settings';
   static const loans = '/loans';
+  static const main = '/main'; // Added main route
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/core/theme/app_colors.dart';
+import 'package:koala/app/core/theme/app_dimensions.dart';
 import 'package:koala/app/core/theme/app_text_styles.dart';
 import 'package:koala/app/modules/transactions/controllers/transaction_controller.dart';
 import 'package:koala/app/shared/widgets/transaction_card.dart';
@@ -41,46 +42,49 @@ class TransactionView extends GetView<TransactionController> {
   /// Custom app bar with back navigation and actions
   Widget _buildAppBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: AppColors.background,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: AppElevation.level1,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(
-              Icons.arrow_back_ios,
-              color: AppColors.textPrimary,
-            ),
-            tooltip: 'Retour',
-          ),
           Expanded(child: Text('Transactions', style: AppTextStyles.h2)),
-          IconButton(
-            onPressed: controller.toggleFilterPanel,
-            icon: Obx(
-              () => Icon(
-                controller.isFilterPanelOpen.value
-                    ? Icons.filter_list
-                    : Icons.filter_list_outlined,
-                color: controller.hasActiveFilters
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+          SizedBox(
+            width: AppSpacing.minTouchTarget,
+            height: AppSpacing.minTouchTarget,
+            child: IconButton(
+              onPressed: controller.toggleFilterPanel,
+              icon: Obx(
+                () => Icon(
+                  controller.isFilterPanelOpen.value
+                      ? Icons.filter_list
+                      : Icons.filter_list_outlined,
+                  color: controller.hasActiveFilters
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                ),
               ),
+              tooltip: 'Filtres',
             ),
-            tooltip: 'Filtres',
           ),
-          IconButton(
-            onPressed: controller.navigateToAddTransaction,
-            icon: const Icon(Icons.add, color: AppColors.primary),
-            tooltip: 'Ajouter',
+          SizedBox(
+            width: AppSpacing.minTouchTarget,
+            height: AppSpacing.minTouchTarget,
+            child: IconButton(
+              onPressed: controller.navigateToAddTransaction,
+              icon: const Icon(Icons.add, color: AppColors.primary),
+              tooltip: 'Ajouter',
+            ),
           ),
         ],
       ),

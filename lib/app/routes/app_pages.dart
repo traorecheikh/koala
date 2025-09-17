@@ -1,10 +1,6 @@
 import 'package:get/get.dart';
-import 'package:koala/app/modules/dashboard/bindings/dashboard_binding.dart';
-import 'package:koala/app/modules/dashboard/views/dashboard_view.dart';
-import 'package:koala/app/modules/insights/bindings/insights_binding.dart';
-import 'package:koala/app/modules/insights/views/insights_view.dart';
-import 'package:koala/app/modules/loans/bindings/loans_binding.dart';
-import 'package:koala/app/modules/loans/views/loans_view.dart';
+import 'package:koala/app/modules/main/bindings/main_binding.dart';
+import 'package:koala/app/modules/main/views/main_view.dart';
 import 'package:koala/app/modules/onboarding/bindings/onboarding_binding.dart';
 import 'package:koala/app/modules/onboarding/views/onboarding_view.dart';
 import 'package:koala/app/modules/settings/bindings/settings_binding.dart';
@@ -14,24 +10,10 @@ import 'package:koala/app/modules/transactions/views/transaction_view.dart';
 import 'package:koala/app/routes/app_routes.dart';
 
 class AppPages {
-  static const initial = Routes.dashboard;
+  static const initial = Routes.main;
 
   static final List<GetPage> routes = [
-    GetPage(
-      name: Routes.dashboard,
-      page: () => DashboardView(),
-      binding: DashboardBinding(),
-    ),
-    GetPage(
-      name: Routes.loans,
-      page: () => LoansView(),
-      binding: LoansBinding(),
-    ),
-    GetPage(
-      name: Routes.transactions,
-      page: () => TransactionView(),
-      binding: TransactionBinding(),
-    ),
+    GetPage(name: Routes.main, page: () => MainView(), binding: MainBinding()),
     GetPage(
       name: Routes.onboarding,
       page: () => OnboardingView(),
@@ -43,10 +25,11 @@ class AppPages {
       binding: SettingsBinding(),
     ),
     GetPage(
-      name: Routes.insights,
-      page: () => InsightsView(),
-      binding: InsightsBinding(),
+      name: Routes.transactions,
+      page: () => TransactionView(),
+      binding: TransactionBinding(),
     ),
-    // Add other routes as needed
+
+    // Add other non-main routes as needed
   ];
 }

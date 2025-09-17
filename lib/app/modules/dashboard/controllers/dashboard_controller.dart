@@ -13,6 +13,7 @@ class DashboardController extends GetxController {
 
   final monthlyIncome = 0.0.obs;
   final monthlyExpenses = 0.0.obs;
+  final monthlyBudget = 150000.0.obs; // Default budget of 150,000 XOF
   final selectedBottomIndex = 0.obs;
 
   @override
@@ -50,7 +51,6 @@ class DashboardController extends GetxController {
       // Calculate monthly stats
       _calculateMonthlyStats();
     } catch (e) {
-      Get.snackbar('Erreur', 'Erreur lors du chargement des données: $e');
     } finally {
       isLoading.value = false;
     }
@@ -85,28 +85,6 @@ class DashboardController extends GetxController {
 
     monthlyIncome.value = income;
     monthlyExpenses.value = expenses;
-  }
-
-  void onBottomNavTap(int index) {
-    selectedBottomIndex.value = index;
-
-    switch (index) {
-      case 0:
-        // Already on dashboard
-        break;
-      case 1:
-        Get.toNamed(Routes.transactions);
-        break;
-      case 2:
-        Get.toNamed(Routes.loans);
-        break;
-      case 3:
-        Get.toNamed(Routes.insights);
-        break;
-      case 4:
-        Get.toNamed(Routes.settings);
-        break;
-    }
   }
 
   void navigateToTransactions() {

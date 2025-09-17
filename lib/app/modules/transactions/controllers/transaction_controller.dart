@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/data/models/account_model.dart';
 import 'package:koala/app/data/models/transaction_model.dart';
+import 'package:koala/app/shared/widgets/add_transaction_bottom_sheet.dart';
 
 class TransactionController extends GetxController {
   final transactions = <TransactionModel>[].obs;
@@ -11,8 +12,7 @@ class TransactionController extends GetxController {
 
   final searchController = TextEditingController();
   final selectedCategory = ''.obs;
-  final selectedDateRange =
-      'all'.obs; // Changed from Rxn<DateTimeRange> to RxString
+  final selectedDateRange = 'all'.obs;
 
   // Filter panel state
   final isFilterPanelOpen = false.obs;
@@ -101,45 +101,41 @@ class TransactionController extends GetxController {
     _filterTransactions();
   }
 
-  /// Set date filter
-  void setDateFilter(String filter) {
-    selectedDateFilter.value = filter;
-    _filterTransactions();
+  /// Add a new transaction
+  Future<void> addTransaction(TransactionModel transaction) async {
+    try {
+      isLoading.value = true;
+
+      // TODO: Save to Hive storage
+      // For now, just add to the local list
+      transactions.add(transaction);
+
+      // Refresh the filtered list
+      _filterTransactions();
+
+      // TODO: Also sync with API if needed
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      ); // Simulate API call
+    } catch (e) {
+      throw Exception('Failed to add transaction: $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  /// Set type filter
-  void setTypeFilter(String type) {
-    selectedType.value = type;
-    _filterTransactions();
-  }
-
-  /// Clear all filters
-  void clearAllFilters() {
-    searchController.clear();
-    searchQuery.value = '';
-    selectedType.value = 'all';
-    selectedDateFilter.value = 'all';
-    _filterTransactions();
-  }
-
-  /// Check if any filters are active
-  bool get hasActiveFilters {
-    return searchQuery.value.isNotEmpty ||
-        selectedType.value != 'all' ||
-        selectedDateFilter.value != 'all';
-  }
-
-  /// Navigate to add transaction
+  /// Navigate to add transaction (now opens bottom sheet)
   void navigateToAddTransaction() {
-    Get.toNamed('/transactions/add');
+    AddTransactionBottomSheet.show();
   }
 
-  /// Edit transaction
-  void editTransaction(dynamic transaction) {
-    Get.toNamed('/transactions/edit', arguments: transaction);
+  /// Edit a transaction
+  void editTransaction(TransactionModel transaction) {
+    // TODO: Implement edit functionality - could open bottom sheet with pre-filled data
+    Get.snackbar('Info', 'Fonctionnalité d\'édition à venir');
   }
 
-  /// Delete transaction
+  /// Delete a transaction with confirmation
   void deleteTransaction(String transactionId) {
     Get.dialog(
       AlertDialog(
@@ -164,6 +160,34 @@ class TransactionController extends GetxController {
   /// View transaction details
   void viewTransactionDetails(String transactionId) {
     Get.toNamed('/transactions/$transactionId');
+  }
+
+  /// Check if any filters are active
+  bool get hasActiveFilters {
+    return selectedType.value != 'all' ||
+        selectedDateFilter.value != 'all' ||
+        searchQuery.value.isNotEmpty;
+  }
+
+  /// Set type filter
+  void setTypeFilter(String type) {
+    selectedType.value = type;
+    _filterTransactions();
+  }
+
+  /// Set date filter
+  void setDateFilter(String dateFilter) {
+    selectedDateFilter.value = dateFilter;
+    _filterTransactions();
+  }
+
+  /// Clear all active filters
+  void clearAllFilters() {
+    selectedType.value = 'all';
+    selectedDateFilter.value = 'all';
+    searchController.clear();
+    searchQuery.value = '';
+    _filterTransactions();
   }
 
   /// Perform actual delete operation

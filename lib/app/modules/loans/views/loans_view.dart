@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/core/theme/app_colors.dart';
+import 'package:koala/app/core/theme/app_dimensions.dart';
 import 'package:koala/app/core/theme/app_text_styles.dart';
 import 'package:koala/app/modules/loans/controllers/loans_controller.dart';
 
@@ -39,7 +40,10 @@ class LoansView extends GetView<LoansController> {
   /// Custom app bar with navigation and actions
   Widget _buildAppBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: AppColors.background,
         boxShadow: [
@@ -52,14 +56,6 @@ class LoansView extends GetView<LoansController> {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(
-              Icons.arrow_back_ios,
-              color: AppColors.textPrimary,
-            ),
-            tooltip: 'Retour',
-          ),
           Expanded(child: Text('Prêts', style: AppTextStyles.h2)),
           IconButton(
             onPressed: controller.navigateToCreateLoan,
@@ -74,7 +70,7 @@ class LoansView extends GetView<LoansController> {
   /// Summary cards showing loan statistics
   Widget _buildSummaryCards() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
           Expanded(
@@ -112,10 +108,10 @@ class LoansView extends GetView<LoansController> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -177,7 +173,7 @@ class LoansView extends GetView<LoansController> {
               itemBuilder: (context, index) {
                 final loan = controller.loans[index];
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: _buildLoanCard(loan),
                 );
               },
@@ -194,10 +190,10 @@ class LoansView extends GetView<LoansController> {
     final isOverdue = loan.nextPaymentDate.isBefore(DateTime.now());
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: isOverdue
             ? Border.all(color: AppColors.error.withValues(alpha: 0.3))
             : null,
@@ -224,12 +220,15 @@ class LoansView extends GetView<LoansController> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
                 decoration: BoxDecoration(
                   color: isOverdue
                       ? AppColors.error.withValues(alpha: 0.1)
                       : AppColors.success.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(
                   isOverdue ? 'En retard' : 'À jour',
@@ -336,9 +335,11 @@ class LoansView extends GetView<LoansController> {
                 child: TextButton(
                   onPressed: () => controller.viewLoanDetails(loan.id),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       side: BorderSide(color: AppColors.primary),
                     ),
                   ),
@@ -358,10 +359,12 @@ class LoansView extends GetView<LoansController> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
+                    elevation: AppElevation.level1,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                   ),
                   child: const Text(
@@ -381,7 +384,7 @@ class LoansView extends GetView<LoansController> {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -390,7 +393,7 @@ class LoansView extends GetView<LoansController> {
               height: 96,
               decoration: BoxDecoration(
                 color: AppColors.textSecondary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(48),
+                borderRadius: BorderRadius.circular(AppRadius.lg * 2),
               ),
               child: Icon(
                 Icons.account_balance_outlined,
@@ -421,7 +424,7 @@ class LoansView extends GetView<LoansController> {
                   foregroundColor: AppColors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                 ),
                 onPressed: controller.navigateToCreateLoan,
@@ -444,7 +447,7 @@ class LoansView extends GetView<LoansController> {
       onPressed: controller.navigateToCreateLoan,
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
-      elevation: 4,
+      elevation: AppElevation.level2,
       shape: const CircleBorder(),
       child: const Icon(Icons.add, size: 24),
     );

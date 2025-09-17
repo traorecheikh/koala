@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/core/theme/app_colors.dart';
+import 'package:koala/app/core/theme/app_dimensions.dart';
 import 'package:koala/app/core/theme/app_text_styles.dart';
 import 'package:koala/app/modules/settings/controllers/settings_controller.dart';
 
@@ -32,7 +33,10 @@ class SettingsView extends GetView<SettingsController> {
   /// Custom app bar with navigation
   Widget _buildAppBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: AppColors.background,
         boxShadow: [
@@ -62,11 +66,11 @@ class SettingsView extends GetView<SettingsController> {
   /// User profile section at the top
   Widget _buildProfileSection() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -143,7 +147,7 @@ class SettingsView extends GetView<SettingsController> {
   /// Settings groups organized by category
   Widget _buildSettingsGroups() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         children: [
           _buildSettingsGroup(
@@ -261,8 +265,8 @@ class SettingsView extends GetView<SettingsController> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: AppColors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                elevation: AppElevation.level1,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -298,7 +302,7 @@ class SettingsView extends GetView<SettingsController> {
         Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.05),
@@ -341,7 +345,7 @@ class SettingsView extends GetView<SettingsController> {
         height: 40,
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: Icon(icon, color: AppColors.primary, size: 20),
       ),
@@ -352,7 +356,10 @@ class SettingsView extends GetView<SettingsController> {
       subtitle: Text(subtitle, style: AppTextStyles.caption),
       trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
     );
   }
 
@@ -370,7 +377,7 @@ class SettingsView extends GetView<SettingsController> {
         height: 40,
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: Icon(icon, color: AppColors.primary, size: 20),
       ),
@@ -386,7 +393,10 @@ class SettingsView extends GetView<SettingsController> {
           activeColor: AppColors.primary,
         ),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
     );
   }
 }

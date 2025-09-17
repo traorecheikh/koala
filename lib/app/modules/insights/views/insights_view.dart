@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/core/theme/app_colors.dart';
+import 'package:koala/app/core/theme/app_dimensions.dart';
 import 'package:koala/app/core/theme/app_text_styles.dart';
 import 'package:koala/app/modules/insights/controllers/insights_controller.dart';
 
@@ -32,7 +33,10 @@ class InsightsView extends GetView<InsightsController> {
   /// Custom app bar with navigation
   Widget _buildAppBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: AppColors.background,
         boxShadow: [
@@ -55,7 +59,10 @@ class InsightsView extends GetView<InsightsController> {
           ),
           Expanded(child: Text('Insights IA', style: AppTextStyles.h2)),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
             decoration: BoxDecoration(
               color: AppColors.info.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
@@ -83,8 +90,8 @@ class InsightsView extends GetView<InsightsController> {
   /// AI question input section
   Widget _buildAskInsightSection() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -151,7 +158,7 @@ class InsightsView extends GetView<InsightsController> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.all(AppSpacing.md),
             ),
           ),
           const SizedBox(height: 16),
@@ -165,7 +172,7 @@ class InsightsView extends GetView<InsightsController> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -216,7 +223,7 @@ class InsightsView extends GetView<InsightsController> {
                     itemBuilder: (context, index) {
                       final insight = controller.insights[index];
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
                         child: _buildInsightCard(insight),
                       );
                     },
@@ -232,10 +239,10 @@ class InsightsView extends GetView<InsightsController> {
     final priorityColor = _getPriorityColor(insight.priority);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: priorityColor.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
@@ -348,9 +355,11 @@ class InsightsView extends GetView<InsightsController> {
                 child: TextButton(
                   onPressed: () => controller.dismissInsight(insight.id),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                   ),
                   child: Text(
@@ -369,10 +378,14 @@ class InsightsView extends GetView<InsightsController> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: priorityColor,
                     foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
+                    elevation: AppElevation.level1,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(
+                        AppRadius.lg + AppRadius.sm,
+                      ),
                     ),
                   ),
                   child: const Text(
@@ -391,10 +404,10 @@ class InsightsView extends GetView<InsightsController> {
   /// Empty state for insights
   Widget _buildEmptyInsights() {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Column(
         children: [
