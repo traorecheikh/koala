@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'account.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Account {
   final String id;
   final String provider;
@@ -21,6 +21,7 @@ class Account {
     required this.createdAt,
   });
 
-  factory Account.fromJson(Map<String, dynamic> json) => _$AccountFromJson(json);
+  factory Account.fromJson(Map<String, dynamic> json) =>
+      _$AccountFromJson(json);
   Map<String, dynamic> toJson() => _$AccountToJson(this);
 }

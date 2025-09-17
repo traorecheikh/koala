@@ -1,12 +1,142 @@
 import 'package:get/get.dart';
+import 'package:koala/app/data/models/account_model.dart';
+import 'package:koala/app/data/models/transaction_model.dart';
+import 'package:koala/app/data/models/user_model.dart';
+import 'package:koala/app/data/services/hive_service.dart';
+import 'package:koala/app/routes/app_routes.dart';
 
 class DashboardController extends GetxController {
-  final userName = ''.obs;
-  final totalBalance = 0.0.obs;
+  final currentUser = Rxn<UserModel>();
+  final recentTransactions = <TransactionModel>[].obs;
+  final accounts = <AccountModel>[].obs;
+  final isLoading = false.obs;
+
   final monthlyIncome = 0.0.obs;
   final monthlyExpenses = 0.0.obs;
+  final selectedBottomIndex = 0.obs;
 
-  void scanReceipt() {
-    // Placeholder for scanReceipt logic
+  @override
+  void onInit() {
+    super.onInit();
+    loadDashboardData();
+  }
+
+  Future<void> loadDashboardData() async {
+    try {
+      isLoading.value = true;
+
+      // Load current user
+      final user = HiveService.users.get('current_user');
+      if (user == null) {
+        Get.offAllNamed(Routes.onboarding);
+        return;
+      }
+      currentUser.value = user;
+
+      // Load accounts
+      final userAccounts = HiveService.accounts.values
+          .where((account) => account.userId == user.id)
+          .toList();
+      accounts.assignAll(userAccounts);
+
+      // Load recent transactions (last 10)
+      final allTransactions = HiveService.transactions.values
+          .where((tx) => tx.userId == user.id)
+          .toList();
+
+      allTransactions.sort((a, b) => b.date.compareTo(a.date));
+      recentTransactions.assignAll(allTransactions.take(10));
+
+      // Calculate monthly stats
+      _calculateMonthlyStats();
+    } catch (e) {
+      Get.snackbar('Erreur', 'Erreur lors du chargement des données: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  void _calculateMonthlyStats() {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0);
+
+    final monthlyTxs = HiveService.transactions.values
+        .where(
+          (tx) =>
+              tx.userId == currentUser.value?.id &&
+              tx.date.isAfter(startOfMonth) &&
+              tx.date.isBefore(endOfMonth.add(const Duration(days: 1))),
+        )
+        .toList();
+
+    double income = 0.0;
+    double expenses = 0.0;
+
+    for (final tx in monthlyTxs) {
+      if (tx.affectsBalance) {
+        if (tx.type == TransactionType.income) {
+          income += tx.amount;
+        } else if (tx.type == TransactionType.expense) {
+          expenses += tx.amount;
+        }
+      }
+    }
+
+    monthlyIncome.value = income;
+    monthlyExpenses.value = expenses;
+  }
+
+  void onBottomNavTap(int index) {
+    selectedBottomIndex.value = index;
+
+    switch (index) {
+      case 0:
+        // Already on dashboard
+        break;
+      case 1:
+        Get.toNamed(Routes.transactions);
+        break;
+      case 2:
+        Get.toNamed(Routes.loans);
+        break;
+      case 3:
+        Get.toNamed(Routes.insights);
+        break;
+      case 4:
+        Get.toNamed(Routes.settings);
+        break;
+    }
+  }
+
+  void navigateToTransactions() {
+    Get.toNamed(Routes.transactions);
+  }
+
+  void navigateToAddTransaction() {
+    Get.toNamed('${Routes.transactions}/add');
+  }
+
+  Future<void> refreshData() async {
+    await loadDashboardData();
+  }
+
+  String get greetingMessage {
+    final hour = DateTime.now().hour;
+    final name = currentUser.value?.name.split(' ').first ?? 'Utilisateur';
+
+    if (hour < 12) {
+      return 'Bonjour, $name';
+    } else if (hour < 17) {
+      return 'Bon après-midi, $name';
+    } else {
+      return 'Bonsoir, $name';
+    }
+  }
+
+  double get savingsRate {
+    if (monthlyIncome.value == 0) return 0.0;
+    final savings = monthlyIncome.value - monthlyExpenses.value;
+    return (savings / monthlyIncome.value) * 100;
   }
 }

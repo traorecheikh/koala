@@ -1,123 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+/// Controller for managing AI insights and recommendations
 class InsightsController extends GetxController {
-  final currentTab = 0.obs;
-  final selectedTimeframe = 'Cette semaine'.obs;
-  final totalSpent = 125000.0.obs;
-  final budgetLimit = 150000.0.obs;
-  final savingsGoal = 200000.0.obs;
-  final currentSavings = 75000.0.obs;
+  // Text controllers
+  final TextEditingController questionController = TextEditingController();
 
-  final categorySpending = <Map<String, dynamic>>[].obs;
-  final insights = <Map<String, dynamic>>[].obs;
-  final spendingTrends = <Map<String, dynamic>>[].obs;
+  // Observable state
+  final RxBool isGeneratingInsight = false.obs;
+  final RxList<dynamic> insights = <dynamic>[].obs;
 
   @override
   void onInit() {
     super.onInit();
-    _loadInsights();
+    loadInsights();
   }
 
-  void _loadInsights() {
-    categorySpending.assignAll([
-      {
-        'category': 'Alimentation',
-        'amount': 45000.0,
-        'percentage': 0.36,
-        'icon': Icons.restaurant,
-        'trend': 'up',
-        'previousAmount': 42000.0,
-      },
-      {
-        'category': 'Transport',
-        'amount': 25000.0,
-        'percentage': 0.20,
-        'icon': Icons.directions_car,
-        'trend': 'down',
-        'previousAmount': 28000.0,
-      },
-      {
-        'category': 'Divertissement',
-        'amount': 35000.0,
-        'percentage': 0.28,
-        'icon': Icons.movie,
-        'trend': 'up',
-        'previousAmount': 30000.0,
-      },
-      {
-        'category': 'Factures',
-        'amount': 20000.0,
-        'percentage': 0.16,
-        'icon': Icons.receipt,
-        'trend': 'stable',
-        'previousAmount': 20000.0,
-      },
-    ]);
+  @override
+  void onClose() {
+    questionController.dispose();
+    super.onClose();
+  }
 
-    insights.assignAll([
-      {
-        'type': 'warning',
-        'title': 'Dépenses en hausse',
-        'description':
-            'Vos dépenses alimentaires ont augmenté de 7% cette semaine',
-        'amount': 3000.0,
-        'icon': Icons.trending_up,
-        'priority': 'high',
-        'suggestions': [
-          'Planifiez vos repas à l\'avance',
-          'Utilisez une liste de courses',
-          'Cuisinez plus à la maison',
+  /// Load existing insights
+  Future<void> loadInsights() async {
+    try {
+      // TODO: Load insights from storage
+      await Future.delayed(const Duration(milliseconds: 300));
+      // Mock insights for now
+      insights.clear();
+    } catch (e) {
+      Get.snackbar('Erreur', 'Impossible de charger les insights');
+    }
+  }
+
+  /// Generate new insight from AI
+  Future<void> generateInsight() async {
+    if (questionController.text.trim().isEmpty) {
+      Get.snackbar('Attention', 'Veuillez poser une question');
+      return;
+    }
+
+    try {
+      isGeneratingInsight.value = true;
+
+      // TODO: Implement AI insight generation
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Mock insight response
+      final mockInsight = MockInsight(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: 'Optimisation des dépenses',
+        description:
+            'Basé sur votre historique, vous pouvez économiser 15% en réduisant les sorties restaurant.',
+        priority: 'high',
+        potentialSavings: 75000,
+        steps: [
+          'Limitez les restaurants à 2 fois par semaine',
+          'Préparez vos repas à la maison',
+          'Utilisez une liste de courses pour éviter les achats impulsifs',
         ],
-      },
-      {
-        'type': 'success',
-        'title': 'Économies sur transport',
-        'description':
-            'Vous avez économisé 3,000 XOF en transport cette semaine',
-        'amount': 3000.0,
-        'icon': Icons.trending_down,
-        'priority': 'medium',
-        'suggestions': [
-          'Continuez à utiliser les transports en commun',
-          'Considérez le covoiturage',
-        ],
-      },
-      {
-        'type': 'info',
-        'title': 'Objectif d\'épargne',
-        'description': 'Vous êtes à 37.5% de votre objectif mensuel',
-        'amount': 0.0,
-        'icon': Icons.savings,
-        'priority': 'medium',
-        'suggestions': [
-          'Réduisez les dépenses non essentielles',
-          'Définissez un budget strict',
-          'Automatisez vos épargnes',
-        ],
-      },
-    ]);
+      );
 
-    spendingTrends.assignAll([
-      {'day': 'Lun', 'amount': 18000.0},
-      {'day': 'Mar', 'amount': 22000.0},
-      {'day': 'Mer', 'amount': 15000.0},
-      {'day': 'Jeu', 'amount': 28000.0},
-      {'day': 'Ven', 'amount': 35000.0},
-      {'day': 'Sam', 'amount': 45000.0},
-      {'day': 'Dim', 'amount': 25000.0},
-    ]);
+      insights.insert(0, mockInsight);
+      questionController.clear();
+      Get.snackbar('Succès', 'Nouvel insight généré!');
+    } catch (e) {
+      Get.snackbar('Erreur', 'Impossible de générer l\'insight');
+    } finally {
+      isGeneratingInsight.value = false;
+    }
   }
 
-  void changeTab(int index) {
-    currentTab.value = index;
+  /// Apply an insight recommendation
+  void applyInsight(String insightId) {
+    // TODO: Implement insight application logic
+    Get.snackbar('Info', 'Fonctionnalité en développement');
   }
 
-  void changeTimeframe(String timeframe) {
-    selectedTimeframe.value = timeframe;
-    _loadInsights(); // Reload data for new timeframe
+  /// Dismiss an insight
+  void dismissInsight(String insightId) {
+    insights.removeWhere((insight) => insight.id == insightId);
+    Get.snackbar('Info', 'Insight ignoré');
   }
+}
 
-  double get budgetUsagePercentage => totalSpent.value / budgetLimit.value;
-  double get savingsPercentage => currentSavings.value / savingsGoal.value;
+/// Mock insight model for demonstration
+class MockInsight {
+  final String id;
+  final String title;
+  final String description;
+  final String priority;
+  final double potentialSavings;
+  final List<String> steps;
+
+  MockInsight({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.priority,
+    required this.potentialSavings,
+    required this.steps,
+  });
 }

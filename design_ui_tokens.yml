@@ -1,0 +1,86 @@
+colors:
+  primary: "#0052FF"        # clean, strong blue accent
+  secondary: "#6C757D"      # neutral gray
+  background: "#FFFFFF"     # clean surface
+  surface: "#F8F9FA"        # light neutral layer
+  text_primary: "#212529"   # near-black, high readability
+  text_secondary: "#6C757D" # muted gray
+  success: "#28A745"
+  warning: "#FFC107"
+  error: "#DC3545"
+  info: "#17A2B8"
+
+typography:
+  font_family: "Inter, SF Pro, Roboto"
+  h1: { size: 24px, weight: 600, line_height: 32px }
+  h2: { size: 20px, weight: 600, line_height: 28px }
+  body: { size: 16px, weight: 400, line_height: 24px }
+  caption: { size: 14px, weight: 400, line_height: 20px, color: text_secondary }
+
+spacing:
+  xs: 4px
+  sm: 8px
+  md: 16px
+  lg: 24px
+  xl: 32px
+
+radius:
+  sm: 8px
+  md: 12px
+  lg: 16px
+
+elevation:
+  level1: "0 1px 2px rgba(0,0,0,0.05)"
+  level2: "0 2px 6px rgba(0,0,0,0.08)"
+  level3: "0 4px 12px rgba(0,0,0,0.12)"
+
+motion:
+  duration_short: 150ms
+  duration_medium: 300ms
+  duration_long: 500ms
+  easing: "ease-in-out"
+touch:
+  min_touch_target: 44px      # Fitts’s Law
+  button_padding: 16px
+  list_item_height: 48px
+
+readability:
+  line_length: 50–75 chars    # Optimal reading span
+  paragraph_spacing: 16px
+  heading_spacing: 24px
+
+contrast:
+  min_text_contrast: 4.5:1    # WCAG AA
+  large_text_contrast: 3:1
+
+navigation:
+  max_nav_items: 5            # Hick’s Law (choice overload)
+  shallow_hierarchy: true     # Jakob’s Law (familiarity)
+  back_navigation: always     # Norman’s feedback principle
+
+forms:
+  input_labels: always_visible
+  error_messages: inline, plain, red
+  autofill_support: true
+  progressive_disclosure: true  # Miller’s Law (avoid overload)
+
+feedback:
+  tap_feedback: opacity 80%   # Immediate acknowledgment
+  loading_state: skeleton_UI  # Avoid blank screens
+  error_state: retry + message
+
+interaction:
+  response_time: <100ms instant, <1s flow continuity
+  animations: <300ms (don’t block usability)
+  undo_action: always (Nielsen’s heuristic: user control)
+
+accessibility:
+  keyboard_navigation: true
+  screen_reader_labels: required
+  color_blind_safe: true
+  focus_outline: visible
+
+personalization:
+  dark_mode: supported
+  language_switch: supported
+  biometric_auth: supported

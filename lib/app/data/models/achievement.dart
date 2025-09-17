@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'achievement.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Achievement {
   final String id;
   final String key;

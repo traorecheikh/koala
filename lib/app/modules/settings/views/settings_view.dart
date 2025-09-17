@@ -1,177 +1,392 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:koala/app/core/theme/app_colors.dart';
+import 'package:koala/app/core/theme/app_text_styles.dart';
 import 'package:koala/app/modules/settings/controllers/settings_controller.dart';
-import 'package:koala/app/shared/controllers/theme_controller.dart';
 
+/// High-fidelity settings view with user profile and app configuration
 class SettingsView extends GetView<SettingsController> {
   const SettingsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final themeController = Get.find<ThemeController>();
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [_buildProfileSection(), _buildSettingsGroups()],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      body: ListView(
+    );
+  }
+
+  /// Custom app bar with navigation
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          _buildProfileSection(context),
-          _buildAccountsSection(context),
-          _buildAppSettingsSection(context, themeController),
-          _buildAboutSection(context),
+          IconButton(
+            onPressed: () => Get.back(),
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: AppColors.textPrimary,
+            ),
+            tooltip: 'Retour',
+          ),
+          Expanded(child: Text('Paramètres', style: AppTextStyles.h2)),
         ],
       ),
     );
   }
 
-  Widget _buildProfileSection(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.all(16.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Profile', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 16.0),
-            const ListTile(
-              leading: CircleAvatar(child: Text('U')),
-              title: Text('User'),
-              subtitle: Text('+221 77 123 4567'),
-              trailing: Icon(Icons.edit),
-            ),
-          ],
-        ),
+  /// User profile section at the top
+  Widget _buildProfileSection() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildAccountsSection(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.all(16.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Obx(
+        () => Row(
           children: [
-            Text('Accounts', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 16.0),
-            Obx(() {
-              if (controller.accounts.isEmpty) {
-                return const Center(child: Text('No accounts found.'));
-              }
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: controller.accounts.length,
-                itemBuilder: (context, index) {
-                  final account = controller.accounts[index];
-                  return ListTile(
-                    leading: Icon(account['icon'] as IconData),
-                    title: Text(account['name'] as String),
-                    subtitle: Text(account['provider'] as String),
-                    trailing: Text('${account['balance']} XOF'),
-                  );
-                },
-              );
-            }),
-            const SizedBox(height: 16.0),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: controller.addAccount,
-                icon: const Icon(Icons.add),
-                label: const Text('Add Account'),
+            // Avatar
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(32),
+              ),
+              child: Icon(Icons.person, size: 32, color: AppColors.primary),
+            ),
+            const SizedBox(width: 16),
+            // User info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    controller.currentUser.value?.name ?? 'Utilisateur',
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    controller.currentUser.value?.phone ?? '',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Compte vérifié',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+            // Edit button
+            IconButton(
+              onPressed: controller.editProfile,
+              icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              tooltip: 'Modifier le profil',
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAppSettingsSection(BuildContext context, ThemeController themeController) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.all(16.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('App Settings', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 16.0),
-            ListTile(
-              leading: const Icon(Icons.palette),
-              title: const Text('Theme'),
-              trailing: Obx(
-                () => DropdownButton<ThemeMode>(
-                  value: themeController.themeMode,
-                  items: const [
-                    DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
-                    DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-                    DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      themeController.setThemeMode(value);
-                    }
-                  },
+  /// Settings groups organized by category
+  Widget _buildSettingsGroups() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          _buildSettingsGroup(
+            title: 'Profil',
+            items: [
+              _buildSettingsItem(
+                icon: Icons.person_outline,
+                title: 'Informations personnelles',
+                subtitle: 'Nom, téléphone, salaire',
+                onTap: controller.editProfile,
+              ),
+              _buildSettingsItem(
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Informations financières',
+                subtitle: 'Salaire, date de paie, comptes',
+                onTap: controller.editFinancialInfo,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSettingsGroup(
+            title: 'Sécurité',
+            items: [
+              _buildSettingsItem(
+                icon: Icons.lock_outline,
+                title: 'Modifier le code PIN',
+                subtitle: 'Changer votre code de sécurité',
+                onTap: controller.changePIN,
+              ),
+              _buildToggleSettingsItem(
+                icon: Icons.fingerprint,
+                title: 'Authentification biométrique',
+                subtitle: 'Empreinte digitale ou Face ID',
+                value: controller.biometricEnabled,
+                onChanged: controller.toggleBiometric,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSettingsGroup(
+            title: 'Données',
+            items: [
+              _buildToggleSettingsItem(
+                icon: Icons.cloud_outlined,
+                title: 'Synchronisation serveur',
+                subtitle: 'Sauvegarder dans le cloud',
+                value: controller.cloudSyncEnabled,
+                onChanged: controller.toggleCloudSync,
+              ),
+              _buildSettingsItem(
+                icon: Icons.backup_outlined,
+                title: 'Sauvegardes locales',
+                subtitle: 'Gérer les sauvegardes hors ligne',
+                onTap: controller.manageBackups,
+              ),
+              _buildSettingsItem(
+                icon: Icons.import_export,
+                title: 'Import / Export',
+                subtitle: 'Importer ou exporter vos données',
+                onTap: controller.navigateToImportExport,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSettingsGroup(
+            title: 'Notifications',
+            items: [
+              _buildToggleSettingsItem(
+                icon: Icons.notifications_outlined,
+                title: 'Notifications push',
+                subtitle: 'Alertes et rappels',
+                value: controller.notificationsEnabled,
+                onChanged: controller.toggleNotifications,
+              ),
+              _buildToggleSettingsItem(
+                icon: Icons.schedule,
+                title: 'Rappels d\'échéances',
+                subtitle: 'Prêts et récurrences',
+                value: controller.paymentRemindersEnabled,
+                onChanged: controller.togglePaymentReminders,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSettingsGroup(
+            title: 'Support',
+            items: [
+              _buildSettingsItem(
+                icon: Icons.help_outline,
+                title: 'Centre d\'aide',
+                subtitle: 'FAQ et tutoriels',
+                onTap: controller.openHelpCenter,
+              ),
+              _buildSettingsItem(
+                icon: Icons.feedback_outlined,
+                title: 'Envoyer un commentaire',
+                subtitle: 'Aidez-nous à améliorer l\'app',
+                onTap: controller.sendFeedback,
+              ),
+              _buildSettingsItem(
+                icon: Icons.info_outline,
+                title: 'À propos',
+                subtitle: 'Version ${controller.appVersion.value}',
+                onTap: controller.showAbout,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          // Logout button
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 32),
+            child: ElevatedButton.icon(
+              onPressed: controller.logout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
+              icon: const Icon(Icons.logout, size: 20),
+              label: const Text(
+                'Se déconnecter',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
-            const ListTile(
-              leading: Icon(Icons.notifications),
-              title: Text('Notifications'),
-              trailing: Icon(Icons.arrow_forward_ios),
-            ),
-            const ListTile(
-              leading: Icon(Icons.security),
-              title: Text('Security'),
-              trailing: Icon(Icons.arrow_forward_ios),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAboutSection(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.all(16.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('About & Support', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 16.0),
-            const ListTile(
-              leading: Icon(Icons.help),
-              title: Text('Help & Support'),
-              trailing: Icon(Icons.arrow_forward_ios),
-            ),
-            const ListTile(
-              leading: Icon(Icons.info),
-              title: Text('About Koala'),
-              trailing: Icon(Icons.arrow_forward_ios),
-            ),
-            const SizedBox(height: 16.0),
-            Center(
-              child: ElevatedButton(
-                onPressed: controller.logout,
-                style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.error),
-                child: const Text('Logout'),
+  /// Settings group with title and items
+  Widget _buildSettingsGroup({
+    required String title,
+    required List<Widget> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            children: items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return Column(
+                children: [
+                  item,
+                  if (index < items.length - 1)
+                    Divider(
+                      height: 1,
+                      color: AppColors.textSecondary.withValues(alpha: 0.1),
+                    ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Regular settings item with tap action
+  Widget _buildSettingsItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 20),
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(subtitle, style: AppTextStyles.caption),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    );
+  }
+
+  /// Settings item with toggle switch
+  Widget _buildToggleSettingsItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required RxBool value,
+    required Function(bool) onChanged,
+  }) {
+    return ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 20),
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(subtitle, style: AppTextStyles.caption),
+      trailing: Obx(
+        () => Switch(
+          value: value.value,
+          onChanged: onChanged,
+          activeColor: AppColors.primary,
         ),
       ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
   }
 }

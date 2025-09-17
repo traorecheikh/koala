@@ -1,264 +1,245 @@
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:koala/app/core/theme/app_colors.dart';
+import 'package:koala/app/core/theme/app_text_styles.dart';
 import 'package:koala/app/modules/insights/controllers/insights_controller.dart';
 
-/// Modern insights view with AI-powered financial analysis
-/// - Smart spending insights
-/// - Category breakdown
-/// - Trends analysis
-/// - Personalized recommendations
+/// High-fidelity AI insights view with smart financial recommendations
 class InsightsView extends GetView<InsightsController> {
   const InsightsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: theme.colorScheme.surface,
-        appBar: AppBar(
-          title: Text(
-            'Analyses IA',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          actions: [
-            IconButton(
-              onPressed: () => _showTimeframePicker(context),
-              icon: const Icon(Icons.date_range_rounded),
-            ),
-          ],
-          bottom: TabBar(
-            tabs: const [
-              Tab(text: 'Aperçu'),
-              Tab(text: 'Catégories'),
-              Tab(text: 'Tendances'),
-            ],
-            labelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp),
-            unselectedLabelStyle: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 13.sp,
-            ),
-          ),
-        ),
-        body: TabBarView(
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
           children: [
-            _buildOverviewTab(context),
-            _buildCategoriesTab(context),
-            _buildTrendsTab(context),
+            _buildAppBar(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [_buildAskInsightSection(), _buildInsightsList()],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOverviewTab(BuildContext context) {
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FadeInDown(child: _buildFinancialOverview(context)),
-          SizedBox(height: 24.h),
-          // FadeInUp(
-          //   delay: const Duration(milliseconds: 200),
-          //   child: _buildInsightsList(context),
-          // ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFinancialOverview(BuildContext context) {
-    final theme = Theme.of(context);
+  /// Custom app bar with navigation
+  Widget _buildAppBar() {
     return Container(
-      padding: EdgeInsets.all(24.w),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(16.r),
+        color: AppColors.background,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            'Aperçu Financier',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: Colors.white.withOpacity(0.9),
-              fontWeight: FontWeight.w500,
+          IconButton(
+            onPressed: () => Get.back(),
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: AppColors.textPrimary,
+            ),
+            tooltip: 'Retour',
+          ),
+          Expanded(child: Text('Insights IA', style: AppTextStyles.h2)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.info.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_awesome, size: 16, color: AppColors.info),
+                const SizedBox(width: 4),
+                Text(
+                  'IA',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.info,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: 16.h),
+        ],
+      ),
+    );
+  }
 
-          // Budget usage
+  /// AI question input section
+  Widget _buildAskInsightSection() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.1),
+            AppColors.info.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.psychology,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Budget utilisé',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                      'Assistant Financier IA',
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    Obx(
-                      () => Text(
-                        '${controller.totalSpent.value.toStringAsFixed(0)} / ${controller.budgetLimit.value.toStringAsFixed(0)} XOF',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    Text(
+                      'Posez vos questions financières',
+                      style: AppTextStyles.caption,
                     ),
                   ],
-                ),
-              ),
-              Obx(
-                () => CircularProgressIndicator(
-                  value: controller.budgetUsagePercentage.clamp(0.0, 1.0),
-                  backgroundColor: Colors.white.withOpacity(0.3),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    controller.budgetUsagePercentage > 0.8
-                        ? Colors.red.shade300
-                        : Colors.white,
-                  ),
-                  strokeWidth: 6.w,
                 ),
               ),
             ],
           ),
-
-          SizedBox(height: 16.h),
-          Container(height: 1, color: Colors.white.withOpacity(0.3)),
-          SizedBox(height: 16.h),
-
-          // Savings progress
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Objectif d\'épargne',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Obx(
-                      () => Text(
-                        '${controller.currentSavings.value.toStringAsFixed(0)} / ${controller.savingsGoal.value.toStringAsFixed(0)} XOF',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: controller.questionController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Ex: Comment économiser 15% de mon salaire ?',
+              hintStyle: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondary,
               ),
-              Obx(
-                () => Text(
-                  '${(controller.savingsPercentage * 100).toStringAsFixed(1)}%',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.all(16),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: Obx(
+              () => ElevatedButton.icon(
+                onPressed: controller.isGeneratingInsight.value
+                    ? null
+                    : controller.generateInsight,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                icon: controller.isGeneratingInsight.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.white,
+                          ),
+                        ),
+                      )
+                    : const Icon(Icons.auto_awesome, size: 20),
+                label: Text(
+                  controller.isGeneratingInsight.value
+                      ? 'Génération en cours...'
+                      : 'Demander Insight',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Widget _buildInsightsList(BuildContext context) {
-  //   final theme = Theme.of(context);
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Text(
-  //         'Recommandations IA',
-  //         style: theme.textTheme.titleLarge?.copyWith(
-  //           fontWeight: FontWeight.w600,
-  //         ),
-  //       ),
-  //       SizedBox(height: 16.h),
-  //       Obx(() {
-  //         if (controller.insights.isEmpty) {
-  //           return _buildNoInsightsState(context);
-  //         }
-  //         return ListView.separated(
-  //           shrinkWrap: true,
-  //           physics: const NeverScrollableScrollPhysics(),
-  //           itemCount: controller.insights.length,
-  //           separatorBuilder: (context, index) => SizedBox(height: 12.h),
-  //           itemBuilder: (context, index) {
-  //             final insight = controller.insights[index];
-  //             return FadeInUp(
-  //               delay: Duration(milliseconds: index * 100),
-  //               child: _buildInsightCard(context, insight),
-  //             );
-  //           },
-  //         );
-  //       }),
-  //     ],
-  //   );
-  // }
+  /// List of AI-generated insights
+  Widget _buildInsightsList() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Recommandations personnalisées', style: AppTextStyles.h2),
+          const SizedBox(height: 16),
+          Obx(
+            () => controller.insights.isEmpty
+                ? _buildEmptyInsights()
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: controller.insights.length,
+                    itemBuilder: (context, index) {
+                      final insight = controller.insights[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildInsightCard(insight),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  /// Clean, professional insight card design inspired by modern financial apps
-  Widget _buildInsightCard(BuildContext context, Map<String, dynamic> insight) {
-    final theme = Theme.of(context);
-    final type = insight['type'] as String;
-    final title = insight['title'] as String;
-    final description = insight['description'] as String;
-    final amount = insight['amount'] as double;
-    final icon = insight['icon'] as IconData;
-    final priority = insight['priority'] as String;
-    final suggestions = insight['suggestions'] as List<String>? ?? [];
-
-    // Clean, minimal color coding (like Revolut/Monzo)
-    Color getAccentColor() {
-      switch (type) {
-        case 'warning':
-          return const Color(0xFFFF6B6B); // Soft red
-        case 'success':
-          return const Color(0xFF51CF66); // Soft green  
-        case 'info':
-          return theme.colorScheme.primary;
-        default:
-          return theme.colorScheme.onSurfaceVariant;
-      }
-    }
+  /// Individual insight card widget
+  Widget _buildInsightCard(dynamic insight) {
+    final priorityColor = _getPriorityColor(insight.priority);
 
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.08),
-          width: 1,
-        ),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: priorityColor.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -267,175 +248,181 @@ class InsightsView extends GetView<InsightsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row with icon and title
+          // Header with priority and potential savings
           Row(
             children: [
-              // Clean icon container (Airbnb style)
               Container(
-                width: 40.w,
-                height: 40.w,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: getAccentColor().withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10.r),
+                  color: priorityColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  icon,
-                  color: getAccentColor(),
-                  size: 20.sp,
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    if (amount > 0) ...[
-                      SizedBox(height: 2.h),
-                      Text(
-                        '${amount.toStringAsFixed(0)} XOF',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: getAccentColor(),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  insight.priority.toUpperCase(),
+                  style: AppTextStyles.caption.copyWith(
+                    color: priorityColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              // Clean priority badge
-              if (priority == 'high')
+              const Spacer(),
+              if (insight.potentialSavings > 0)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: getAccentColor().withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6.r),
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Important',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: getAccentColor(),
-                      fontWeight: FontWeight.w500,
-                      fontSize: 11.sp,
+                    '+${insight.potentialSavings.toStringAsFixed(0)} XOF',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
             ],
           ),
-          SizedBox(height: 12.h),
-          
-          // Description with proper spacing
+          const SizedBox(height: 16),
+
+          // Title and description
           Text(
-            description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.5,
-            ),
+            insight.title,
+            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
           ),
-          
-          // Clean suggestions section (if available)
-          if (suggestions.isNotEmpty) ...[
-            SizedBox(height: 16.h),
-            Container(
-              padding: EdgeInsets.all(14.w),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Suggestions',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+          const SizedBox(height: 8),
+          Text(
+            insight.description,
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+
+          // Action steps
+          if (insight.steps.isNotEmpty) ...[
+            Text(
+              'Étapes recommandées:',
+              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            ...insight.steps.asMap().entries.map((entry) {
+              final index = entry.key;
+              final step = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(step, style: AppTextStyles.body)),
+                  ],
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 16),
+          ],
+
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => controller.dismissInsight(insight.id),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  SizedBox(height: 8.h),
-                  ...suggestions.take(3).map((suggestion) => Padding(
-                    padding: EdgeInsets.only(bottom: 6.h),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 4.w,
-                          height: 4.w,
-                          margin: EdgeInsets.only(top: 8.h, right: 10.w),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            suggestion,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
+                  child: Text(
+                    'Ignorer',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
                     ),
-                  )).toList(),
-                ],
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => controller.applyInsight(insight.id),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: priorityColor,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Appliquer',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildNoInsightsState(BuildContext context) {
-    final theme = Theme.of(context);
+  /// Empty state for insights
+  Widget _buildEmptyInsights() {
     return Container(
-      padding: EdgeInsets.all(32.w),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.08),
-          width: 1,
-        ),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           Container(
-            width: 56.w,
-            height: 56.w,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16.r),
+              color: AppColors.info.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(32),
             ),
             child: Icon(
-              Icons.psychology_outlined,
-              size: 28.sp,
-              color: theme.colorScheme.primary,
+              Icons.lightbulb_outlined,
+              size: 32,
+              color: AppColors.info.withValues(alpha: 0.6),
             ),
           ),
-          SizedBox(height: 16.h),
+          const SizedBox(height: 16),
           Text(
-            'Aucune analyse disponible',
-            style: theme.textTheme.titleMedium?.copyWith(
+            'Aucun insight pour le moment',
+            style: AppTextStyles.body.copyWith(
               fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface,
+              color: AppColors.textSecondary,
             ),
           ),
-          SizedBox(height: 8.h),
+          const SizedBox(height: 8),
           Text(
-            'Ajoutez plus de transactions pour obtenir des recommandations personnalisées',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.4,
-            ),
+            'Posez une question à l\'IA pour obtenir des recommandations personnalisées',
+            style: AppTextStyles.caption,
             textAlign: TextAlign.center,
           ),
         ],
@@ -443,461 +430,20 @@ class InsightsView extends GetView<InsightsController> {
     );
   }
 
-  Widget _buildCategoriesTab(BuildContext context) {
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FadeInDown(child: _buildSpendingChart(context)),
-          SizedBox(height: 24.h),
-          Text(
-            'Répartition par catégorie',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          FadeInUp(
-            delay: const Duration(milliseconds: 200),
-            child: _buildCategoryList(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSpendingChart(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Dépenses par catégorie',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          // Placeholder for chart - in real app you'd use a chart library
-          Container(
-            height: 200.h,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.pie_chart_outline_rounded,
-                    size: 48.sp,
-                    color: theme.colorScheme.primary,
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Graphique interactif',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  Text(
-                    'Bientôt disponible',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryList(BuildContext context) {
-    return Obx(() {
-      if (controller.categorySpending.isEmpty) {
-        return _buildNoCategoriesState(context);
-      }
-      return ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: controller.categorySpending.length,
-        separatorBuilder: (context, index) => SizedBox(height: 12.h),
-        itemBuilder: (context, index) {
-          final category = controller.categorySpending[index];
-          return FadeInUp(
-            delay: Duration(milliseconds: index * 100),
-            child: _buildCategoryCard(context, category),
-          );
-        },
-      );
-    });
-  }
-
-  Widget _buildNoCategoriesState(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: EdgeInsets.all(24.w),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.category_outlined,
-            size: 48.sp,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            'Aucune donnée de catégorie',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryCard(
-    BuildContext context,
-    Map<String, dynamic> category,
-  ) {
-    final theme = Theme.of(context);
-    final amount = category['amount'] as double;
-    final percentage = category['percentage'] as double;
-    final trend = category['trend'] as String;
-    final previousAmount = category['previousAmount'] as double;
-    final change = amount - previousAmount;
-
-    Color getTrendColor() {
-      switch (trend) {
-        case 'up':
-          return theme.colorScheme.error;
-        case 'down':
-          return theme.colorScheme.primary;
-        case 'stable':
-          return theme.colorScheme.onSurfaceVariant;
-        default:
-          return theme.colorScheme.onSurfaceVariant;
-      }
+  /// Helper method to get priority color
+  Color _getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high':
+      case 'élevée':
+        return AppColors.error;
+      case 'medium':
+      case 'moyenne':
+        return AppColors.warning;
+      case 'low':
+      case 'faible':
+        return AppColors.success;
+      default:
+        return AppColors.primary;
     }
-
-    IconData getTrendIcon() {
-      switch (trend) {
-        case 'up':
-          return Icons.trending_up_rounded;
-        case 'down':
-          return Icons.trending_down_rounded;
-        case 'stable':
-          return Icons.trending_flat_rounded;
-        default:
-          return Icons.trending_flat_rounded;
-      }
-    }
-
-    return Container(
-      padding: EdgeInsets.all(18.w),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.08),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44.w,
-            height: 44.w,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(
-              category['icon'] as IconData,
-              color: theme.colorScheme.primary,
-              size: 24.sp,
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  category['category'] as String,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  '${(percentage * 100).toStringAsFixed(1)}% du total',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${amount.toStringAsFixed(0)} XOF',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (change != 0) ...[
-                SizedBox(height: 4.h),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(getTrendIcon(), size: 16.sp, color: getTrendColor()),
-                    SizedBox(width: 4.w),
-                    Text(
-                      '${change > 0 ? '+' : ''}${change.toStringAsFixed(0)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: getTrendColor(),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrendsTab(BuildContext context) {
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FadeInDown(child: _buildTrendsChart(context)),
-          SizedBox(height: 24.h),
-          FadeInUp(
-            delay: const Duration(milliseconds: 200),
-            child: _buildTrendsSummary(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrendsChart(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Tendances des dépenses',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          Container(
-            height: 200.h,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.show_chart_rounded,
-                    size: 48.sp,
-                    color: theme.colorScheme.primary,
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Graphique linéaire',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  Text(
-                    'Bientôt disponible',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrendsSummary(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Analyse des tendances',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 16.h),
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(
-              color: theme.colorScheme.outline.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              _buildTrendItem(
-                context,
-                'Dépense moyenne quotidienne',
-                '25,714 XOF',
-                Icons.calendar_today_rounded,
-                theme.colorScheme.primary,
-              ),
-              SizedBox(height: 12.h),
-              _buildTrendItem(
-                context,
-                'Jour le plus dépensier',
-                'Samedi (45,000 XOF)',
-                Icons.trending_up_rounded,
-                theme.colorScheme.error,
-              ),
-              SizedBox(height: 12.h),
-              _buildTrendItem(
-                context,
-                'Économie cette semaine',
-                '-3,000 XOF vs semaine précédente',
-                Icons.trending_down_rounded,
-                theme.colorScheme.secondary,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTrendItem(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          padding: EdgeInsets.all(8.w),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          child: Icon(icon, color: color, size: 20.sp),
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              Text(
-                value,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showTimeframePicker(BuildContext context) {
-    Get.bottomSheet(
-      Container(
-        padding: EdgeInsets.all(20.w),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Période d\'analyse',
-              style: Get.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 20.h),
-            ...['Cette semaine', 'Ce mois', 'Cette année'].map((timeframe) {
-              return Obx(
-                () => RadioListTile<String>(
-                  title: Text(timeframe),
-                  value: timeframe,
-                  groupValue: controller.selectedTimeframe.value,
-                  onChanged: (value) {
-                    if (value != null) {
-                      controller.changeTimeframe(value);
-                      Get.back();
-                    }
-                  },
-                ),
-              );
-            }).toList(),
-          ],
-        ),
-      ),
-    );
   }
 }

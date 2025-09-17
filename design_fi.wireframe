@@ -1,0 +1,120 @@
+Parfait 🙌
+Je vais donc générer les **wireframes low-fi textuels pour tous tes écrans du MVP** (Onboarding → Dashboard → Transactions → Prêts → Récurrences → IA Insights → Import/Export → Paramètres).
+
+---
+
+# 📐 Wireframes Low-Fi (texte)
+
+### 1. **Onboarding / Auth**
+
+* Logo (centré haut).
+* Champ Nom (text).
+* Champ Téléphone (text, validé).
+* Champ Salaire initial (numeric).
+* Champ Solde initial (numeric).
+* Champ Date de paie (picker).
+* Champ PIN (4–6 digits) + bouton activer biométrie.
+* Bouton \[Continuer] (large, plein).
+
+---
+
+### 2. **Dashboard / Accueil**
+
+* Top App Bar : “Assistant Financier” + icône paramètres.
+* Bloc HeroBalance (solde courant total).
+* Carte “Revenus du mois” / “Dépenses du mois”.
+* Section “Dernières transactions” (liste 5 max).
+* Bouton flottant \[+ Transaction].
+* Bottom Navigation (Accueil / Transactions / Prêts / Insights).
+
+---
+
+### 3. **Transactions (Liste)**
+
+* Barre de recherche + filtres (date, catégorie).
+* Liste paginée de `CardTransaction` (montant, merchant, catégorie, tag, icône type).
+* Swipe gauche → Éditer.
+* Swipe droite → Supprimer.
+* Bouton flottant \[+ Nouvelle transaction].
+
+---
+
+### 4. **Transaction (Formulaire CRUD)**
+
+* BottomSheetEditor (modale).
+* Champs :
+
+  * Montant (numeric).
+  * Type (dépense / revenu / prêt / remboursement / transfert).
+  * Compte (dropdown).
+  * Catégorie (dropdown).
+  * Date/Heure.
+  * Merchant / Description (text).
+  * Tags (chips).
+  * Joindre justificatif (upload photo).
+* Switch “Affecte solde ?”.
+* Boutons \[Enregistrer] / \[Annuler].
+
+---
+
+### 5. **Prêts**
+
+* Liste prêts : montant, solde restant, échéance.
+* Bouton \[+ Nouveau prêt].
+* Écran “Créer prêt” :
+
+  * Montant principal.
+  * Taux d’intérêt.
+  * Date début.
+  * Durée (mois).
+  * Échéance mensuelle calculée auto.
+  * Bouton \[Enregistrer].
+
+---
+
+### 6. **Récurrences**
+
+* Liste des récurrences : titre (BRT, cantine…), fréquence, prochain run.
+* Bouton \[+ Nouvelle récurrence].
+* Formulaire :
+
+  * Nom.
+  * Montant.
+  * Fréquence (quotidien/hebdo/mensuel).
+  * Compte associé.
+  * Catégorie.
+  * Notification (toggle).
+
+---
+
+### 7. **IA Insights**
+
+* Bloc question : “Comment économiser 15% ?” (input).
+* Bouton \[Demander Insight].
+* Liste cartes suggestions :
+
+  * Titre.
+  * Estimation économie (XOF).
+  * Priorité.
+  * Étapes (liste).
+  * Bouton \[Appliquer règle].
+
+---
+
+### 8. **Import / Export**
+
+* Carte \[Importer CSV/JSON] → ouvre file picker.
+* Carte \[Exporter CSV/JSON] → enregistre fichier chiffré.
+* Historique imports (succès/erreurs).
+
+---
+
+### 9. **Paramètres**
+
+* Profil utilisateur (nom, téléphone, salaire, date de paie).
+* Sécurité (modifier PIN, activer biométrie).
+* Synchronisation serveur (opt-in toggle).
+* Sauvegardes locales.
+* À propos (version app).
+
+---

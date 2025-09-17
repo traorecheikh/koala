@@ -1,215 +1,185 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:koala/app/routes/app_routes.dart';
-import 'package:koala/app/shared/services/hive_service.dart';
-import 'package:koala/app/shared/theme/colors.dart';
 
 class OnboardingController extends GetxController {
-  final PageController pageController = PageController();
-  var currentPage = 0.obs;
+  final formKey = GlobalKey<FormState>();
 
-  // Text controllers for all form fields
-  final TextEditingController nameInputController = TextEditingController();
-  final TextEditingController phoneInputController = TextEditingController();
-  final TextEditingController salaryInputController = TextEditingController();
-  final TextEditingController balanceInputController = TextEditingController();
-  final TextEditingController pinInputController = TextEditingController();
+  // Text controllers
+  final nameController = TextEditingController();
+  final phoneController = TextEditingController();
+  final salaryController = TextEditingController();
+  final balanceController = TextEditingController();
+  final initialBalanceController = TextEditingController();
+  final pinController = TextEditingController();
+  final confirmPinController = TextEditingController();
 
-  // Observable data
-  var name = ''.obs;
-  var phone = ''.obs;
-  var salary = ''.obs;
-  var balance = ''.obs;
-  var pin = ''.obs;
-  var biometricEnabled = false.obs;
+  // Page controller for managing steps
+  final pageController = PageController();
 
-  final HiveService _hiveService = Get.find<HiveService>();
+  // Observable state
+  final selectedPayDay = 1.obs;
+  final selectedPayday = Rxn<int>();
+  final biometricEnabled = false.obs;
+  final isLoading = false.obs;
+  final currentStep = 0.obs;
+  final personalInfoError = ''.obs;
+
+  // Constants
+  final int totalSteps = 3;
+  final int maxSteps = 3;
 
   @override
   void onInit() {
     super.onInit();
-    pageController.addListener(() {
-      currentPage.value = pageController.page?.round() ?? 0;
-    });
-    
-    // Add listeners for all controllers
-    nameInputController.addListener(() {
-      name.value = nameInputController.text;
-    });
-    phoneInputController.addListener(() {
-      phone.value = phoneInputController.text;
-    });
-    salaryInputController.addListener(() {
-      salary.value = salaryInputController.text;
-    });
-    balanceInputController.addListener(() {
-      balance.value = balanceInputController.text;
-    });
-    pinInputController.addListener(() {
-      pin.value = pinInputController.text;
-    });
+    // Initialize balance controller to point to the same controller
+    initialBalanceController.text = balanceController.text;
   }
 
-  void nextPage() {
-    // Validate current step before proceeding
-    if (!_validateCurrentStep()) {
-      return;
-    }
+  @override
+  void onClose() {
+    nameController.dispose();
+    phoneController.dispose();
+    salaryController.dispose();
+    balanceController.dispose();
+    initialBalanceController.dispose();
+    pinController.dispose();
+    confirmPinController.dispose();
+    pageController.dispose();
+    super.onClose();
+  }
 
-    if (currentPage.value < 6) {
-      // Now we have 7 steps (0-6)
-      pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
+  /// Move to next step
+  void nextStep() {
+    if (currentStep.value < totalSteps - 1) {
+      if (_validateCurrentStep()) {
+        currentStep.value++;
+        pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     } else {
-      // Onboarding finished, save data and navigate to home
-      _saveOnboardingData();
-      _hiveService.setOnboardingComplete(true);
-      Get.offAllNamed(Routes.home);
+      completeOnboarding();
     }
   }
 
-  void skipToEnd() {
-    pageController.animateToPage(
-      6, // Go to completion step (7th step, index 6)
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  void previousPage() {
-    if (currentPage.value > 0) {
+  /// Move to previous step
+  void previousStep() {
+    if (currentStep.value > 0) {
+      currentStep.value--;
       pageController.previousPage(
-        duration: const Duration(milliseconds: 400),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     }
   }
 
+  /// Set payday
+  void setPayday(int? day) {
+    if (day != null) {
+      selectedPayday.value = day;
+      selectedPayDay.value = day;
+    }
+  }
+
+  /// Toggle biometric authentication
+  void toggleBiometric(bool value) {
+    biometricEnabled.value = value;
+  }
+
+  /// Validate current step
   bool _validateCurrentStep() {
-    switch (currentPage.value) {
-      case 0: // Welcome step
-      case 1: // Koala bot intro step
-        return true;
-      case 2: // Personal info step
-        if (name.value.isEmpty || name.value.trim().length < 2) {
-          Get.snackbar(
-            'Nom requis',
-            'Veuillez saisir votre nom complet',
-            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
-            colorText: AppColors.textInverse,
-            snackPosition: SnackPosition.TOP,
-          );
+    personalInfoError.value = '';
+
+    switch (currentStep.value) {
+      case 0: // Personal info step
+        if (nameController.text.trim().isEmpty) {
+          personalInfoError.value = 'Le nom est requis';
           return false;
         }
-        if (phone.value.isEmpty || phone.value.length < 8) {
-          Get.snackbar(
-            'Téléphone requis',
-            'Veuillez saisir un numéro de téléphone valide',
-            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
-            colorText: AppColors.textInverse,
-            snackPosition: SnackPosition.TOP,
-          );
+        if (phoneController.text.trim().isEmpty) {
+          personalInfoError.value = 'Le numéro de téléphone est requis';
           return false;
         }
         return true;
-      case 3: // Salary step
-        if (salary.value.isEmpty || double.tryParse(salary.value) == null) {
-          Get.snackbar(
-            'Salaire requis',
-            'Veuillez saisir votre salaire mensuel',
-            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
-            colorText: AppColors.textInverse,
-            snackPosition: SnackPosition.TOP,
-          );
+
+      case 1: // Financial info step
+        if (salaryController.text.trim().isEmpty) {
+          personalInfoError.value = 'Le salaire est requis';
           return false;
         }
-        final salaryValue = double.parse(salary.value);
-        if (salaryValue <= 0) {
-          Get.snackbar(
-            'Salaire invalide',
-            'Le salaire doit être supérieur à zéro',
-            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
-            colorText: AppColors.textInverse,
-            snackPosition: SnackPosition.TOP,
-          );
+        if (initialBalanceController.text.trim().isEmpty) {
+          personalInfoError.value = 'Le solde initial est requis';
+          return false;
+        }
+        if (selectedPayday.value == null) {
+          personalInfoError.value = 'La date de paie est requise';
           return false;
         }
         return true;
-      case 4: // Balance step
-        if (balance.value.isEmpty || double.tryParse(balance.value) == null) {
-          Get.snackbar(
-            'Solde requis',
-            'Veuillez saisir votre solde actuel',
-            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
-            colorText: AppColors.textInverse,
-            snackPosition: SnackPosition.TOP,
-          );
+
+      case 2: // Security step
+        if (pinController.text.trim().length < 4) {
+          personalInfoError.value = 'Le PIN doit contenir au moins 4 chiffres';
+          return false;
+        }
+        if (pinController.text != confirmPinController.text) {
+          personalInfoError.value = 'Les codes PIN ne correspondent pas';
           return false;
         }
         return true;
-      case 5: // Security step
-        if (pin.value.length != 4) {
-          Get.snackbar(
-            'Code PIN requis',
-            'Veuillez créer un code PIN à 4 chiffres',
-            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
-            colorText: AppColors.textInverse,
-            snackPosition: SnackPosition.TOP,
-          );
-          return false;
-        }
-        return true;
-      case 6: // Final step
-        return true;
+
       default:
         return true;
     }
   }
 
-  void _saveOnboardingData() {
-    try {
-      _hiveService.saveUserData({
-        'name': name.value.trim(),
-        'phone': phone.value.trim(),
-        'salary': double.parse(salary.value),
-        'initialBalance': double.parse(balance.value),
-        'currentBalance': double.parse(balance.value),
-        'currency': 'XOF',
-        'pin': pin.value, // In a real app, this should be hashed
-        'biometricEnabled': biometricEnabled.value,
-        'onboardingCompleted': true,
-        'setupDate': DateTime.now().toIso8601String(),
-      });
+  /// Complete onboarding process
+  Future<void> completeOnboarding() async {
+    if (!_validateCurrentStep()) return;
 
-      Get.snackbar(
-        'Profil créé!',
-        'Votre configuration a été sauvegardée avec succès',
-        backgroundColor: AppColors.success.withAlpha((0.8 * 255).toInt()),
-        colorText: AppColors.textInverse,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
+    try {
+      isLoading.value = true;
+
+      // Create user model (mock for now)
+      final user = MockUserModel(
+        name: nameController.text.trim(),
+        phone: phoneController.text.trim(),
+        salary: double.tryParse(salaryController.text) ?? 0.0,
+        currentBalance: double.tryParse(initialBalanceController.text) ?? 0.0,
+        payDay: selectedPayday.value ?? 1,
+        biometricEnabled: biometricEnabled.value,
       );
+
+      // TODO: Save user to storage using HiveService
+      await Future.delayed(const Duration(seconds: 2)); // Mock delay
+
+      // Navigate to dashboard
+      Get.offAllNamed('/dashboard');
+      Get.snackbar('Bienvenue!', 'Votre compte a été créé avec succès');
     } catch (e) {
-      Get.snackbar(
-        'Erreur',
-        'Impossible de sauvegarder vos données: $e',
-        backgroundColor: AppColors.error.withAlpha((0.8 * 255).toInt()),
-        colorText: AppColors.textInverse,
-        snackPosition: SnackPosition.TOP,
-      );
+      Get.snackbar('Erreur', 'Impossible de créer le compte');
+    } finally {
+      isLoading.value = false;
     }
   }
+}
 
-  @override
-  void onClose() {
-    pageController.dispose();
-    nameInputController.dispose();
-    phoneInputController.dispose();
-    salaryInputController.dispose();
-    balanceInputController.dispose();
-    pinInputController.dispose();
-    super.onClose();
-  }
+/// Mock user model for demonstration
+class MockUserModel {
+  final String name;
+  final String phone;
+  final double salary;
+  final double currentBalance;
+  final int payDay;
+  final bool biometricEnabled;
+
+  MockUserModel({
+    required this.name,
+    required this.phone,
+    required this.salary,
+    required this.currentBalance,
+    required this.payDay,
+    required this.biometricEnabled,
+  });
 }
