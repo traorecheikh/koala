@@ -2,29 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Modern, professional theme configuration for Koala Financial App
+/// Following modern financial app design patterns (inspired by Revolut, Monzo, etc.)
 class AppTheme {
-  // Brand Colors - Modern Financial App Palette
-  static const Color _primaryColor = Color(0xFF0066FF); // Modern blue
-  static const Color _primaryVariant = Color(0xFF0052CC);
-  static const Color _secondaryColor = Color(0xFF00D4AA); // Mint green
-  static const Color _secondaryVariant = Color(0xFF00B894);
+  // Brand Colors - Modern Financial App Palette (No gradients, flat design)
+  static const Color _primaryColor = Color(0xFF1A73E8); // Google-style blue
+  static const Color _primaryVariant = Color(0xFF1557B0);
+  static const Color _secondaryColor = Color(0xFF34A853); // Success green
+  static const Color _secondaryVariant = Color(0xFF2D8F46);
 
-  // Surface Colors
-  static const Color _surfaceLight = Color(0xFFFBFCFE);
-  static const Color _surfaceDark = Color(0xFF0A0E13);
+  // Surface Colors - Clean, modern surfaces
+  static const Color _surfaceLight = Color(0xFFFBFBFB);
+  static const Color _surfaceDark = Color(0xFF121212);
   static const Color _cardLight = Color(0xFFFFFFFF);
-  static const Color _cardDark = Color(0xFF151922);
+  static const Color _cardDark = Color(0xFF1E1E1E);
 
-  // Text Colors
-  static const Color _textPrimaryLight = Color(0xFF1A1D29);
-  static const Color _textSecondaryLight = Color(0xFF6B7280);
-  static const Color _textPrimaryDark = Color(0xFFF9FAFB);
-  static const Color _textSecondaryDark = Color(0xFFD1D5DB);
+  // Text Colors - High contrast for readability
+  static const Color _textPrimaryLight = Color(0xFF202124);
+  static const Color _textSecondaryLight = Color(0xFF5F6368);
+  static const Color _textPrimaryDark = Color(0xFFF8F9FA);
+  static const Color _textSecondaryDark = Color(0xFFE8EAED);
 
-  // Accent Colors
-  static const Color _successColor = Color(0xFF10B981);
-  static const Color _warningColor = Color(0xFFF59E0B);
-  static const Color _errorColor = Color(0xFFEF4444);
+  // Accent Colors - Modern financial app palette
+  static const Color _successColor = Color(0xFF34A853);
+  static const Color _warningColor = Color(0xFFFBBC04);
+  static const Color _errorColor = Color(0xFFEA4335);
 
   /// Light Theme Configuration
   static ThemeData get lightTheme {
@@ -32,14 +33,14 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
 
-      // Color Scheme
+      // Color Scheme - Clean, accessible colors
       colorScheme: const ColorScheme.light(
         primary: _primaryColor,
-        primaryContainer: Color(0xFFE3F2FD),
+        primaryContainer: Color(0xFFE8F0FE),
         secondary: _secondaryColor,
-        secondaryContainer: Color(0xFFE0F7F4),
+        secondaryContainer: Color(0xFFE6F4EA),
         surface: _surfaceLight,
-        surfaceVariant: Color(0xFFF8FAFC),
+        surfaceVariant: Color(0xFFF8F9FA),
         background: _surfaceLight,
         error: _errorColor,
         onPrimary: Colors.white,
@@ -48,8 +49,8 @@ class AppTheme {
         onSurfaceVariant: _textSecondaryLight,
         onBackground: _textPrimaryLight,
         onError: Colors.white,
-        outline: Color(0xFFE5E7EB),
-        shadow: Color(0x1A000000),
+        outline: Color(0xFFDADCE0),
+        shadow: Color(0x0A000000),
       ),
 
       // Typography
@@ -68,60 +69,60 @@ class AppTheme {
         ),
       ),
 
-      // Card Theme
+      // Card Theme - Modern card design with subtle borders
       cardTheme: CardThemeData(
         elevation: 0,
         color: _cardLight,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFF1F5F9), width: 1),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFE8EAED), width: 1),
         ),
-        margin: const EdgeInsets.all(8),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       ),
 
-      // Elevated Button Theme
+      // Elevated Button Theme - Modern button design
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: _primaryColor,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
+          minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
 
-      // Outlined Button Theme
+      // Outlined Button Theme - Consistent with elevated buttons
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 56),
-          side: const BorderSide(color: _primaryColor, width: 1.5),
+          minimumSize: const Size(double.infinity, 48),
+          side: const BorderSide(color: _primaryColor, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
 
-      // Input Decoration Theme
+      // Input Decoration Theme - Clean, modern inputs
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: const Color(0xFFF8F9FA),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFDADCE0)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFDADCE0)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: _primaryColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 16,
+          vertical: 12,
         ),
       ),
 
@@ -133,11 +134,11 @@ class AppTheme {
         shape: CircleBorder(),
       ),
 
-      // Divider Theme
+      // Divider Theme - Subtle dividers
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFE5E7EB),
-        thickness: 1,
-        space: 1,
+        color: Color(0xFFE8EAED),
+        thickness: 0.5,
+        space: 0.5,
       ),
     );
   }
@@ -148,14 +149,14 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
 
-      // Color Scheme
+      // Color Scheme - Modern dark theme
       colorScheme: const ColorScheme.dark(
         primary: _primaryColor,
-        primaryContainer: Color(0xFF1E3A8A),
+        primaryContainer: Color(0xFF1A73E8),
         secondary: _secondaryColor,
-        secondaryContainer: Color(0xFF065F46),
+        secondaryContainer: Color(0xFF2D5016),
         surface: _surfaceDark,
-        surfaceVariant: Color(0xFF1F2937),
+        surfaceVariant: Color(0xFF2C2C2C),
         background: _surfaceDark,
         error: _errorColor,
         onPrimary: Colors.white,
@@ -164,8 +165,8 @@ class AppTheme {
         onSurfaceVariant: _textSecondaryDark,
         onBackground: _textPrimaryDark,
         onError: Colors.white,
-        outline: Color(0xFF374151),
-        shadow: Color(0x3D000000),
+        outline: Color(0xFF5F6368),
+        shadow: Color(0x4D000000),
       ),
 
       // Typography
@@ -184,60 +185,60 @@ class AppTheme {
         ),
       ),
 
-      // Card Theme
+      // Card Theme - Dark mode cards
       cardTheme: CardThemeData(
         elevation: 0,
         color: _cardDark,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF374151), width: 1),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF5F6368), width: 1),
         ),
-        margin: const EdgeInsets.all(8),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       ),
 
-      // Elevated Button Theme
+      // Elevated Button Theme - Dark mode buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: _primaryColor,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
+          minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
 
-      // Outlined Button Theme
+      // Outlined Button Theme - Dark mode outlined buttons
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 56),
-          side: const BorderSide(color: _primaryColor, width: 1.5),
+          minimumSize: const Size(double.infinity, 48),
+          side: const BorderSide(color: _primaryColor, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
 
-      // Input Decoration Theme
+      // Input Decoration Theme - Dark mode inputs
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF1F2937),
+        fillColor: const Color(0xFF2C2C2C),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF374151)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF5F6368)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF374151)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF5F6368)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: _primaryColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 16,
+          vertical: 12,
         ),
       ),
 
@@ -249,11 +250,11 @@ class AppTheme {
         shape: CircleBorder(),
       ),
 
-      // Divider Theme
+      // Divider Theme - Dark mode dividers
       dividerTheme: const DividerThemeData(
-        color: Color(0xFF374151),
-        thickness: 1,
-        space: 1,
+        color: Color(0xFF5F6368),
+        thickness: 0.5,
+        space: 0.5,
       ),
     );
   }

@@ -5,6 +5,11 @@ import 'package:get/get.dart';
 import 'package:koala/app/modules/auth/controllers/auth_controller.dart';
 import 'package:koala/generated/assets.dart';
 
+/// Modern authentication view with improved UX
+/// - Clear visual hierarchy
+/// - Better error handling
+/// - Smooth animations
+/// - Proper accessibility
 class AuthView extends GetView<AuthController> {
   const AuthView({super.key});
 
@@ -22,11 +27,11 @@ class AuthView extends GetView<AuthController> {
               _buildHeader(context),
               const Spacer(flex: 1),
               _buildPinDots(context),
-              const Spacer(flex: 1),
+              SizedBox(height: 32.h),
               _buildKeypad(context),
               const Spacer(flex: 2),
               _buildFooter(context),
-              SizedBox(height: 20.h),
+              SizedBox(height: 24.h),
             ],
           ),
         ),
@@ -38,20 +43,68 @@ class AuthView extends GetView<AuthController> {
     final theme = Theme.of(context);
     return Column(
       children: [
-        FadeInDown(child: Image.asset(Assets.imagesKoala, height: 80.h)),
-        SizedBox(height: 16.h),
+        FadeInDown(
+          child: Container(
+            width: 80.w,
+            height: 80.w,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20.r),
+              child: Image.asset(
+                Assets.imagesKoala,
+                width: 80.w,
+                height: 80.w,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 24.h),
         FadeInUp(
           delay: const Duration(milliseconds: 200),
-          child: Text('Bon retour parmi nous', style: theme.textTheme.headlineSmall),
+          child: Text(
+            'Bon retour !',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
         ),
         SizedBox(height: 8.h),
         FadeInUp(
           delay: const Duration(milliseconds: 400),
           child: Text(
             'Saisissez votre code PIN pour continuer',
-            style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
+        Obx(() {
+          if (controller.errorMessage.value.isNotEmpty) {
+            return FadeIn(
+              child: Container(
+                margin: EdgeInsets.only(top: 16.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  controller.errorMessage.value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        }),
       ],
     );
   }
@@ -61,19 +114,21 @@ class AuthView extends GetView<AuthController> {
     return Obx(() {
       final pinLength = controller.enteredPin.length;
       return ShakeX(
-        key: ValueKey(controller.errorMessage.value), // Shake on error
+        key: ValueKey(controller.errorMessage.value),
         manualTrigger: controller.errorMessage.value.isNotEmpty,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(4, (index) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.symmetric(horizontal: 12.w),
-              width: 20.w,
-              height: 20.w,
+              margin: EdgeInsets.symmetric(horizontal: 8.w),
+              width: 16.w,
+              height: 16.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: index < pinLength ? theme.colorScheme.primary : Colors.transparent,
+                color: index < pinLength 
+                    ? theme.colorScheme.primary 
+                    : Colors.transparent,
                 border: Border.all(
                   color: controller.errorMessage.value.isNotEmpty
                       ? theme.colorScheme.error
@@ -95,17 +150,17 @@ class AuthView extends GetView<AuthController> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: ['1', '2', '3'].map((d) => _buildKeypadButton(context, d)).toList(),
         ),
-        SizedBox(height: 20.h),
+        SizedBox(height: 16.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: ['4', '5', '6'].map((d) => _buildKeypadButton(context, d)).toList(),
         ),
-        SizedBox(height: 20.h),
+        SizedBox(height: 16.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: ['7', '8', '9'].map((d) => _buildKeypadButton(context, d)).toList(),
         ),
-        SizedBox(height: 20.h),
+        SizedBox(height: 16.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -127,26 +182,38 @@ class AuthView extends GetView<AuthController> {
             controller.removePinDigit();
           } else if (value == 'fingerprint') {
             // TODO: Implement biometric login
-            Get.snackbar('Bientôt disponible', 'La connexion par empreinte digitale sera bientôt disponible.');
+            Get.snackbar(
+              'Bientôt disponible', 
+              'La connexion par empreinte digitale sera bientôt disponible.',
+              backgroundColor: theme.colorScheme.primaryContainer,
+              colorText: theme.colorScheme.onPrimaryContainer,
+            );
           }
         } else {
           controller.addPinDigit(value);
         }
       },
-      borderRadius: BorderRadius.circular(50.r),
+      borderRadius: BorderRadius.circular(28.r),
       child: Container(
-        width: 70.w,
-        height: 70.w,
+        width: 56.w,
+        height: 56.w,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(28.r),
+        ),
         alignment: Alignment.center,
         child: isIcon
             ? Icon(
                 value == 'backspace' ? Icons.backspace_outlined : Icons.fingerprint,
-                size: 32.sp,
-                color: theme.colorScheme.onSurface,
+                size: 24.sp,
+                color: theme.colorScheme.onSurfaceVariant,
               )
             : Text(
                 value,
-                style: theme.textTheme.displayMedium,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
       ),
     );
@@ -154,12 +221,27 @@ class AuthView extends GetView<AuthController> {
 
   Widget _buildFooter(BuildContext context) {
     final theme = Theme.of(context);
-    return TextButton(
-      onPressed: controller.showForgotPinDialog,
-      child: Text(
-        'Code PIN oublié ?',
-        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.primary),
-      ),
+    return Column(
+      children: [
+        TextButton(
+          onPressed: controller.showForgotPinDialog,
+          child: Text(
+            'Code PIN oublié ?',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Text(
+          'Utilisez votre empreinte digitale ou saisissez votre code PIN',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

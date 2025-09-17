@@ -9,6 +9,11 @@ import 'package:koala/app/modules/onboarding/controllers/onboarding_controller.d
 import 'package:koala/generated/assets.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
+/// Modern onboarding experience following UX best practices
+/// - Clear visual hierarchy
+/// - Minimal cognitive load per step
+/// - Progressive disclosure
+/// - Proper form validation
 class OnboardingView extends GetView<OnboardingController> {
   const OnboardingView({super.key});
 
@@ -26,21 +31,23 @@ class OnboardingView extends GetView<OnboardingController> {
               children: [
                 _buildWelcomeStep(context),
                 _buildKoalaBotStep(context),
+                _buildPersonalInfoStep(context),
                 _buildIncomeStep(context),
                 _buildBalanceStep(context),
+                _buildSecurityStep(context),
                 _buildCompletionStep(context),
               ],
             ),
             Positioned(
-              top: 20.h,
-              left: 24.w,
-              right: 24.w,
+              top: 16.h,
+              left: 20.w,
+              right: 20.w,
               child: _buildHeader(context),
             ),
             Positioned(
-              bottom: 40.h,
-              left: 24.w,
-              right: 24.w,
+              bottom: 32.h,
+              left: 20.w,
+              right: 20.w,
               child: Obx(() => _buildNavigation(context)),
             ),
           ],
@@ -56,21 +63,26 @@ class OnboardingView extends GetView<OnboardingController> {
       children: [
         SmoothPageIndicator(
           controller: controller.pageController,
-          count: 5,
+          count: 7, // Updated to 7 steps for better UX
           effect: ExpandingDotsEffect(
             activeDotColor: theme.colorScheme.primary,
-            dotColor: theme.colorScheme.surfaceVariant,
-            dotHeight: 6.h,
-            dotWidth: 6.w,
+            dotColor: theme.colorScheme.outline,
+            dotHeight: 4.h,
+            dotWidth: 4.w,
             expansionFactor: 4,
           ),
         ),
         Obx(() {
-          if (controller.currentPage.value < 2) {
+          if (controller.currentPage.value < 6) { // Updated condition
             return FadeIn(
               child: TextButton(
                 onPressed: controller.skipToEnd,
-                child: Text('Ignorer', style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+                child: Text(
+                  'Passer',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             );
           }
@@ -82,7 +94,7 @@ class OnboardingView extends GetView<OnboardingController> {
 
   Widget _buildNavigation(BuildContext context) {
     final theme = Theme.of(context);
-    final isLastStep = controller.currentPage.value == 4;
+    final isLastStep = controller.currentPage.value == 6; // Updated to 7 steps (0-6)
     final isFirstStep = controller.currentPage.value == 0;
 
     return FadeInUp(
@@ -93,7 +105,7 @@ class OnboardingView extends GetView<OnboardingController> {
               child: OutlinedButton(
                 onPressed: controller.previousPage,
                 style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
                   side: BorderSide(color: theme.colorScheme.outline),
                 ),
                 child: const Text('Précédent'),
@@ -105,7 +117,7 @@ class OnboardingView extends GetView<OnboardingController> {
             child: ElevatedButton(
               onPressed: controller.nextPage,
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
+                padding: EdgeInsets.symmetric(vertical: 12.h),
               ),
               child: Text(isLastStep ? 'Commencer' : 'Continuer'),
             ),
@@ -172,6 +184,68 @@ class OnboardingView extends GetView<OnboardingController> {
               style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
               maxLines: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Personal information collection step
+  Widget _buildPersonalInfoStep(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FadeInDown(
+            child: Icon(
+              Icons.person_outline_rounded,
+              size: 120.sp,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          SizedBox(height: 32.h),
+          FadeInUp(
+            child: Text(
+              'Parlez-nous de vous',
+              style: theme.textTheme.displaySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          FadeInUp(
+            delay: const Duration(milliseconds: 200),
+            child: Text(
+              'Ces informations nous aident à personnaliser votre expérience.',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(height: 32.h),
+          FadeInUp(
+            delay: const Duration(milliseconds: 400),
+            child: Column(
+              children: [
+                _buildTextField(
+                  context,
+                  controller: controller.nameInputController,
+                  hintText: 'Votre nom complet',
+                  prefixIcon: Icons.person_outline,
+                ),
+                SizedBox(height: 16.h),
+                _buildTextField(
+                  context,
+                  controller: controller.phoneInputController,
+                  hintText: 'Numéro de téléphone',
+                  prefixIcon: Icons.phone_outlined,
+                ),
+              ],
             ),
           ),
         ],
@@ -251,6 +325,57 @@ class OnboardingView extends GetView<OnboardingController> {
     );
   }
 
+  /// Security setup step for PIN and biometric authentication
+  Widget _buildSecurityStep(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FadeInDown(
+            child: Icon(
+              Icons.security_rounded,
+              size: 120.sp,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          SizedBox(height: 32.h),
+          FadeInUp(
+            child: Text(
+              'Sécurisez votre compte',
+              style: theme.textTheme.displaySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          FadeInUp(
+            delay: const Duration(milliseconds: 200),
+            child: Text(
+              'Créez un code PIN à 4 chiffres pour protéger vos données.',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(height: 32.h),
+          FadeInUp(
+            delay: const Duration(milliseconds: 400),
+            child: _buildPinInput(context),
+          ),
+          SizedBox(height: 24.h),
+          FadeInUp(
+            delay: const Duration(milliseconds: 600),
+            child: _buildBiometricOption(context),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCompletionStep(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
@@ -286,29 +411,179 @@ class OnboardingView extends GetView<OnboardingController> {
   }
 
   Widget _buildTextField(
-    BuildContext context,
-    {
+    BuildContext context, {
     required TextEditingController controller,
     required String hintText,
     String? suffixText,
+    IconData? prefixIcon,
   }) {
     final theme = Theme.of(context);
+    final isNumeric = suffixText != null; // Numeric fields have suffix (XOF)
+    
     return TextField(
       controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      textAlign: TextAlign.center,
-      style: theme.textTheme.displaySmall,
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+      inputFormatters: isNumeric ? [FilteringTextInputFormatter.digitsOnly] : null,
+      textAlign: prefixIcon != null ? TextAlign.start : TextAlign.center,
+      style: prefixIcon != null 
+          ? theme.textTheme.titleLarge 
+          : theme.textTheme.displaySmall,
       decoration: InputDecoration(
         hintText: hintText,
         suffixText: suffixText,
+        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(12.r),
           borderSide: BorderSide(color: theme.colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(12.r),
           borderSide: BorderSide(color: theme.colorScheme.outline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+        ),
+      ),
+    );
+  }
+
+  /// PIN input widget for security setup
+  Widget _buildPinInput(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(
+          'Code PIN',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Obx(() => Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(4, (index) {
+            return Container(
+              width: 60.w,
+              height: 60.w,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: index < controller.pinInputController.text.length
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outline,
+                  width: 2,
+                ),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Center(
+                child: Text(
+                  index < controller.pinInputController.text.length ? '●' : '',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            );
+          }),
+        )),
+        SizedBox(height: 16.h),
+        _buildNumericKeypad(context),
+      ],
+    );
+  }
+
+  /// Biometric authentication option
+  Widget _buildBiometricOption(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Obx(() => SwitchListTile(
+        title: Text(
+          'Empreinte digitale',
+          style: theme.textTheme.titleMedium,
+        ),
+        subtitle: Text(
+          'Utiliser l\'empreinte pour une connexion rapide',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        secondary: Icon(
+          Icons.fingerprint,
+          color: theme.colorScheme.primary,
+        ),
+        value: controller.biometricEnabled.value,
+        onChanged: (value) => controller.biometricEnabled.value = value,
+      )),
+    );
+  }
+
+  /// Numeric keypad for PIN input
+  Widget _buildNumericKeypad(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: ['1', '2', '3'].map((digit) => 
+            _buildKeypadButton(context, digit)).toList(),
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: ['4', '5', '6'].map((digit) => 
+            _buildKeypadButton(context, digit)).toList(),
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: ['7', '8', '9'].map((digit) => 
+            _buildKeypadButton(context, digit)).toList(),
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            SizedBox(width: 56.w), // Empty space
+            _buildKeypadButton(context, '0'),
+            _buildKeypadButton(context, '⌫', isBackspace: true),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Individual keypad button
+  Widget _buildKeypadButton(BuildContext context, String value, {bool isBackspace = false}) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () {
+        if (isBackspace) {
+          if (controller.pinInputController.text.isNotEmpty) {
+            controller.pinInputController.text = 
+                controller.pinInputController.text.substring(0, 
+                controller.pinInputController.text.length - 1);
+          }
+        } else {
+          if (controller.pinInputController.text.length < 4) {
+            controller.pinInputController.text += value;
+          }
+        }
+      },
+      borderRadius: BorderRadius.circular(28.r),
+      child: Container(
+        width: 56.w,
+        height: 56.w,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(28.r),
+        ),
+        child: Center(
+          child: Text(
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );

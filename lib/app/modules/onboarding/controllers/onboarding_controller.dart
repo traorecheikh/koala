@@ -8,11 +8,20 @@ class OnboardingController extends GetxController {
   final PageController pageController = PageController();
   var currentPage = 0.obs;
 
+  // Text controllers for all form fields
+  final TextEditingController nameInputController = TextEditingController();
+  final TextEditingController phoneInputController = TextEditingController();
   final TextEditingController salaryInputController = TextEditingController();
   final TextEditingController balanceInputController = TextEditingController();
+  final TextEditingController pinInputController = TextEditingController();
 
+  // Observable data
+  var name = ''.obs;
+  var phone = ''.obs;
   var salary = ''.obs;
   var balance = ''.obs;
+  var pin = ''.obs;
+  var biometricEnabled = false.obs;
 
   final HiveService _hiveService = Get.find<HiveService>();
 
@@ -22,11 +31,22 @@ class OnboardingController extends GetxController {
     pageController.addListener(() {
       currentPage.value = pageController.page?.round() ?? 0;
     });
+    
+    // Add listeners for all controllers
+    nameInputController.addListener(() {
+      name.value = nameInputController.text;
+    });
+    phoneInputController.addListener(() {
+      phone.value = phoneInputController.text;
+    });
     salaryInputController.addListener(() {
       salary.value = salaryInputController.text;
     });
     balanceInputController.addListener(() {
       balance.value = balanceInputController.text;
+    });
+    pinInputController.addListener(() {
+      pin.value = pinInputController.text;
     });
   }
 
@@ -36,8 +56,8 @@ class OnboardingController extends GetxController {
       return;
     }
 
-    if (currentPage.value < 4) {
-      // Now we have 5 steps (0-4)
+    if (currentPage.value < 6) {
+      // Now we have 7 steps (0-6)
       pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
@@ -52,7 +72,7 @@ class OnboardingController extends GetxController {
 
   void skipToEnd() {
     pageController.animateToPage(
-      4, // Go to completion step
+      6, // Go to completion step (7th step, index 6)
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeInOut,
     );
@@ -72,7 +92,29 @@ class OnboardingController extends GetxController {
       case 0: // Welcome step
       case 1: // Koala bot intro step
         return true;
-      case 2: // Salary step
+      case 2: // Personal info step
+        if (name.value.isEmpty || name.value.trim().length < 2) {
+          Get.snackbar(
+            'Nom requis',
+            'Veuillez saisir votre nom complet',
+            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
+            colorText: AppColors.textInverse,
+            snackPosition: SnackPosition.TOP,
+          );
+          return false;
+        }
+        if (phone.value.isEmpty || phone.value.length < 8) {
+          Get.snackbar(
+            'Téléphone requis',
+            'Veuillez saisir un numéro de téléphone valide',
+            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
+            colorText: AppColors.textInverse,
+            snackPosition: SnackPosition.TOP,
+          );
+          return false;
+        }
+        return true;
+      case 3: // Salary step
         if (salary.value.isEmpty || double.tryParse(salary.value) == null) {
           Get.snackbar(
             'Salaire requis',
@@ -83,13 +125,11 @@ class OnboardingController extends GetxController {
           );
           return false;
         }
-        return true;
-      case 3: // Balance step
-        if (balance.value.isEmpty || double.tryParse(balance.value) == null) {
-          print('Balance: ${balance.value}');
+        final salaryValue = double.parse(salary.value);
+        if (salaryValue <= 0) {
           Get.snackbar(
-            'Solde requis',
-            'Veuillez saisir votre solde actuel${balance.value}',
+            'Salaire invalide',
+            'Le salaire doit être supérieur à zéro',
             backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
             colorText: AppColors.textInverse,
             snackPosition: SnackPosition.TOP,
@@ -97,7 +137,31 @@ class OnboardingController extends GetxController {
           return false;
         }
         return true;
-      case 4: // Final step
+      case 4: // Balance step
+        if (balance.value.isEmpty || double.tryParse(balance.value) == null) {
+          Get.snackbar(
+            'Solde requis',
+            'Veuillez saisir votre solde actuel',
+            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
+            colorText: AppColors.textInverse,
+            snackPosition: SnackPosition.TOP,
+          );
+          return false;
+        }
+        return true;
+      case 5: // Security step
+        if (pin.value.length != 4) {
+          Get.snackbar(
+            'Code PIN requis',
+            'Veuillez créer un code PIN à 4 chiffres',
+            backgroundColor: AppColors.warning.withAlpha((0.8 * 255).toInt()),
+            colorText: AppColors.textInverse,
+            snackPosition: SnackPosition.TOP,
+          );
+          return false;
+        }
+        return true;
+      case 6: // Final step
         return true;
       default:
         return true;
@@ -107,10 +171,14 @@ class OnboardingController extends GetxController {
   void _saveOnboardingData() {
     try {
       _hiveService.saveUserData({
+        'name': name.value.trim(),
+        'phone': phone.value.trim(),
         'salary': double.parse(salary.value),
         'initialBalance': double.parse(balance.value),
         'currentBalance': double.parse(balance.value),
         'currency': 'XOF',
+        'pin': pin.value, // In a real app, this should be hashed
+        'biometricEnabled': biometricEnabled.value,
         'onboardingCompleted': true,
         'setupDate': DateTime.now().toIso8601String(),
       });
@@ -126,7 +194,7 @@ class OnboardingController extends GetxController {
     } catch (e) {
       Get.snackbar(
         'Erreur',
-        'Impossible de sauvegarder vos données',
+        'Impossible de sauvegarder vos données: $e',
         backgroundColor: AppColors.error.withAlpha((0.8 * 255).toInt()),
         colorText: AppColors.textInverse,
         snackPosition: SnackPosition.TOP,
@@ -137,8 +205,11 @@ class OnboardingController extends GetxController {
   @override
   void onClose() {
     pageController.dispose();
+    nameInputController.dispose();
+    phoneInputController.dispose();
     salaryInputController.dispose();
     balanceInputController.dispose();
+    pinInputController.dispose();
     super.onClose();
   }
 }
