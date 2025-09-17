@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:koala/app/data/models/user_model.dart';
+import 'package:koala/app/data/services/local_data_service.dart';
+import 'package:koala/app/data/services/local_settings_service.dart';
 
 class OnboardingController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -141,45 +144,45 @@ class OnboardingController extends GetxController {
     try {
       isLoading.value = true;
 
-      // Create user model (mock for now)
-      final user = MockUserModel(
+      // Create user model using actual UserModel
+      final user = UserModel(
         name: nameController.text.trim(),
         phone: phoneController.text.trim(),
-        salary: double.tryParse(salaryController.text) ?? 0.0,
+        monthlySalary: double.tryParse(salaryController.text) ?? 0.0,
         currentBalance: double.tryParse(initialBalanceController.text) ?? 0.0,
         payDay: selectedPayday.value ?? 1,
         biometricEnabled: biometricEnabled.value,
       );
 
-      // TODO: Save user to storage using HiveService
-      await Future.delayed(const Duration(seconds: 2)); // Mock delay
+      // Save user to local storage
+      await LocalDataService.to.saveUser(user);
+      
+      // Save PIN securely
+      await LocalSettingsService.to.savePIN(pinController.text);
+      
+      // Set biometric setting
+      await LocalSettingsService.to.setBiometricEnabled(biometricEnabled.value);
+      
+      // Mark first run as complete
+      await LocalSettingsService.to.completeFirstRun();
 
-      // Navigate to dashboard
-      Get.offAllNamed('/dashboard');
-      Get.snackbar('Bienvenue!', 'Votre compte a été créé avec succès');
+      // Navigate to main app
+      Get.offAllNamed('/main');
+      Get.snackbar(
+        'Bienvenue dans Koala!', 
+        'Votre compte a été créé avec succès',
+        backgroundColor: const Color(0xFF4CAF50),
+        colorText: Colors.white,
+      );
     } catch (e) {
-      Get.snackbar('Erreur', 'Impossible de créer le compte');
+      Get.snackbar(
+        'Erreur', 
+        'Impossible de créer le compte: $e',
+        backgroundColor: const Color(0xFFE53E3E),
+        colorText: Colors.white,
+      );
     } finally {
       isLoading.value = false;
     }
   }
-}
-
-/// Mock user model for demonstration
-class MockUserModel {
-  final String name;
-  final String phone;
-  final double salary;
-  final double currentBalance;
-  final int payDay;
-  final bool biometricEnabled;
-
-  MockUserModel({
-    required this.name,
-    required this.phone,
-    required this.salary,
-    required this.currentBalance,
-    required this.payDay,
-    required this.biometricEnabled,
-  });
 }

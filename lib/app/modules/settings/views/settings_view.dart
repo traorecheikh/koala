@@ -181,7 +181,7 @@ class SettingsView extends GetView<SettingsController> {
                 icon: Icons.fingerprint,
                 title: 'Authentification biométrique',
                 subtitle: 'Empreinte digitale ou Face ID',
-                value: controller.biometricEnabled,
+                valueGetter: () => controller.biometricEnabled,
                 onChanged: controller.toggleBiometric,
               ),
             ],
@@ -194,7 +194,7 @@ class SettingsView extends GetView<SettingsController> {
                 icon: Icons.cloud_outlined,
                 title: 'Synchronisation serveur',
                 subtitle: 'Sauvegarder dans le cloud',
-                value: controller.cloudSyncEnabled,
+                valueGetter: () => controller.cloudSyncEnabled,
                 onChanged: controller.toggleCloudSync,
               ),
               _buildSettingsItem(
@@ -219,14 +219,14 @@ class SettingsView extends GetView<SettingsController> {
                 icon: Icons.notifications_outlined,
                 title: 'Notifications push',
                 subtitle: 'Alertes et rappels',
-                value: controller.notificationsEnabled,
+                valueGetter: () => controller.notificationsEnabled,
                 onChanged: controller.toggleNotifications,
               ),
               _buildToggleSettingsItem(
                 icon: Icons.schedule,
                 title: 'Rappels d\'échéances',
                 subtitle: 'Prêts et récurrences',
-                value: controller.paymentRemindersEnabled,
+                valueGetter: () => controller.paymentRemindersEnabled,
                 onChanged: controller.togglePaymentReminders,
               ),
             ],
@@ -368,7 +368,7 @@ class SettingsView extends GetView<SettingsController> {
     required IconData icon,
     required String title,
     required String subtitle,
-    required RxBool value,
+    required bool Function() valueGetter,
     required Function(bool) onChanged,
   }) {
     return ListTile(
@@ -386,9 +386,9 @@ class SettingsView extends GetView<SettingsController> {
         style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(subtitle, style: AppTextStyles.caption),
-      trailing: Obx(
-        () => Switch(
-          value: value.value,
+      trailing: GetBuilder<SettingsController>(
+        builder: (controller) => Switch(
+          value: valueGetter(),
           onChanged: onChanged,
           activeColor: AppColors.primary,
         ),
