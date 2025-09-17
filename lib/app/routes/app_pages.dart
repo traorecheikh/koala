@@ -7,6 +7,8 @@ import 'package:koala/app/modules/home/bindings/home_binding.dart';
 import 'package:koala/app/modules/home/views/home_view.dart';
 import 'package:koala/app/modules/insights/bindings/insights_binding.dart';
 import 'package:koala/app/modules/insights/views/insights_view.dart';
+import 'package:koala/app/modules/loans/bindings/loans_binding.dart';
+import 'package:koala/app/modules/loans/views/loans_view.dart';
 import 'package:koala/app/modules/onboarding/bindings/onboarding_binding.dart';
 import 'package:koala/app/modules/onboarding/views/onboarding_view.dart';
 import 'package:koala/app/modules/settings/bindings/settings_binding.dart';
@@ -56,6 +58,11 @@ class AppPages {
       name: Routes.settings,
       page: () => const SettingsView(),
       binding: SettingsBinding(),
+    ),
+    GetPage(
+      name: Routes.loans,
+      page: () => const LoansView(),
+      binding: LoansBinding(),
     ),
   ];
 }

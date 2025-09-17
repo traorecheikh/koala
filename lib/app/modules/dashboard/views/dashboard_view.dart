@@ -295,14 +295,18 @@ class DashboardView extends GetView<DashboardController> {
                 () => _showAddTransactionDialog(context, 'expense'),
               ),
             ),
-            SizedBox(width: 12.w),
+          ],
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          children: [
             Expanded(
               child: _buildActionCard(
                 context,
-                Icons.swap_horiz_rounded,
-                'Transfert',
+                Icons.account_balance_outlined,
+                'Gérer\nPrêts',
                 theme.colorScheme.secondary,
-                () => _showAddTransactionDialog(context, 'transfer'),
+                () => Get.toNamed('/loans'),
               ),
             ),
             SizedBox(width: 12.w),
@@ -310,7 +314,7 @@ class DashboardView extends GetView<DashboardController> {
               child: _buildActionCard(
                 context,
                 Icons.insights_rounded,
-                'Statistiques',
+                'Analyses\nIA',
                 theme.colorScheme.tertiary,
                 () => Get.toNamed('/insights'),
               ),
