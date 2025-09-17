@@ -141,15 +141,15 @@ class DashboardView extends GetView<DashboardController> {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
         color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -338,27 +338,42 @@ class DashboardView extends GetView<DashboardController> {
       child: Container(
         height: 80.h,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16.r),
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: theme.colorScheme.outline.withOpacity(0.08),
             width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 24.sp,
-              color: color,
+            Container(
+              width: 32.w,
+              height: 32.w,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Icon(
+                icon,
+                size: 18.sp,
+                color: color,
+              ),
             ),
             SizedBox(height: 8.h),
             Text(
               label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
             ),

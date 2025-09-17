@@ -80,15 +80,15 @@ class InsightsView extends GetView<InsightsController> {
   Widget _buildFinancialOverview(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
         color: theme.colorScheme.primary,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -217,33 +217,219 @@ class InsightsView extends GetView<InsightsController> {
     );
   }
 
+  /// Clean, professional insight card design inspired by modern financial apps
+  Widget _buildInsightCard(BuildContext context, Map<String, dynamic> insight) {
+    final theme = Theme.of(context);
+    final type = insight['type'] as String;
+    final title = insight['title'] as String;
+    final description = insight['description'] as String;
+    final amount = insight['amount'] as double;
+    final icon = insight['icon'] as IconData;
+    final priority = insight['priority'] as String;
+    final suggestions = insight['suggestions'] as List<String>? ?? [];
+
+    // Clean, minimal color coding (like Revolut/Monzo)
+    Color getAccentColor() {
+      switch (type) {
+        case 'warning':
+          return const Color(0xFFFF6B6B); // Soft red
+        case 'success':
+          return const Color(0xFF51CF66); // Soft green  
+        case 'info':
+          return theme.colorScheme.primary;
+        default:
+          return theme.colorScheme.onSurfaceVariant;
+      }
+    }
+
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row with icon and title
+          Row(
+            children: [
+              // Clean icon container (Airbnb style)
+              Container(
+                width: 40.w,
+                height: 40.w,
+                decoration: BoxDecoration(
+                  color: getAccentColor().withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  icon,
+                  color: getAccentColor(),
+                  size: 20.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    if (amount > 0) ...[
+                      SizedBox(height: 2.h),
+                      Text(
+                        '${amount.toStringAsFixed(0)} XOF',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: getAccentColor(),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Clean priority badge
+              if (priority == 'high')
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: getAccentColor().withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    'Important',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: getAccentColor(),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          
+          // Description with proper spacing
+          Text(
+            description,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
+          ),
+          
+          // Clean suggestions section (if available)
+          if (suggestions.isNotEmpty) ...[
+            SizedBox(height: 16.h),
+            Container(
+              padding: EdgeInsets.all(14.w),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Suggestions',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  ...suggestions.take(3).map((suggestion) => Padding(
+                    padding: EdgeInsets.only(bottom: 6.h),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 4.w,
+                          height: 4.w,
+                          margin: EdgeInsets.only(top: 8.h, right: 10.w),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            suggestion,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )).toList(),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildNoInsightsState(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: EdgeInsets.all(24.w),
+      padding: EdgeInsets.all(32.w),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.08),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.psychology_outlined,
-            size: 48.sp,
-            color: theme.colorScheme.onSurfaceVariant,
+          Container(
+            width: 56.w,
+            height: 56.w,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            child: Icon(
+              Icons.psychology_outlined,
+              size: 28.sp,
+              color: theme.colorScheme.primary,
+            ),
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 16.h),
           Text(
             'Aucune analyse disponible',
             style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 4.h),
+          SizedBox(height: 8.h),
           Text(
-            'Ajoutez plus de transactions pour des recommandations personnalisées',
-            style: theme.textTheme.bodySmall?.copyWith(
+            'Ajoutez plus de transactions pour obtenir des recommandations personnalisées',
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
+              height: 1.4,
             ),
             textAlign: TextAlign.center,
           ),
@@ -415,14 +601,21 @@ class InsightsView extends GetView<InsightsController> {
     }
 
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withOpacity(0.08),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
