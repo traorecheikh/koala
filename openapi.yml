@@ -1,0 +1,786 @@
+openapi: 3.0.3
+info:
+  title: API - Assistant Financier Personnel
+  version: "1.0.0"
+  description: |
+    API REST pour l'application personnelle de gestion financière.
+    Tout en français; endpoints essentiels pour un utilisateur unique.
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: api.monsuperapp.exemple
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        salary:
+          type: number
+          description: salaire net mensuel en XOF
+        pay_day:
+          type: integer
+          description: jour du mois de paie (1-31)
+        opening_balance:
+          type: number
+          description: solde initial déclaré (XOF)
+        current_balance:
+          type: number
+          description: solde courant (XOF)
+        currency:
+          type: string
+          example: XOF
+        created_at:
+          type: string
+          format: date-time
+      required: [id,name,phone,salary,opening_balance,current_balance]
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          example: manual|orange_money|wave|bank_csv
+        name:
+          type: string
+        balance:
+          type: number
+        details:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id,provider,name]
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        currency:
+          type: string
+          example: XOF
+        timestamp:
+          type: string
+          format: date-time
+        merchant:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum: [expense,income,transfer,loan,repayment]
+        linked_loan_id:
+          type: string
+          format: uuid
+          nullable: true
+        annotation:
+          type: string
+        receipt_url:
+          type: string
+          format: uri
+        imported:
+          type: boolean
+        affects_balance:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required: [id,account_id,amount,timestamp,type]
+    Loan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        principal:
+          type: number
+        interest_rate:
+          type: number
+        start_date:
+          type: string
+          format: date
+        term_months:
+          type: integer
+        monthly_due:
+          type: number
+        remaining_balance:
+          type: number
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required: [id,user_id,principal,start_date,term_months]
+    Rule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        pattern:
+          type: object
+        category:
+          type: string
+        priority:
+          type: integer
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        points:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, key, title]
+    
+    UserAchievement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        achievementId:
+          type: string
+          format: uuid
+        awardedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+        achievement:
+          $ref: '#/components/schemas/Achievement'
+      required: [id, userId, achievementId]
+    
+    PointTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        change:
+          type: integer
+        reason:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, userId, change]
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        fcmToken:
+          type: string
+        platform:
+          type: string
+        lastSeenAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        fcmToken:
+          type: string
+        platform:
+          type: string
+        lastSeenAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+          
+    NotificationTemplate:
+      type: object
+      properties:
+        templateName:
+          type: string
+          enum: [device_registered, device_unregistered, welcome_new_user, onboarding_step_salary, onboarding_step_first_transaction, account_created, account_updated, salary_received, payment_failed, new_transaction_short, new_transaction_long, achievement_unlocked, points_milestone, level_up, weekly_summary, recurring_payment_due, loan_due, low_balance, large_expense, suspicious_activity, insight_ready, budget_tip, spending_pattern, sync_completed, import_finished, budget_goal_met, refund_issued, daily_check_in, comeback_reminder, feature_highlight]
+        params:
+          type: object
+          additionalProperties: true
+      required: [templateName]
+      type: object
+      properties:
+        userQuery:
+          type: string
+          description: Question or prompt the user sends to the AI assistant
+        persona:
+          type: string
+          description: "Optional: 'insight' or 'bot'"
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              isUserMessage:
+                type: boolean
+    InsightResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              estimated_monthly_saving:
+                type: number
+              priority:
+                type: string
+              steps:
+                type: array
+                items:
+                  type: string
+paths:
+  /auth/login:
+    post:
+      summary: Connexion locale / récupération token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pin:
+                  type: string
+                device_id:
+                  type: string
+      responses:
+        "200":
+          description: Token JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+  /user:
+    get:
+      summary: Récupérer profil utilisateur
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      summary: Mettre à jour profil (ex: salaire)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                salary: { type: number }
+                pay_day: { type: integer }
+                opening_balance: { type: number }
+                current_balance: { type: number }
+      responses:
+        "200":
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /accounts:
+    get:
+      summary: Lister comptes
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste de comptes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+    post:
+      summary: Créer un compte (manuel / provider)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider: { type: string }
+                name: { type: string }
+                balance: { type: number }
+                details: { type: object }
+      responses:
+        "201":
+          description: Compte créé
+  /transactions:
+    get:
+      summary: Obtenir transactions (filtres)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: Liste paginée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  page: { type: integer }
+                  per_page: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+    post:
+      summary: Créer une transaction (dépense / revenu / remboursement)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+      responses:
+        "201":
+          description: Transaction créée
+  /transactions/import:
+    post:
+      summary: Import CSV/JSON en masse
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                account_id:
+                  type: string
+      responses:
+        "200":
+          description: Résultat import (helpers)
+  /transactions/{id}:
+    get:
+      summary: Récupérer transaction
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+    patch:
+      summary: Mettre à jour / annoter transaction
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                annotation: { type: string }
+                category: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+                linked_loan_id: { type: string }
+                receipt_url: { type: string }
+      responses:
+        "200":
+          description: Transaction mise à jour
+    delete:
+      summary: Supprimer transaction (soft delete recommandé)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Supprimée
+  /loans:
+    get:
+      summary: Lister prêts
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste prêts
+    post:
+      summary: Créer un prêt
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Loan'
+      responses:
+        "201":
+          description: Prêt créé
+  /rules:
+    get:
+      summary: Lister règles de catégorisation
+      security:
+        - bearerAuth: []
+    post:
+      summary: Créer règle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Rule'
+  /ai/insight:
+    post:
+      summary: Demander suggestion IA (retour en FR)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsightRequest'
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightResponse'
+  /sync/pending:
+    get:
+      summary: Récupérer éléments en attente de sync
+      security:
+        - bearerAuth: []
+  /sync/ack:
+    post:
+      summary: Accuser réception d'éléments sync (ack)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items: { type: string }
+                  
+  /notifications:
+    get:
+      summary: Lister les appareils enregistrés pour notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des appareils
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      devices:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Device'
+                          
+  /notifications/register:
+    post:
+      summary: Enregistrer un token FCM pour notifications push
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fcmToken:
+                  type: string
+                platform:
+                  type: string
+                  enum: [android, ios, web]
+                metadata:
+                  type: object
+                  additionalProperties: true
+              required: [fcmToken]
+      responses:
+        "200":
+          description: Appareil enregistré avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      device:
+                        $ref: '#/components/schemas/Device'
+                        
+  /notifications/unregister:
+    post:
+      summary: Désenregistrer un token FCM
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fcmToken:
+                  type: string
+              required: [fcmToken]
+      responses:
+        "200":
+          description: Appareil désenregistré avec succès
+          
+  /notifications/send/template:
+    post:
+      summary: Envoyer une notification basée sur un template
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                templateName:
+                  type: string
+                params:
+                  type: object
+                  additionalProperties: true
+              required: [userId, templateName]
+      responses:
+        "200":
+          description: Notification envoyée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      sent:
+                        type: integer
+                      failure:
+                        type: integer
+                        
+  /points:
+    get:
+      summary: Récupérer les points et transactions de l'utilisateur
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Points et historique
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalPoints:
+                        type: integer
+                      transactions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PointTransaction'
+                          
+  /points/award:
+    post:
+      summary: Attribuer des points à un utilisateur
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                points:
+                  type: integer
+                reason:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+              required: [userId, points, reason]
+      responses:
+        "200":
+          description: Points attribués avec succès
+          
+  /achievements:
+    get:
+      summary: Lister tous les succès disponibles et ceux débloqués par l'utilisateur
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      available:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Achievement'
+                      unlocked:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserAchievement'
+security:
+  - bearerAuth: []
