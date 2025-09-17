@@ -143,13 +143,30 @@ class DashboardView extends GetView<DashboardController> {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(20.r),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withBlue(
+              (theme.colorScheme.primary.blue * 0.8).round(),
+            ),
+            theme.colorScheme.secondary.withOpacity(0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: theme.colorScheme.primary.withOpacity(0.3),
+            blurRadius: 25,
+            spreadRadius: 3,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: theme.colorScheme.secondary.withOpacity(0.2),
+            blurRadius: 40,
+            spreadRadius: 5,
+            offset: const Offset(0, 20),
           ),
         ],
       ),
@@ -336,22 +353,59 @@ class DashboardView extends GetView<DashboardController> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 80.h,
+        height: 88.h,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16.r),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withOpacity(0.15),
+              color.withOpacity(0.05),
+              theme.colorScheme.surface,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
             color: color.withOpacity(0.2),
             width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 24.sp,
-              color: color,
+            Container(
+              width: 36.w,
+              height: 36.w,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color.withOpacity(0.2),
+                    color.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(10.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.1),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                icon,
+                size: 20.sp,
+                color: color,
+              ),
             ),
             SizedBox(height: 8.h),
             Text(
