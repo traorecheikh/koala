@@ -15,6 +15,12 @@ class KoaAiService extends GetxService {
   final RxList<AiMessage> conversationHistory = <AiMessage>[].obs;
   final RxBool isThinking = false.obs;
 
+  /// Initialize the service for async dependency injection
+  Future<KoaAiService> init() async {
+    _initializeKoa();
+    return this;
+  }
+
   @override
   void onInit() {
     super.onInit();

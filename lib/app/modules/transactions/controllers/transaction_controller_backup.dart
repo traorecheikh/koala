@@ -115,6 +115,34 @@ class TransactionController extends GetxController {
     }
   }
 
+  /// Delete a transaction
+  Future<void> deleteTransaction(String transactionId) async {
+    try {
+      await LocalDataService.to.deleteTransaction(transactionId);
+      _filterTransactions();
+      
+      Get.snackbar(
+        'Succès', 
+        'Transaction supprimée',
+        backgroundColor: const Color(0xFF4CAF50),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Erreur', 'Impossible de supprimer la transaction: $e');
+    }
+  }
+
+      // TODO: Also sync with API if needed
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      ); // Simulate API call
+    } catch (e) {
+      throw Exception('Failed to add transaction: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   /// Navigate to add transaction (now opens bottom sheet)
   void navigateToAddTransaction() {
     AddTransactionBottomSheet.show();
@@ -184,7 +212,8 @@ class TransactionController extends GetxController {
   /// Perform actual delete operation
   Future<void> _performDelete(String transactionId) async {
     try {
-      await LocalDataService.to.deleteTransaction(transactionId);
+      // TODO: Delete from storage
+      transactions.removeWhere((t) => t.id == transactionId);
       _filterTransactions();
       Get.snackbar('Succès', 'Transaction supprimée');
     } catch (e) {

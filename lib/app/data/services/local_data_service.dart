@@ -20,6 +20,12 @@ class LocalDataService extends GetxService {
   final RxList<LoanModel> loans = <LoanModel>[].obs;
   final RxList<RecurringModel> recurrings = <RecurringModel>[].obs;
 
+  /// Initialize the service for async dependency injection
+  Future<LocalDataService> init() async {
+    await _loadLocalData();
+    return this;
+  }
+
   @override
   Future<void> onInit() async {
     super.onInit();

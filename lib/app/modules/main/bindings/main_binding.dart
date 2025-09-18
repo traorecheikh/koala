@@ -12,10 +12,7 @@ class MainBinding extends Bindings {
   void dependencies() {
     Get.lazyPut<MainController>(() => MainController());
     Get.lazyPut<DashboardController>(() => DashboardController(), fenix: true);
-    Get.lazyPut<TransactionController>(
-      () => TransactionController(),
-      fenix: true,
-    );
+    Get.lazyPut<TransactionController>(() => TransactionController(), fenix: true);
     Get.lazyPut<LoansController>(() => LoansController(), fenix: true);
     Get.lazyPut<InsightsController>(() => InsightsController(), fenix: true);
   }

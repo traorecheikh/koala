@@ -23,10 +23,14 @@ class SettingsController extends GetxController {
   bool get paymentRemindersEnabled => LocalSettingsService.to.isPaymentRemindersEnabled;
 
   // Observable versions for UI binding
-  RxBool get biometricEnabledRx => LocalSettingsService.to.settings.map((s) => s.biometricEnabled).obs;
-  RxBool get cloudSyncEnabledRx => LocalSettingsService.to.settings.map((s) => s.cloudSyncEnabled).obs;
-  RxBool get notificationsEnabledRx => LocalSettingsService.to.settings.map((s) => s.notificationsEnabled).obs;
-  RxBool get paymentRemindersEnabledRx => LocalSettingsService.to.settings.map((s) => s.paymentRemindersEnabled).obs;
+  RxBool get biometricEnabledRx => 
+      LocalSettingsService.to.isBiometricEnabled.obs;
+  RxBool get cloudSyncEnabledRx => 
+      LocalSettingsService.to.isCloudSyncEnabled.obs;
+  RxBool get notificationsEnabledRx => 
+      LocalSettingsService.to.isNotificationsEnabled.obs;
+  RxBool get paymentRemindersEnabledRx => 
+      LocalSettingsService.to.isPaymentRemindersEnabled.obs;
 
   /// Load current user data from local storage
   Future<void> loadUserData() async {

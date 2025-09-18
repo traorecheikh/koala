@@ -83,6 +83,12 @@ class LocalSettingsService extends GetxService {
   // Observable settings
   final Rx<AppSettings> settings = AppSettings().obs;
 
+  /// Initialize the service for async dependency injection
+  Future<LocalSettingsService> init() async {
+    await _initSettings();
+    return this;
+  }
+
   @override
   Future<void> onInit() async {
     super.onInit();
