@@ -5,19 +5,22 @@ import 'package:get/get.dart';
 import 'package:koala/app/data/models/transaction_model.dart';
 import 'package:koala/app/data/services/local_data_service.dart';
 import 'package:koala/app/data/services/local_settings_service.dart';
+import 'package:koala/app/data/services/api_service.dart';
 
-/// AI Assistant Koa - Local financial insights and recommendations
-/// Processes all data locally without external API calls for privacy
+/// AI Assistant Koa - Intelligent financial insights and recommendations
+/// Works offline with local data analysis and online with real AI API
 class KoaAiService extends GetxService {
   static KoaAiService get to => Get.find();
 
   // Conversation history
   final RxList<AiMessage> conversationHistory = <AiMessage>[].obs;
   final RxBool isThinking = false.obs;
+  final RxBool isOnline = false.obs;
 
   /// Initialize the service for async dependency injection
   Future<KoaAiService> init() async {
     _initializeKoa();
+    _checkOnlineStatus();
     return this;
   }
 
@@ -25,6 +28,17 @@ class KoaAiService extends GetxService {
   void onInit() {
     super.onInit();
     _initializeKoa();
+    _checkOnlineStatus();
+  }
+
+  /// Check if we have internet connectivity for AI API calls
+  Future<void> _checkOnlineStatus() async {
+    try {
+      // Simple connectivity check - you could use connectivity_plus package for more robust checking
+      isOnline.value = true; // For now assume online, implement proper check if needed
+    } catch (e) {
+      isOnline.value = false;
+    }
   }
 
   /// Initialize Koa with welcome message
@@ -33,7 +47,7 @@ class KoaAiService extends GetxService {
     final userName = user?.name.split(' ').first ?? 'utilisateur';
     
     conversationHistory.add(AiMessage(
-      text: 'Bonjour $userName ! 👋\n\nJe suis Koa, votre assistant financier personnel. Je peux vous aider à :\n\n• Analyser vos dépenses\n• Suggérer des économies\n• Répondre à vos questions financières\n• Créer des budgets personnalisés\n\nToutes nos conversations restent privées et locales sur votre appareil. Comment puis-je vous aider aujourd\'hui ?',
+      text: 'Bonjour $userName ! 👋\n\nJe suis Koa, votre assistant financier personnel. Je peux vous aider à :\n\n• Analyser vos dépenses\n• Suggérer des économies\n• Répondre à vos questions financières\n• Créer des budgets personnalisés\n\n${isOnline.value ? "Je suis connecté à l'IA avancée pour des conseils personnalisés." : "Je fonctionne en mode hors ligne avec vos données locales."}\n\nComment puis-je vous aider aujourd\'hui ?',
       isFromUser: false,
       timestamp: DateTime.now(),
       messageType: AiMessageType.welcome,
@@ -55,27 +69,89 @@ class KoaAiService extends GetxService {
     try {
       isThinking.value = true;
       
-      // Simulate AI thinking time
-      await Future.delayed(const Duration(milliseconds: 1500));
-      
-      // Generate response based on query type
-      final response = await _generateResponse(userQuery);
-      
-      conversationHistory.add(response);
+      // Check if we should use online AI or offline responses
+      if (isOnline.value && LocalSettingsService.to.isCloudSyncEnabled) {
+        await _getOnlineAiResponse(userQuery);
+      } else {
+        await _getOfflineResponse(userQuery);
+      }
     } catch (e) {
-      conversationHistory.add(AiMessage(
-        text: 'Désolé, j\'ai rencontré une erreur en traitant votre demande. Pouvez-vous reformuler votre question ?',
-        isFromUser: false,
-        timestamp: DateTime.now(),
-        messageType: AiMessageType.error,
-      ));
+      // Fallback to offline if online fails
+      await _getOfflineResponse(userQuery);
     } finally {
       isThinking.value = false;
     }
   }
 
-  /// Generate AI response based on user query
-  Future<AiMessage> _generateResponse(String query) async {
+  /// Get response from online AI API (when connected)
+  Future<void> _getOnlineAiResponse(String userQuery) async {
+    try {
+      // Build conversation history for context
+      final history = conversationHistory.take(10).map((msg) => {
+        'text': msg.text,
+        'isUserMessage': msg.isFromUser,
+      }).toList();
+
+      // Call the real AI API endpoint from OpenAPI spec
+      final response = await ApiService.getAiInsight(
+        userQuery: userQuery,
+        persona: 'insight',
+        history: history,
+      );
+
+      // Process the AI response according to OpenAPI InsightResponse schema
+      final suggestions = response['suggestions'] as List? ?? [];
+      String responseText = '';
+
+      if (suggestions.isNotEmpty) {
+        responseText = '🤖 **Conseils IA personnalisés**\n\n';
+        for (final suggestion in suggestions) {
+          final title = suggestion['title'] ?? '';
+          final savings = suggestion['estimated_monthly_saving'] ?? 0;
+          final priority = suggestion['priority'] ?? 'normal';
+          final steps = suggestion['steps'] as List? ?? [];
+          
+          responseText += '**$title**\n';
+          if (savings > 0) {
+            responseText += 'Économie estimée: ${savings.toStringAsFixed(0)} XOF/mois\n';
+          }
+          responseText += 'Priorité: $priority\n';
+          if (steps.isNotEmpty) {
+            responseText += 'Étapes:\n';
+            for (final step in steps) {
+              responseText += '• $step\n';
+            }
+          }
+          responseText += '\n';
+        }
+      } else {
+        responseText = 'Je traite votre demande et vais vous proposer des conseils personnalisés basés sur vos données financières.';
+      }
+
+      conversationHistory.add(AiMessage(
+        text: responseText,
+        isFromUser: false,
+        timestamp: DateTime.now(),
+        messageType: AiMessageType.analysis,
+        data: response,
+      ));
+    } catch (e) {
+      throw Exception('Erreur API IA: $e');
+    }
+  }
+
+  /// Get offline response using local data analysis
+  Future<void> _getOfflineResponse(String userQuery) async {
+    // Simulate AI thinking time
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    // Generate response based on query type using local data
+    final response = await _generateLocalResponse(userQuery);
+    conversationHistory.add(response);
+  }
+
+  /// Generate AI response based on user query using local data
+  Future<AiMessage> _generateLocalResponse(String query) async {
     final lowerQuery = query.toLowerCase();
     
     // Financial analysis queries

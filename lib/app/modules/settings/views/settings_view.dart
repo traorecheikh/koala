@@ -177,13 +177,18 @@ class SettingsView extends GetView<SettingsController> {
                 subtitle: 'Changer votre code de sécurité',
                 onTap: controller.changePIN,
               ),
-              _buildToggleSettingsItem(
+              Obx(() => _buildToggleSettingsItem(
                 icon: Icons.fingerprint,
                 title: 'Authentification biométrique',
-                subtitle: 'Empreinte digitale ou Face ID',
+                subtitle: controller.isBiometricAvailable.value 
+                  ? 'Empreinte digitale ou Face ID'
+                  : 'Non disponible sur cet appareil',
                 valueGetter: () => controller.biometricEnabled,
-                onChanged: controller.toggleBiometric,
-              ),
+                onChanged: controller.isBiometricAvailable.value 
+                  ? controller.toggleBiometric 
+                  : null,
+                enabled: controller.isBiometricAvailable.value,
+              )),
             ],
           ),
           const SizedBox(height: 24),
@@ -369,27 +374,40 @@ class SettingsView extends GetView<SettingsController> {
     required String title,
     required String subtitle,
     required bool Function() valueGetter,
-    required Function(bool) onChanged,
+    required Function(bool)? onChanged,
+    bool enabled = true,
   }) {
     return ListTile(
       leading: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
+          color: (enabled ? AppColors.primary : AppColors.textSecondary).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
-        child: Icon(icon, color: AppColors.primary, size: 20),
+        child: Icon(
+          icon, 
+          color: enabled ? AppColors.primary : AppColors.textSecondary, 
+          size: 20,
+        ),
       ),
       title: Text(
         title,
-        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
+        style: AppTextStyles.body.copyWith(
+          fontWeight: FontWeight.w500,
+          color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
+        ),
       ),
-      subtitle: Text(subtitle, style: AppTextStyles.caption),
+      subtitle: Text(
+        subtitle, 
+        style: AppTextStyles.caption.copyWith(
+          color: enabled ? AppColors.textSecondary : AppColors.textSecondary.withValues(alpha: 0.6),
+        ),
+      ),
       trailing: GetBuilder<SettingsController>(
         builder: (controller) => Switch(
-          value: valueGetter(),
-          onChanged: onChanged,
+          value: enabled ? valueGetter() : false,
+          onChanged: enabled ? onChanged : null,
           activeColor: AppColors.primary,
         ),
       ),
@@ -397,6 +415,7 @@ class SettingsView extends GetView<SettingsController> {
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
+      enabled: enabled,
     );
   }
 }

@@ -28,7 +28,7 @@ abstract class ApiClient {
 
   // Transactions
   @GET("/transactions")
-  Future<List<Transaction>> getTransactions({
+  Future<Map<String, dynamic>> getTransactions({
     @Query("from") String? from,
     @Query("to") String? to,
     @Query("category") String? category,
@@ -38,6 +38,13 @@ abstract class ApiClient {
 
   @POST("/transactions")
   Future<Transaction> createTransaction(@Body() Transaction transaction);
+
+  @POST("/transactions/import")
+  @MultiPart()
+  Future<HttpResponse> importTransactions(
+    @Part() File file,
+    @Part("account_id") String accountId,
+  );
 
   @GET("/transactions/{id}")
   Future<Transaction> getTransaction(@Path("id") String id);
@@ -67,24 +74,34 @@ abstract class ApiClient {
   @POST("/ai/insight")
   Future<InsightResponse> getInsight(@Body() Map<String, dynamic> body);
 
+  // Sync
+  @GET("/sync/pending")
+  Future<HttpResponse> getSyncPending();
+
+  @POST("/sync/ack")
+  Future<HttpResponse> acknowledgeSyncItems(@Body() Map<String, dynamic> body);
+
   // Notifications
   @GET("/notifications")
-  Future<List<Device>> getRegisteredDevices();
+  Future<Map<String, dynamic>> getRegisteredDevices();
 
   @POST("/notifications/register")
-  Future<HttpResponse> registerDevice(@Body() Map<String, dynamic> body);
+  Future<Map<String, dynamic>> registerDevice(@Body() Map<String, dynamic> body);
 
   @POST("/notifications/unregister")
   Future<HttpResponse> unregisterDevice(@Body() Map<String, dynamic> body);
 
   @POST("/notifications/send/template")
-  Future<HttpResponse> sendTemplateNotification(
-      @Body() NotificationTemplate body);
+  Future<Map<String, dynamic>> sendTemplateNotification(
+      @Body() Map<String, dynamic> body);
 
   // Points & Achievements
   @GET("/points")
-  Future<PointTransaction> getPoints();
+  Future<Map<String, dynamic>> getPoints();
+
+  @POST("/points/award")
+  Future<HttpResponse> awardPoints(@Body() Map<String, dynamic> body);
 
   @GET("/achievements")
-  Future<List<Achievement>> getAchievements();
+  Future<Map<String, dynamic>> getAchievements();
 }

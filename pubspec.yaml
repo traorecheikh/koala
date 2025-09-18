@@ -42,6 +42,7 @@ dependencies:
 
   # Device Info for Authentication
   device_info_plus: ^10.1.2
+  local_auth: ^2.3.0
 
   # Firebase
   firebase_core: ^4.1.0

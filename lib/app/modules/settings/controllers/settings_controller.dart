@@ -2,17 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/data/services/local_data_service.dart';
 import 'package:koala/app/data/services/local_settings_service.dart';
+import 'package:koala/app/data/services/biometric_service.dart';
 
 /// Controller for managing app settings and user preferences
 class SettingsController extends GetxController {
   // Observable state from local services
   final Rx<dynamic> currentUser = Rx<dynamic>(null);
   final RxString appVersion = '1.0.0'.obs;
+  final RxBool isBiometricAvailable = false.obs;
 
   @override
   void onInit() {
     super.onInit();
     loadUserData();
+    checkBiometricAvailability();
+  }
+
+  /// Check if biometric authentication is available on device
+  Future<void> checkBiometricAvailability() async {
+    try {
+      isBiometricAvailable.value = await BiometricService.to.isAvailable();
+    } catch (e) {
+      isBiometricAvailable.value = false;
+    }
   }
 
   // ==== GETTERS FOR SETTINGS ====
@@ -88,11 +100,38 @@ class SettingsController extends GetxController {
   /// Toggle biometric authentication
   Future<void> toggleBiometric(bool value) async {
     try {
+      if (value && isBiometricAvailable.value) {
+        // Test biometric authentication before enabling
+        final authenticated = await BiometricService.to.authenticate(
+          reason: 'Confirmer l\'activation de l\'authentification biométrique',
+        );
+        
+        if (!authenticated) {
+          Get.snackbar(
+            'Authentification échouée',
+            'Impossible d\'activer l\'authentification biométrique',
+            backgroundColor: const Color(0xFFE53E3E),
+            colorText: Colors.white,
+          );
+          return;
+        }
+      }
+      
       await LocalSettingsService.to.setBiometricEnabled(value);
+      
+      Get.snackbar(
+        value ? 'Biométrie activée' : 'Biométrie désactivée',
+        value 
+          ? 'L\'authentification biométrique est maintenant active'
+          : 'L\'authentification biométrique est désactivée',
+        backgroundColor: const Color(0xFF4CAF50),
+        colorText: Colors.white,
+      );
+      
       // Refresh UI
       update();
     } catch (e) {
-      Get.snackbar('Erreur', 'Impossible de modifier l\'authentification biométrique');
+      Get.snackbar('Erreur', 'Impossible de modifier l\'authentification biométrique: $e');
     }
   }
 
