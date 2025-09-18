@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koala/app/data/models/account_model.dart';
 import 'package:koala/app/data/models/transaction_model.dart';
+import 'package:koala/app/data/services/local_data_service.dart';
 import 'package:koala/app/shared/widgets/add_transaction_bottom_sheet.dart';
 
 class TransactionController extends GetxController {
-  final transactions = <TransactionModel>[].obs;
   final filteredTransactions = <TransactionModel>[].obs;
-  final accounts = <AccountModel>[].obs;
   final isLoading = false.obs;
 
   final searchController = TextEditingController();
@@ -32,16 +31,22 @@ class TransactionController extends GetxController {
     'Autres',
   ].obs;
 
+  // Use reactive data from LocalDataService
+  List<TransactionModel> get transactions => LocalDataService.to.transactions;
+  List<AccountModel> get accounts => LocalDataService.to.accounts;
+
   @override
   void onInit() {
     super.onInit();
     loadTransactions();
-    loadAccounts();
 
     // Listen to search changes
     searchController.addListener(_filterTransactions);
     ever(selectedCategory, (_) => _filterTransactions());
     ever(selectedDateRange, (_) => _filterTransactions());
+    
+    // Listen to changes in local data
+    ever(LocalDataService.to.transactions, (_) => _filterTransactions());
   }
 
   @override
@@ -54,27 +59,12 @@ class TransactionController extends GetxController {
   Future<void> loadTransactions() async {
     try {
       isLoading.value = true;
-      // TODO: Load from Hive storage
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Mock transactions for now
-      transactions.clear();
+      // Data is automatically loaded from LocalDataService
       _filterTransactions();
     } catch (e) {
       Get.snackbar('Erreur', 'Impossible de charger les transactions');
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  /// Load accounts from storage
-  Future<void> loadAccounts() async {
-    try {
-      // TODO: Load from Hive storage
-      await Future.delayed(const Duration(milliseconds: 300));
-      accounts.clear();
-    } catch (e) {
-      Get.snackbar('Erreur', 'Impossible de charger les comptes');
     }
   }
 
@@ -106,12 +96,41 @@ class TransactionController extends GetxController {
     try {
       isLoading.value = true;
 
-      // TODO: Save to Hive storage
-      // For now, just add to the local list
-      transactions.add(transaction);
+      // Save using LocalDataService
+      await LocalDataService.to.addTransaction(transaction);
 
       // Refresh the filtered list
       _filterTransactions();
+
+      Get.snackbar(
+        'Succès', 
+        'Transaction ajoutée avec succès',
+        backgroundColor: const Color(0xFF4CAF50),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Erreur', 'Impossible d\'ajouter la transaction: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Delete a transaction
+  Future<void> deleteTransaction(String transactionId) async {
+    try {
+      await LocalDataService.to.deleteTransaction(transactionId);
+      _filterTransactions();
+      
+      Get.snackbar(
+        'Succès', 
+        'Transaction supprimée',
+        backgroundColor: const Color(0xFF4CAF50),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Erreur', 'Impossible de supprimer la transaction: $e');
+    }
+  }
 
       // TODO: Also sync with API if needed
       await Future.delayed(

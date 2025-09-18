@@ -9,4 +9,13 @@ abstract class Routes {
   static const settings = '/settings';
   static const loans = '/loans';
   static const main = '/main'; // Added main route
+  
+  // Settings sub-routes
+  static const profileEdit = '/profile/edit';
+  static const profileFinancial = '/profile/financial';
+  static const changePin = '/security/change-pin';
+  static const help = '/help';
+  static const feedback = '/feedback';
+  static const about = '/about';
+  static const settingsBackups = '/settings/backups';
 }
