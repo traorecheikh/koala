@@ -49,14 +49,6 @@ class InsightsView extends GetView<InsightsController> {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(
-              Icons.arrow_back_ios,
-              color: AppColors.textPrimary,
-            ),
-            tooltip: 'Retour',
-          ),
           Expanded(child: Text('Insights IA', style: AppTextStyles.h2)),
           Container(
             padding: const EdgeInsets.symmetric(
