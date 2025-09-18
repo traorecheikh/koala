@@ -1,33 +1,35 @@
-/// App dimensions and spacing constants based on design tokens
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+/// App dimensions and spacing constants based on design tokens with ScreenUtil responsiveness
 class AppDimensions {
-  // Spacing values from design tokens
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 16.0;
-  static const double lg = 24.0;
-  static const double xl = 32.0;
+  // Responsive spacing values from design tokens
+  static double get xs => 4.w;
+  static double get sm => 8.w;
+  static double get md => 16.w;
+  static double get lg => 24.w;
+  static double get xl => 32.w;
 
-  // Touch targets
-  static const double minTouchTarget = 44.0;
-  static const double buttonPadding = 16.0;
-  static const double listItemHeight = 48.0;
+  // Responsive touch targets
+  static double get minTouchTarget => 44.w;
+  static double get buttonPadding => 16.w;
+  static double get listItemHeight => 48.h;
 }
 
-/// App spacing constants
+/// App spacing constants with ScreenUtil responsiveness
 class AppSpacing {
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 16.0;
-  static const double lg = 24.0;
-  static const double xl = 32.0;
-  static const double minTouchTarget = 44.0;
+  static double get xs => 4.w;
+  static double get sm => 8.w;
+  static double get md => 16.w;
+  static double get lg => 24.w;
+  static double get xl => 32.w;
+  static double get minTouchTarget => 44.w;
 }
 
-/// App radius constants
+/// App radius constants with ScreenUtil responsiveness
 class AppRadius {
-  static const double sm = 8.0;
-  static const double md = 12.0;
-  static const double lg = 16.0;
+  static double get sm => 8.r;
+  static double get md => 12.r;
+  static double get lg => 16.r;
 }
 
 /// App elevation constants
