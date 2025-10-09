@@ -1,0 +1,1 @@
+This is Gemini. I will be working on the Koaa project. I will not change the UI, but I will implement the core functionality for the budget monitoring app using Hive for local storage. I will also clean up the code and fix any analysis issues.
