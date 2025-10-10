@@ -3,7 +3,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -19,104 +18,84 @@ class AnalyticsView extends GetView<AnalyticsController> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(CupertinoIcons.back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('Analytique', style: theme.textTheme.titleLarge),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: ListView(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-          children:
-              [
-                    // Header
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 8.h,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Analytics', style: theme.textTheme.titleLarge),
-                          IconButton(
-                            icon: const Icon(
-                              CupertinoIcons.info_circle,
-                              size: 28,
-                            ),
-                            onPressed: () {},
-                            splashRadius: 24,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Period selector
-                    Obx(() => _buildPeriodSelector()),
-
-                    const SizedBox(height: 24),
-
-                    // Main balance card
-                    Obx(() => _buildBalanceCard(theme)),
-
-                    const SizedBox(height: 16),
-
-                    // Income/Expense row
-                    Obx(
-                      () => Row(
-                        children: [
-                          Expanded(child: _buildSummaryCard(theme, true)),
-                          SizedBox(width: 12.w),
-                          Expanded(child: _buildSummaryCard(theme, false)),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Spending trend
-                    Obx(() => _buildSpendingTrendCard(theme)),
-
-                    const SizedBox(height: 24),
-
-                    // Category breakdown
-                    Obx(() => _buildCategoryCard(theme)),
-
-                    const SizedBox(height: 24),
-
-                    // Insights
-                    Obx(() => _buildInsightsCard(theme)),
-
-                    const SizedBox(height: 24),
-
-                    // ML Insights Section
-                    Obx(
-                      () => controller.mlInsights.isNotEmpty
-                          ? Column(
-                              children: [
-                                _buildMLInsightsCard(theme),
-                                const SizedBox(height: 24),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-
-                    // Spending Pattern
-                    Obx(
-                      () => controller.spendingPattern.value != null
-                          ? Column(
-                              children: [
-                                _buildSpendingPatternCard(theme),
-                                const SizedBox(height: 24),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ]
-                  .animate(interval: 50.ms)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 300.ms,
-                    curve: Curves.easeOutQuart,
-                  )
-                  .fadeIn(duration: 200.ms),
+          children: [
+            // Header
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Analytique', style: theme.textTheme.titleLarge),
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.info_circle, size: 28),
+                    onPressed: () {},
+                    splashRadius: 24,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Period selector
+            Obx(() => _buildPeriodSelector()),
+            const SizedBox(height: 24),
+            // Main balance card
+            Obx(() => _buildBalanceCard(theme)),
+            const SizedBox(height: 16),
+            // Income/Expense row
+            Obx(
+              () => Row(
+                children: [
+                  Expanded(child: _buildSummaryCard(theme, true)),
+                  SizedBox(width: 12.w),
+                  Expanded(child: _buildSummaryCard(theme, false)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Spending trend
+            Obx(() => _buildSpendingTrendCard(theme)),
+            const SizedBox(height: 24),
+            // Category breakdown
+            Obx(() => _buildCategoryCard(theme)),
+            const SizedBox(height: 24),
+            // Insights
+            Obx(() => _buildInsightsCard(theme)),
+            const SizedBox(height: 24),
+            // ML Insights Section
+            Obx(
+              () => controller.mlInsights.isNotEmpty
+                  ? Column(
+                      children: [
+                        _buildMLInsightsCard(theme),
+                        const SizedBox(height: 24),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            // Spending Pattern
+            Obx(
+              () => controller.spendingPattern.value != null
+                  ? Column(
+                      children: [
+                        _buildSpendingPatternCard(theme),
+                        const SizedBox(height: 24),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
         ),
       ),
     );
@@ -196,7 +175,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Net Balance',
+                'Solde Net',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white70,
                 ),
@@ -242,7 +221,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
           ),
           SizedBox(height: 4.h),
           Text(
-            isPositive ? 'You\'re doing great!' : 'Budget exceeded',
+            isPositive ? 'Vous faites du bon travail !' : 'Budget dépassé',
             style: TextStyle(fontSize: 14.sp, color: Colors.white70),
           ),
         ],
@@ -252,7 +231,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
 
   Widget _buildSummaryCard(ThemeData theme, bool isIncome) {
     final amount = isIncome ? controller.totalIncome : controller.totalExpenses;
-    final label = isIncome ? 'Income' : 'Expense';
+    final label = isIncome ? 'Revenu' : 'Dépense';
     final icon = isIncome ? CupertinoIcons.arrow_down : CupertinoIcons.arrow_up;
     final color = isIncome
         ? theme.colorScheme.secondary
@@ -296,7 +275,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
   Widget _buildSpendingTrendCard(ThemeData theme) {
     final trendData = controller.dailySpendingTrend;
     if (trendData.isEmpty) {
-      return _buildEmptyCard(theme, 'No spending data available');
+      return _buildEmptyCard(theme, 'Aucune donnée de dépense disponible');
     }
 
     return Container(
@@ -311,7 +290,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Spending Trend', style: theme.textTheme.titleMedium),
+              Text('Tendance des dépenses', style: theme.textTheme.titleMedium),
               if (controller.percentageChange != 0)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
@@ -369,7 +348,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
   Widget _buildCategoryCard(ThemeData theme) {
     final categories = controller.topSpendingCategories;
     if (categories.isEmpty) {
-      return _buildEmptyCard(theme, 'No expense data available');
+      return _buildEmptyCard(theme, 'Aucune donnée de dépense disponible');
     }
 
     final total = categories.fold(0.0, (sum, e) => sum + e.value);
@@ -383,7 +362,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Top Categories', style: theme.textTheme.titleMedium),
+          Text('Catégories principales', style: theme.textTheme.titleMedium),
           SizedBox(height: 16.h),
           ...categories.map((entry) {
             final percentage = (entry.value / total) * 100;
@@ -445,18 +424,18 @@ class AnalyticsView extends GetView<AnalyticsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Insights', style: theme.textTheme.titleMedium),
+          Text('Aperçus', style: theme.textTheme.titleMedium),
           SizedBox(height: 16.h),
           _buildInsightRow(
             theme,
-            'Daily Average',
+            'Moyenne quotidienne',
             'FCFA ${_formatAmount(avgDaily)}',
             CupertinoIcons.calendar,
           ),
           SizedBox(height: 12.h),
           _buildInsightRow(
             theme,
-            'End of Month',
+            'Fin du mois',
             'FCFA ${_formatAmount(predicted)}',
             CupertinoIcons.clock,
           ),
@@ -651,33 +630,37 @@ class AnalyticsView extends GetView<AnalyticsController> {
                 size: 20.sp,
               ),
               SizedBox(width: 8.w),
-              Text('Spending Pattern', style: theme.textTheme.titleMedium),
+              Text('Modèle de dépenses', style: theme.textTheme.titleMedium),
             ],
           ),
           SizedBox(height: 16.h),
           _buildPatternRow(
             theme,
-            'Trend',
+            'Tendance',
             pattern.trend == SpendingTrend.increasing
-                ? '📈 Increasing'
+                ? '📈 Augmentant'
                 : pattern.trend == SpendingTrend.decreasing
-                ? '📉 Decreasing'
+                ? '📉 Diminuant'
                 : '➡️ Stable',
           ),
           SizedBox(height: 8.h),
           _buildPatternRow(
             theme,
-            'Consistency Score',
+            'Score de cohérence',
             '${pattern.consistencyScore}%',
           ),
           SizedBox(height: 8.h),
           _buildPatternRow(
             theme,
-            'Top Category',
+            'Catégorie principale',
             '${pattern.topCategory.icon} ${pattern.topCategory.displayName}',
           ),
           SizedBox(height: 8.h),
-          _buildPatternRow(theme, 'Peak Day', _getDayName(pattern.peakDay)),
+          _buildPatternRow(
+            theme,
+            'Jour de pointe',
+            _getDayName(pattern.peakDay),
+          ),
         ],
       ),
     );
@@ -720,7 +703,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
       case 7:
         return 'Dimanche';
       default:
-        return 'Unknown';
+        return 'Inconnu';
     }
   }
 }
