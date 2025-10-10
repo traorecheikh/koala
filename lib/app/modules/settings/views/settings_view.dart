@@ -26,7 +26,7 @@ class SettingsView extends GetView<SettingsController> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          'Settings',
+          'Paramètres', // Translated from 'Settings'
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -38,12 +38,12 @@ class SettingsView extends GetView<SettingsController> {
         children: [
           _buildSettingsSection(
             context,
-            title: 'Appearance',
+            title: 'Apparence', // Translated from 'Appearance'
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.moon_fill,
-                title: 'Dark Mode',
+                title: 'Mode sombre', // Translated from 'Dark Mode'
                 trailing: Obx(
                   () => CupertinoSwitch(
                     value: controller.isDarkMode.value,
@@ -56,24 +56,25 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Account',
+            title: 'Compte', // Translated from 'Account'
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.person_alt_circle_fill,
-                title: 'Profile',
+                title: 'Profil', // Translated from 'Profile'
                 onTap: () => showEditProfileDialog(context),
               ),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.lock_fill,
-                title: 'Security',
+                title: 'Sécurité', // Translated from 'Security'
                 onTap: () {},
               ),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.repeat,
-                title: 'Recurring Transactions',
+                title:
+                    'Transactions récurrentes', // Translated from 'Recurring Transactions'
                 onTap: () => Get.to(() => const RecurringTransactionsView()),
               ),
             ],
@@ -81,12 +82,13 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Notifications',
+            title: 'Notifications', // Translated from 'Notifications'
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.bell_fill,
-                title: 'Notification Settings',
+                title:
+                    'Paramètres de notification', // Translated from 'Notification Settings'
                 onTap: () {},
               ),
             ],
@@ -94,18 +96,20 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Privacy',
+            title: 'Confidentialité', // Translated from 'Privacy'
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.hand_raised_fill,
-                title: 'Privacy Policy',
+                title:
+                    'Politique de confidentialité', // Translated from 'Privacy Policy'
                 onTap: () {},
               ),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.doc_text_fill,
-                title: 'Terms of Service',
+                title:
+                    'Conditions d\'utilisation', // Translated from 'Terms of Service'
                 onTap: () {},
               ),
             ],
