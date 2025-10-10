@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:koaa/app/modules/analytics/bindings/analytics_binding.dart';
 import 'package:koaa/app/modules/analytics/views/analytics_view.dart';
+import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -31,6 +32,12 @@ class AppPages {
       name: _Paths.analytics,
       page: () => const AnalyticsView(),
       binding: AnalyticsBinding(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: _Paths.recurring,
+      page: () => const RecurringTransactionsView(),
+      binding: SettingsBinding(),
       transition: Transition.cupertino,
     ),
   ];
