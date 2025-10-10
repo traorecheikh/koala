@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app_info/flutter_app_info.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
@@ -23,7 +24,7 @@ void main() async {
   await Hive.openBox<RecurringTransaction>('recurringTransactionBox');
   // await Hive.deleteFromDisk();
 
-  runApp(const MyApp());
+  runApp(AppInfo(data: await AppInfoData.get(), child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
