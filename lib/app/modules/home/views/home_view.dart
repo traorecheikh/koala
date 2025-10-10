@@ -357,9 +357,155 @@ class _TransactionsHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text('Activité récente', style: theme.textTheme.titleLarge),
-          const Icon(CupertinoIcons.search, size: 28),
+          GestureDetector(
+            onTap: () => showSearch(
+              context: context,
+              delegate: TransactionSearchDelegate(),
+            ),
+            child: const Icon(CupertinoIcons.search, size: 28),
+          ),
         ],
       ),
+    );
+  }
+}
+
+// --- Flowy, smooth search page for transactions ---
+class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
+  TransactionSearchDelegate();
+
+  @override
+  String get searchFieldLabel => 'Rechercher un transfert...';
+
+  @override
+  TextStyle? get searchFieldStyle =>
+      const TextStyle(fontSize: 18, fontWeight: FontWeight.w400);
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.copyWith(
+      appBarTheme: theme.appBarTheme.copyWith(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        iconTheme: theme.iconTheme,
+        titleTextStyle: theme.textTheme.titleLarge,
+      ),
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        border: InputBorder.none,
+        hintStyle: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey),
+      ),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(CupertinoIcons.clear),
+          onPressed: () => query = '',
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(CupertinoIcons.back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildResultsList(context);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildResultsList(context);
+  }
+
+  Widget _buildResultsList(BuildContext context) {
+    final controller = Get.find<HomeController>();
+    final results = controller.transactions.where((tx) {
+      final q = query.toLowerCase();
+      return tx.description.toLowerCase().contains(q) ||
+          NumberFormat.currency(
+            locale: 'fr_FR',
+            symbol: 'FCFA',
+          ).format(tx.amount).contains(q);
+    }).toList();
+
+    if (results.isEmpty) {
+      return Center(
+        child: Text(
+          'Aucun transfert trouvé',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+      itemCount: results.length,
+      separatorBuilder: (_, __) => SizedBox(height: 12.h),
+      itemBuilder: (context, index) {
+        final tx = results[index];
+        final isExpense = tx.type == TransactionType.expense;
+        final color = isExpense
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.secondary;
+        final icon = isExpense
+            ? CupertinoIcons.arrow_up
+            : CupertinoIcons.arrow_down;
+        return AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutQuart,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(18.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.08),
+                    blurRadius: 12.r,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: color.withAlpha(30),
+                  child: Icon(icon, color: color, size: 22.sp),
+                ),
+                title: Text(
+                  tx.description,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                subtitle: Text(
+                  DateFormat('dd MMM, yyyy').format(tx.date),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                trailing: Text(
+                  (isExpense ? '- ' : '+ ') +
+                      NumberFormat.currency(
+                        locale: 'fr_FR',
+                        symbol: 'FCFA',
+                      ).format(tx.amount),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: color),
+                ),
+                onTap: () => close(context, tx),
+              ),
+            )
+            .animate()
+            .fadeIn(duration: 400.ms)
+            .slideY(begin: 0.1, curve: Curves.easeOutQuart);
+      },
     );
   }
 }
