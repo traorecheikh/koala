@@ -20,94 +20,103 @@ class AnalyticsView extends GetView<AnalyticsController> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: Obx(
-          () => ListView(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            children:
-                [
-                      // Header
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 8.h,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Analytics',
-                              style: theme.textTheme.titleLarge,
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                CupertinoIcons.info_circle,
-                                size: 28,
-                              ),
-                              onPressed: () {},
-                              splashRadius: 24,
-                            ),
-                          ],
-                        ),
+        child: ListView(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          children:
+              [
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 8.h,
                       ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Analytics', style: theme.textTheme.titleLarge),
+                          IconButton(
+                            icon: const Icon(
+                              CupertinoIcons.info_circle,
+                              size: 28,
+                            ),
+                            onPressed: () {},
+                            splashRadius: 24,
+                          ),
+                        ],
+                      ),
+                    ),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Period selector
-                      _buildPeriodSelector(),
+                    // Period selector
+                    Obx(() => _buildPeriodSelector()),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Main balance card
-                      _buildBalanceCard(theme),
+                    // Main balance card
+                    Obx(() => _buildBalanceCard(theme)),
 
-                      const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                      // Income/Expense row
-                      Row(
+                    // Income/Expense row
+                    Obx(
+                      () => Row(
                         children: [
                           Expanded(child: _buildSummaryCard(theme, true)),
                           SizedBox(width: 12.w),
                           Expanded(child: _buildSummaryCard(theme, false)),
                         ],
                       ),
+                    ),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Spending trend
-                      _buildSpendingTrendCard(theme),
+                    // Spending trend
+                    Obx(() => _buildSpendingTrendCard(theme)),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Category breakdown
-                      _buildCategoryCard(theme),
+                    // Category breakdown
+                    Obx(() => _buildCategoryCard(theme)),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Insights
-                      _buildInsightsCard(theme),
+                    // Insights
+                    Obx(() => _buildInsightsCard(theme)),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // ML Insights Section
-                      if (controller.mlInsights.isNotEmpty) ...[
-                        _buildMLInsightsCard(theme),
-                        const SizedBox(height: 24),
-                      ],
+                    // ML Insights Section
+                    Obx(
+                      () => controller.mlInsights.isNotEmpty
+                          ? Column(
+                              children: [
+                                _buildMLInsightsCard(theme),
+                                const SizedBox(height: 24),
+                              ],
+                            )
+                          : const SizedBox.shrink(),
+                    ),
 
-                      // Spending Pattern
-                      if (controller.spendingPattern.value != null) ...[
-                        _buildSpendingPatternCard(theme),
-                        const SizedBox(height: 24),
-                      ],
-                    ]
-                    .animate(interval: 100.ms)
-                    .slideY(
-                      begin: 0.2,
-                      duration: 400.ms,
-                      curve: Curves.easeOutQuart,
-                    )
-                    .fadeIn(),
-          ),
+                    // Spending Pattern
+                    Obx(
+                      () => controller.spendingPattern.value != null
+                          ? Column(
+                              children: [
+                                _buildSpendingPatternCard(theme),
+                                const SizedBox(height: 24),
+                              ],
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ]
+                  .animate(interval: 50.ms)
+                  .slideY(
+                    begin: 0.1,
+                    duration: 300.ms,
+                    curve: Curves.easeOutQuart,
+                  )
+                  .fadeIn(duration: 200.ms),
         ),
       ),
     );
@@ -341,111 +350,14 @@ class AnalyticsView extends GetView<AnalyticsController> {
             ],
           ),
           SizedBox(height: 20.h),
-          SizedBox(
-            height: 180.h,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 1,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(color: Colors.grey.shade200, strokeWidth: 1);
-                  },
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40.w,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          _formatCompactAmount(value),
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: Colors.grey.shade600,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30.h,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        if (index < 0 || index >= trendData.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final date = trendData.keys.elementAt(index);
-                        return Padding(
-                          padding: EdgeInsets.only(top: 8.h),
-                          child: Text(
-                            DateFormat('EEE').format(date).substring(0, 1),
-                            style: TextStyle(
-                              fontSize: 11.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: trendData.entries
-                        .toList()
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value.value))
-                        .toList(),
-                    isCurved: true,
-                    color: theme.colorScheme.primary,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) {
-                        return FlDotCirclePainter(
-                          radius: 4,
-                          color: theme.colorScheme.surface,
-                          strokeWidth: 2,
-                          strokeColor: theme.colorScheme.primary,
-                        );
-                      },
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: theme.colorScheme.primary.withAlpha(25),
-                    ),
-                  ),
-                ],
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) => const Color(0xFF1A1B1E),
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        return LineTooltipItem(
-                          'FCFA ${_formatAmount(spot.y)}',
-                          TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12.sp,
-                          ),
-                        );
-                      }).toList();
-                    },
-                  ),
-                ),
+          // Wrap chart in RepaintBoundary to isolate repaints
+          RepaintBoundary(
+            child: SizedBox(
+              height: 180.h,
+              child: _SpendingTrendChart(
+                trendData: trendData,
+                primaryColor: theme.colorScheme.primary,
+                surfaceColor: theme.colorScheme.surface,
               ),
             ),
           ),
@@ -810,5 +722,139 @@ class AnalyticsView extends GetView<AnalyticsController> {
       default:
         return 'Unknown';
     }
+  }
+}
+
+class _SpendingTrendChart extends StatelessWidget {
+  final Map<DateTime, double> trendData;
+  final Color primaryColor;
+  final Color surfaceColor;
+
+  const _SpendingTrendChart({
+    required this.trendData,
+    required this.primaryColor,
+    required this.surfaceColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 1,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(color: Colors.grey.shade200, strokeWidth: 1);
+          },
+        ),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40.w,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  _formatCompactAmount(value),
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                );
+              },
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30.h,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= trendData.length) {
+                  return const SizedBox.shrink();
+                }
+                final date = trendData.keys.elementAt(index);
+                return Padding(
+                  padding: EdgeInsets.only(top: 8.h),
+                  child: Text(
+                    DateFormat('EEE').format(date).substring(0, 1),
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        lineBarsData: [
+          LineChartBarData(
+            spots: trendData.entries
+                .toList()
+                .asMap()
+                .entries
+                .map((e) => FlSpot(e.key.toDouble(), e.value.value))
+                .toList(),
+            isCurved: true,
+            color: primaryColor,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 4,
+                  color: surfaceColor,
+                  strokeWidth: 2,
+                  strokeColor: primaryColor,
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              color: primaryColor.withAlpha(25),
+            ),
+          ),
+        ],
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (touchedSpot) => const Color(0xFF1A1B1E),
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                return LineTooltipItem(
+                  'FCFA ${_formatAmount(spot.y)}',
+                  TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.sp,
+                  ),
+                );
+              }).toList();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatAmount(double amount) {
+    return NumberFormat('#,###', 'fr_FR').format(amount.round());
+  }
+
+  String _formatCompactAmount(double value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(0)}k';
+    }
+    return value.toStringAsFixed(0);
   }
 }
