@@ -66,7 +66,7 @@ class _Header extends StatelessWidget {
         children: [
           Obx(
             () => Text(
-              'Hi, ${controller.userName.value}',
+              'Bonjour, ${controller.userName.value}',
               style: theme.textTheme.titleLarge,
             ),
           ),
@@ -129,7 +129,7 @@ class _BalanceView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Your Balance',
+                'Votre solde',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white70,
                 ),
@@ -204,7 +204,7 @@ class _QuickActions extends GetView<HomeController> {
       children: [
         _AnimatedActionButton(
           icon: CupertinoIcons.arrow_down,
-          label: 'Income',
+          label: 'Revenu',
           color: theme.colorScheme.secondary,
           onTap: () =>
               showAddTransactionDialog(context, TransactionType.income),
@@ -212,14 +212,14 @@ class _QuickActions extends GetView<HomeController> {
 
         _AnimatedActionButton(
           icon: CupertinoIcons.arrow_up,
-          label: 'Expense',
+          label: 'Dépense',
           color: theme.colorScheme.primary,
           onTap: () =>
               showAddTransactionDialog(context, TransactionType.expense),
         ),
         _AnimatedActionButton(
           icon: CupertinoIcons.star_fill,
-          label: 'Goals',
+          label: 'Objectifs',
           color: Colors.pinkAccent,
           onTap: () => {
             // Get.toNamed(Routes.goals)
@@ -227,7 +227,7 @@ class _QuickActions extends GetView<HomeController> {
         ),
         _AnimatedActionButton(
           icon: CupertinoIcons.square_grid_2x2_fill,
-          label: 'More',
+          label: 'Plus',
           color: Colors.grey.shade600,
           onTap: () {
             Get.bottomSheet(
@@ -259,7 +259,7 @@ class _MoreOptionsSheet extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0.w, vertical: 8.0.h),
-            child: Text('More Options', style: theme.textTheme.titleLarge),
+            child: Text('Plus d’options', style: theme.textTheme.titleLarge),
           ),
           const SizedBox(height: 16),
           GridView.count(
@@ -269,19 +269,19 @@ class _MoreOptionsSheet extends StatelessWidget {
             children: [
               _AnimatedActionButton(
                 icon: CupertinoIcons.chart_bar_alt_fill,
-                label: 'Analytics',
+                label: 'Statistiques',
                 color: theme.colorScheme.secondary,
                 onTap: () => Get.toNamed(Routes.analytics),
               ),
               _AnimatedActionButton(
                 icon: CupertinoIcons.archivebox_fill,
-                label: 'Categories',
+                label: 'Categorie',
                 color: Colors.brown,
                 onTap: () => Get.toNamed(Routes.analytics),
               ),
               _AnimatedActionButton(
                 icon: CupertinoIcons.settings_solid,
-                label: 'Settings',
+                label: 'Paramètres',
                 color: Colors.black45,
                 onTap: () => {Get.offAndToNamed(Routes.settings)},
               ),
@@ -356,7 +356,7 @@ class _TransactionsHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Recent Activity', style: theme.textTheme.titleLarge),
+          Text('Activité récente', style: theme.textTheme.titleLarge),
           const Icon(CupertinoIcons.search, size: 28),
         ],
       ),
@@ -395,7 +395,7 @@ class _TransactionListItem extends StatelessWidget {
     final isExpense = transaction.type == TransactionType.expense;
     final amountString = isExpense
         ? '- ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}'
-        : '+ ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}';
+        : ' ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}';
 
     final iconData = {
       TransactionType.income: {
@@ -429,9 +429,7 @@ class _TransactionListItem extends StatelessWidget {
           ),
           trailing: Text(
             amountString,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: isExpense ? null : theme.colorScheme.secondary,
-            ),
+            style: theme.textTheme.titleMedium?.copyWith(color: null),
           ),
         )
         .animate()
