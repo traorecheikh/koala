@@ -147,7 +147,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     final isKeyboardVisible = keyboardHeight > 0;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      height: MediaQuery.of(context).size.height * 0.65,
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -195,6 +195,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       : 'Ajouter une dépense',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
+                    fontSize: 23.sp,
                   ),
                 ),
                 const Spacer(),
@@ -244,9 +245,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                         ),
                         decoration: InputDecoration(
                           hintText: '0',
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                          ),
+                          hintStyle: TextStyle(color: Colors.grey.shade400),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -289,87 +288,99 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
                   // Category selector
                   GestureDetector(
-                    onTap: _showCategoryPicker,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            _selectedCategory?.icon ?? '📦',
-                            style: TextStyle(fontSize: 24.sp),
+                        onTap: _showCategoryPicker,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 16.h,
                           ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Text(
-                              _selectedCategory?.displayName ?? 'Sélectionner une catégorie',
-                              style: TextStyle(
-                                fontSize: 17.sp,
-                                fontWeight: FontWeight.w500,
-                                color: _selectedCategory != null
-                                    ? Colors.black
-                                    : Colors.grey.shade500,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                _selectedCategory?.icon ?? '📦',
+                                style: TextStyle(fontSize: 24.sp),
                               ),
-                            ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Text(
+                                  _selectedCategory?.displayName ??
+                                      'Sélectionner une catégorie',
+                                  style: TextStyle(
+                                    fontSize: 17.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: _selectedCategory != null
+                                        ? Colors.black
+                                        : Colors.grey.shade500,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                CupertinoIcons.chevron_right,
+                                color: Colors.grey.shade400,
+                                size: 20.sp,
+                              ),
+                            ],
                           ),
-                          Icon(
-                            CupertinoIcons.chevron_right,
-                            color: Colors.grey.shade400,
-                            size: 20.sp,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ).animate().slideY(
-                    begin: 0.2,
-                    duration: 400.ms,
-                    delay: 100.ms,
-                    curve: Curves.easeOutQuart,
-                  ).fadeIn(),
+                        ),
+                      )
+                      .animate()
+                      .slideY(
+                        begin: 0.2,
+                        duration: 400.ms,
+                        delay: 100.ms,
+                        curve: Curves.easeOutQuart,
+                      )
+                      .fadeIn(),
 
                   SizedBox(height: 16.h),
 
                   // Optional description
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: TextField(
-                      controller: _descriptionController,
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Note (optionnel)',
-                        hintStyle: TextStyle(color: Colors.grey.shade500),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 16.h),
-                        prefixIcon: Icon(
-                          CupertinoIcons.text_alignleft,
-                          color: Colors.grey.shade500,
-                          size: 20.sp,
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
-                      ),
-                      onChanged: (_) {
-                        if (_error != null) {
-                          setState(() => _error = null);
-                        }
-                      },
-                    ),
-                  ).animate().slideY(
-                    begin: 0.2,
-                    duration: 400.ms,
-                    delay: 200.ms,
-                    curve: Curves.easeOutQuart,
-                  ).fadeIn(),
+                        child: TextField(
+                          controller: _descriptionController,
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Note (optionnel)',
+                            hintStyle: TextStyle(color: Colors.grey.shade500),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 16.h,
+                            ),
+                            prefixIcon: Icon(
+                              CupertinoIcons.text_alignleft,
+                              color: Colors.grey.shade500,
+                              size: 20.sp,
+                            ),
+                          ),
+                          onChanged: (_) {
+                            if (_error != null) {
+                              setState(() => _error = null);
+                            }
+                          },
+                        ),
+                      )
+                      .animate()
+                      .slideY(
+                        begin: 0.2,
+                        duration: 400.ms,
+                        delay: 200.ms,
+                        curve: Curves.easeOutQuart,
+                      )
+                      .fadeIn(),
 
                   if (_error != null) ...[
                     SizedBox(height: 24.h),
@@ -465,10 +476,7 @@ class _CategoryPickerSheet extends StatelessWidget {
   final TransactionType type;
   final Function(TransactionCategory) onSelect;
 
-  const _CategoryPickerSheet({
-    required this.type,
-    required this.onSelect,
-  });
+  const _CategoryPickerSheet({required this.type, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -523,37 +531,38 @@ class _CategoryPickerSheet extends StatelessWidget {
                     HapticFeedback.lightImpact();
                     onSelect(category);
                   },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          category.icon,
-                          style: TextStyle(fontSize: 32.sp),
+                  child:
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          category.displayName,
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              category.icon,
+                              style: TextStyle(fontSize: 32.sp),
+                            ),
+                            SizedBox(height: 8.h),
+                            Text(
+                              category.displayName,
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ).animate().scale(
-                    delay: (index * 30).ms,
-                    duration: 300.ms,
-                    curve: Curves.easeOutBack,
-                  ),
+                      ).animate().scale(
+                        delay: (index * 30).ms,
+                        duration: 300.ms,
+                        curve: Curves.easeOutBack,
+                      ),
                 );
               },
             ),
