@@ -13,6 +13,7 @@ class HomeController extends GetxController {
   final Rxn<LocalUser> user = Rxn<LocalUser>();
   final RxDouble balance = 0.0.obs;
   final RxList<LocalTransaction> transactions = <LocalTransaction>[].obs;
+  final RxBool isCardFlipped = false.obs;
 
   @override
   void onInit() {
@@ -59,6 +60,10 @@ class HomeController extends GetxController {
     balanceVisible.value = !balanceVisible.value;
   }
 
+  void toggleCardFlip() {
+    isCardFlipped.value = !isCardFlipped.value;
+  }
+
   void calculateBalance() {
     double total = 0;
     for (var transaction in transactions) {
@@ -77,7 +82,9 @@ class HomeController extends GetxController {
   }
 
   void generateRecurringTransactions() {
-    final recurringBox = Hive.box<RecurringTransaction>('recurringTransactionBox');
+    final recurringBox = Hive.box<RecurringTransaction>(
+      'recurringTransactionBox',
+    );
     final today = DateTime.now();
 
     for (var recurring in recurringBox.values) {
@@ -109,7 +116,8 @@ class HomeController extends GetxController {
               date: lastGenerated,
               type: TransactionType.expense, // Assuming recurring are expenses
               isRecurring: true,
-              category: TransactionCategory.otherExpense, // Default category for recurring
+              category: TransactionCategory
+                  .otherExpense, // Default category for recurring
             ),
           );
         }
@@ -122,5 +130,101 @@ class HomeController extends GetxController {
   String get formattedBalance {
     final format = NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA');
     return format.format(balance.value);
+  }
+
+  /// Get the last transaction
+  LocalTransaction? get lastTransaction {
+    if (transactions.isEmpty) return null;
+    return transactions.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+  }
+
+  /// Get top spending category
+  MapEntry<TransactionCategory, double>? get topSpendingCategory {
+    if (transactions.isEmpty) return null;
+
+    final Map<TransactionCategory, double> categoryTotals = {};
+
+    for (var tx in transactions) {
+      if (tx.type == TransactionType.expense) {
+        categoryTotals[tx.category!] =
+            (categoryTotals[tx.category] ?? 0) + tx.amount;
+      }
+    }
+
+    if (categoryTotals.isEmpty) return null;
+
+    return categoryTotals.entries.reduce((a, b) => a.value > b.value ? a : b);
+  }
+
+  /// Get recent activity for mini chart (last 7 days)
+  List<double> get recentActivityData {
+    final now = DateTime.now();
+    final List<double> data = List.filled(7, 0.0);
+
+    for (var tx in transactions) {
+      final daysDiff = now.difference(tx.date).inDays;
+      if (daysDiff >= 0 && daysDiff < 7) {
+        final index = 6 - daysDiff;
+        if (tx.type == TransactionType.expense) {
+          data[index] += tx.amount;
+        }
+      }
+    }
+
+    return data;
+  }
+
+  /// Get color based on time of day
+  Color getTimeOfDayColor() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 12) {
+      // Morning: Warm sunrise colors
+      return const Color(0xFF2D3250);
+    } else if (hour >= 12 && hour < 17) {
+      // Afternoon: Bright colors
+      return const Color(0xFF1E3A5F);
+    } else if (hour >= 17 && hour < 21) {
+      // Evening: Sunset colors
+      return const Color(0xFF2C1810);
+    } else {
+      // Night: Deep dark colors
+      return const Color(0xFF0F0F1E);
+    }
+  }
+
+  /// Get gradient based on time of day
+  LinearGradient getTimeOfDayGradient() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 12) {
+      // Morning
+      return LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [const Color(0xFF2D3250), const Color(0xFF424769)],
+      );
+    } else if (hour >= 12 && hour < 17) {
+      // Afternoon
+      return LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [const Color(0xFF1E3A5F), const Color(0xFF2E5984)],
+      );
+    } else if (hour >= 17 && hour < 21) {
+      // Evening
+      return LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [const Color(0xFF2C1810), const Color(0xFF4A2C1A)],
+      );
+    } else {
+      // Night
+      return LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [const Color(0xFF0F0F1E), const Color(0xFF1A1B2E)],
+      );
+    }
   }
 }

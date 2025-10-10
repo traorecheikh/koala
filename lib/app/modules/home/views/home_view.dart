@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/home/widgets/add_transaction_dialog.dart';
+import 'package:koaa/app/modules/home/widgets/enhanced_balance_card.dart';
 
 import '../../../routes/app_pages.dart';
 import '../controllers/home_controller.dart';
@@ -25,24 +26,25 @@ class HomeView extends GetView<HomeController> {
               horizontal: 16.0,
               vertical: 8.0,
             ),
-            children: [
-              const _Header(),
-              const SizedBox(height: 24),
-              const _WalletCard(),
-              const SizedBox(height: 32),
-              const _QuickActions(),
-              const SizedBox(height: 32),
-              const _TransactionsHeader(),
-              const SizedBox(height: 12),
-              const _TransactionList(),
-            ]
-                .animate(interval: 100.ms)
-                .slideY(
-                  begin: 0.2,
-                  duration: 400.ms,
-                  curve: Curves.easeOutQuart,
-                )
-                .fadeIn(),
+            children:
+                [
+                      const _Header(),
+                      const SizedBox(height: 24),
+                      const EnhancedBalanceCard(),
+                      const SizedBox(height: 32),
+                      const _QuickActions(),
+                      const SizedBox(height: 32),
+                      const _TransactionsHeader(),
+                      const SizedBox(height: 12),
+                      const _TransactionList(),
+                    ]
+                    .animate(interval: 100.ms)
+                    .slideY(
+                      begin: 0.2,
+                      duration: 400.ms,
+                      curve: Curves.easeOutQuart,
+                    )
+                    .fadeIn(),
           ),
         ),
       ),
@@ -204,13 +206,15 @@ class _QuickActions extends GetView<HomeController> {
           icon: CupertinoIcons.arrow_down,
           label: 'Income',
           color: theme.colorScheme.secondary,
-          onTap: () => showAddTransactionDialog(context, TransactionType.income),
+          onTap: () =>
+              showAddTransactionDialog(context, TransactionType.income),
         ),
         _AnimatedActionButton(
           icon: CupertinoIcons.arrow_up,
           label: 'Expense',
           color: theme.colorScheme.primary,
-          onTap: () => showAddTransactionDialog(context, TransactionType.expense),
+          onTap: () =>
+              showAddTransactionDialog(context, TransactionType.expense),
         ),
         _AnimatedActionButton(
           icon: CupertinoIcons.square_grid_2x2_fill,
@@ -308,8 +312,8 @@ class _AnimatedActionButton extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
+                color: isDark ? Colors.white : Colors.black,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -345,11 +349,12 @@ class _TransactionList extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Obx(
-      () => Column(
-        children: controller.transactions
-            .map((tx) => _TransactionListItem(transaction: tx))
-            .toList(),
-      ).animate().slideY(
+      () =>
+          Column(
+            children: controller.transactions
+                .map((tx) => _TransactionListItem(transaction: tx))
+                .toList(),
+          ).animate().slideY(
             begin: 0.5,
             duration: 500.ms,
             curve: Curves.easeOutQuart,
@@ -387,22 +392,27 @@ class _TransactionListItem extends StatelessWidget {
     final Color color = iconData[transaction.type]!['color']! as Color;
 
     return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      leading: CircleAvatar(
-        radius: 25.r,
-        backgroundColor: color.withAlpha(25),
-        child: Icon(displayIcon, color: color, size: 24.sp),
-      ),
-      title: Text(transaction.description, style: theme.textTheme.titleMedium),
-      subtitle: Text(DateFormat('dd MMM, yyyy').format(transaction.date),
-          style: theme.textTheme.bodySmall),
-      trailing: Text(
-        amountString,
-        style: theme.textTheme.titleMedium?.copyWith(
-          color: isExpense ? null : theme.colorScheme.secondary,
-        ),
-      ),
-    )
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          leading: CircleAvatar(
+            radius: 25.r,
+            backgroundColor: color.withAlpha(25),
+            child: Icon(displayIcon, color: color, size: 24.sp),
+          ),
+          title: Text(
+            transaction.description,
+            style: theme.textTheme.titleMedium,
+          ),
+          subtitle: Text(
+            DateFormat('dd MMM, yyyy').format(transaction.date),
+            style: theme.textTheme.bodySmall,
+          ),
+          trailing: Text(
+            amountString,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: isExpense ? null : theme.colorScheme.secondary,
+            ),
+          ),
+        )
         .animate()
         .fadeIn(duration: 500.ms)
         .slideX(begin: -0.2, curve: Curves.easeOutQuart);
