@@ -24,29 +24,31 @@ class EnhancedBalanceCard extends GetView<HomeController> {
         HapticFeedback.mediumImpact();
         controller.toggleCardFlip();
       },
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(
-          begin: 0,
-          end: controller.isCardFlipped.value ? math.pi : 0,
+      child: Obx(
+        () => TweenAnimationBuilder<double>(
+          tween: Tween<double>(
+            begin: 0,
+            end: controller.isCardFlipped.value ? math.pi : 0,
+          ),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+          builder: (context, value, child) {
+            final isFront = value < math.pi / 2;
+            return Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.001)
+                ..rotateY(value),
+              child: isFront
+                  ? _FrontCard()
+                  : Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..rotateY(math.pi),
+                      child: _BackCard(),
+                    ),
+            );
+          },
         ),
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOut,
-        builder: (context, value, child) {
-          final isFront = value < math.pi / 2;
-          return Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(value),
-            child: isFront
-                ? _FrontCard()
-                : Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()..rotateY(math.pi),
-                    child: _BackCard(),
-                  ),
-          );
-        },
       ),
     );
   }
@@ -241,7 +243,7 @@ class _BackCard extends GetView<HomeController> {
     final gradient = controller.getTimeOfDayGradient();
 
     return Container(
-      height: 215.h,
+      height: 205.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: gradient,
@@ -322,26 +324,8 @@ class _BackCard extends GetView<HomeController> {
                                 ).format(controller.topSpendingCategory!.value)
                               : '',
                         ),
-
-                        const Spacer(),
-
-                        // Mini chart
-                        _MiniChart(data: controller.recentActivityData),
                       ],
                     ),
-            ),
-
-            SizedBox(height: 8.h),
-
-            Center(
-              child: Text(
-                'Tap to return',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
-                  fontSize: 11.sp,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
             ),
           ],
         ),

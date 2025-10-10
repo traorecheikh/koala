@@ -15,12 +15,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final appDocDir = await getApplicationDocumentsDirectory();
-  await Hive.deleteFromDisk();
+
   Hive.init(appDocDir.path);
   Hive.registerAdapters();
   await Hive.openBox<LocalUser>('userBox');
   await Hive.openBox<LocalTransaction>('transactionBox');
   await Hive.openBox<RecurringTransaction>('recurringTransactionBox');
+  // await Hive.deleteFromDisk();
 
   runApp(const MyApp());
 }

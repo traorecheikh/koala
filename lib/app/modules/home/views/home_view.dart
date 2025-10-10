@@ -209,12 +209,21 @@ class _QuickActions extends GetView<HomeController> {
           onTap: () =>
               showAddTransactionDialog(context, TransactionType.income),
         ),
+
         _AnimatedActionButton(
           icon: CupertinoIcons.arrow_up,
           label: 'Expense',
           color: theme.colorScheme.primary,
           onTap: () =>
               showAddTransactionDialog(context, TransactionType.expense),
+        ),
+        _AnimatedActionButton(
+          icon: CupertinoIcons.star_fill,
+          label: 'Goals',
+          color: Colors.pinkAccent,
+          onTap: () => {
+            // Get.toNamed(Routes.goals)
+          },
         ),
         _AnimatedActionButton(
           icon: CupertinoIcons.square_grid_2x2_fill,
@@ -263,6 +272,18 @@ class _MoreOptionsSheet extends StatelessWidget {
                 label: 'Analytics',
                 color: theme.colorScheme.secondary,
                 onTap: () => Get.toNamed(Routes.analytics),
+              ),
+              _AnimatedActionButton(
+                icon: CupertinoIcons.archivebox_fill,
+                label: 'Categories',
+                color: Colors.brown,
+                onTap: () => Get.toNamed(Routes.analytics),
+              ),
+              _AnimatedActionButton(
+                icon: CupertinoIcons.settings_solid,
+                label: 'Settings',
+                color: Colors.black45,
+                onTap: () => {Get.offAndToNamed(Routes.settings)},
               ),
             ],
           ),
