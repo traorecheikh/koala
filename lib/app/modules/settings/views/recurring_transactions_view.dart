@@ -66,16 +66,23 @@ class _Header extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          IconButton(
-            icon: const Icon(CupertinoIcons.back, size: 28),
-            onPressed: () => Get.back(),
-            splashRadius: 24,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              icon: const Icon(CupertinoIcons.back, size: 28),
+              onPressed: () => Get.back(),
+              splashRadius: 24,
+            ),
           ),
-          Text('Recurring Transactions', style: theme.textTheme.titleLarge),
-          const SizedBox(width: 48), // For spacing
+          Center(
+            child: Text(
+              'Transactions récurrentes',
+              style: theme.textTheme.titleLarge?.copyWith(fontSize: 20.sp),
+            ),
+          ),
         ],
       ),
     );
@@ -109,7 +116,7 @@ class _TransactionListItem extends StatelessWidget {
             style: theme.textTheme.titleMedium,
           ),
           subtitle: Text(
-            '${transaction.amount} FCFA - Every ${transaction.frequency}',
+            '${transaction.amount} FCFA - Chaque ${transaction.frequency}',
             style: theme.textTheme.bodySmall,
           ),
           trailing: IconButton(
