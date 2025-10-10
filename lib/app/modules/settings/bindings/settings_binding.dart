@@ -6,7 +6,10 @@ import '../controllers/settings_controller.dart';
 class SettingsBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<SettingsController>(() => SettingsController());
-    Get.lazyPut<RecurringTransactionsController>(() => RecurringTransactionsController());
+    Get.lazyPut<SettingsController>(() => SettingsController(), fenix: true);
+    Get.lazyPut<RecurringTransactionsController>(
+      () => RecurringTransactionsController(),
+      fenix: true,
+    );
   }
 }
