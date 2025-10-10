@@ -75,7 +75,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         HapticFeedback.mediumImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile updated successfully'),
+            content: Text('Profil mis à jour avec succès'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
@@ -116,7 +116,10 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0.h),
             child: Row(
               children: [
-                Text('Edit Profile', style: theme.textTheme.headlineSmall),
+                Text(
+                  'Modifier le profil',
+                  style: theme.textTheme.headlineSmall,
+                ),
                 const Spacer(),
                 CupertinoButton(
                   padding: EdgeInsets.zero,
@@ -149,11 +152,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       [
                             _buildTextFormField(
                               controller: _fullNameController,
-                              label: 'Full Name',
+                              label: 'Nom complet',
                               icon: CupertinoIcons.person_fill,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your full name';
+                                  return 'Veuillez entrer votre nom complet';
                                 }
                                 return null;
                               },
@@ -161,14 +164,14 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                             SizedBox(height: 16.h),
                             _buildTextFormField(
                               controller: _salaryController,
-                              label: 'Salary',
+                              label: 'Salaire',
                               icon: CupertinoIcons.money_dollar_circle_fill,
                               keyboardType: TextInputType.number,
                               validator: (value) {
                                 if (value == null ||
                                     value.isEmpty ||
                                     double.tryParse(value) == null) {
-                                  return 'Please enter a valid salary';
+                                  return 'Veuillez entrer un salaire valide';
                                 }
                                 return null;
                               },
@@ -176,16 +179,16 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                             SizedBox(height: 16.h),
                             _buildTextFormField(
                               controller: _paydayController,
-                              label: 'Payday (Day of Month)',
+                              label: 'Jour de paie (Jour du mois)',
                               icon: CupertinoIcons.calendar,
                               keyboardType: TextInputType.number,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your payday';
+                                  return 'Veuillez entrer votre jour de paie';
                                 }
                                 final day = int.tryParse(value);
                                 if (day == null || day < 1 || day > 31) {
-                                  return 'Please enter a valid day (1-31)';
+                                  return 'Veuillez entrer un jour valide (1-31)';
                                 }
                                 return null;
                               },
@@ -193,14 +196,14 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                             SizedBox(height: 16.h),
                             _buildTextFormField(
                               controller: _ageController,
-                              label: 'Age',
+                              label: 'Âge',
                               icon: CupertinoIcons.person_badge_plus_fill,
                               keyboardType: TextInputType.number,
                               validator: (value) {
                                 if (value == null ||
                                     value.isEmpty ||
                                     int.tryParse(value) == null) {
-                                  return 'Please enter a valid age';
+                                  return 'Veuillez entrer un âge valide';
                                 }
                                 return null;
                               },
@@ -328,7 +331,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       ),
                       SizedBox(width: 12.w),
                       Text(
-                        'Saving...',
+                        'Enregistrement...',
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
@@ -338,7 +341,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     ],
                   )
                 : Text(
-                    'Save Changes',
+                    'Enregistrer les modifications',
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
