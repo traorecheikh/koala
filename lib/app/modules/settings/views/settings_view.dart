@@ -53,6 +53,18 @@ class SettingsView extends GetView<SettingsController> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: Icon(
+              CupertinoIcons.cloud_download,
+              color: theme.colorScheme.primary,
+            ),
+            title: Text(
+              'Vérifier les mises à jour',
+              style: theme.textTheme.bodyLarge,
+            ),
+            onTap: controller.checkForUpdates,
+          ),
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
