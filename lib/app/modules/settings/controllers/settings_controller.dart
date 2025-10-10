@@ -1,16 +1,19 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app_info/flutter_app_info.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsController extends GetxController {
   RxBool isDarkMode = Get.isDarkMode.obs;
   RxString currentVersion = ''.obs;
+  late Dio _dio;
 
   void toggleTheme(bool value) {
     isDarkMode.value = value;
@@ -20,51 +23,148 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    Logger.level =
+        Level.verbose; // Set Logger to verbose to ensure all logs are displayed
+    _setupDioLogger();
     _loadCurrentVersion();
+  }
+
+  void _setupDioLogger() {
+    _dio = Dio();
+    _dio.interceptors.add(
+      PrettyDioLogger(
+        requestHeader: true,
+        requestBody: true,
+        responseHeader: true,
+        responseBody: true,
+        compact: true,
+      ),
+    );
   }
 
   Future<void> _loadCurrentVersion() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      currentVersion.value = packageInfo.version;
+      Logger().i('Loading current app version...');
+      final appInfo = AppInfo.of(Get.context!);
+      currentVersion.value = appInfo.package.version.toString();
+      Logger().i('Loaded current app version: ${currentVersion.value}');
     } catch (e) {
       currentVersion.value = 'Unknown';
+      Logger().e('Failed to load app version: $e');
       Get.snackbar('Error', 'Failed to load app version.');
     }
   }
 
   Future<void> checkForUpdates() async {
     const String updateUrl =
-        'https://raw.githubusercontent.com/traorecheikh/koala/main/version.json';
+        'https://raw.githubusercontent.com/traorecheikh/koala/refs/heads/main/version.json?token=GHSAT0AAAAAADIKXW7PO7QUB6DKMIBWIX6Q2HJHDTQ';
 
     try {
-      final response = await Dio().get(updateUrl);
+      Logger().i('Checking for updates...');
+      final response = await _dio.get(updateUrl);
+      Logger().i('Received response: ${response.statusCode} ${response.data}');
+
       if (response.statusCode == 200) {
-        final data = response.data;
+        final Map<String, dynamic> data;
+        if (response.data is String) {
+          data = jsonDecode(response.data);
+        } else {
+          data = response.data;
+        }
         final String latestVersion = data['version'];
         final String apkUrl = data['apk_url'];
+        Logger().i('Latest version from server: $latestVersion');
+        Logger().i('APK URL from server: $apkUrl');
 
         if (_isNewerVersion(currentVersion.value, latestVersion)) {
+          Logger().i('A newer version is available. Prompting update.');
           _promptUpdate(latestVersion, apkUrl);
         } else {
+          Logger().i('No updates available. Current version is up-to-date.');
           Get.snackbar('No Updates', 'You are using the latest version.');
         }
+      } else {
+        Logger().e(
+          'Failed to fetch update info. Status code: ${response.statusCode}',
+        );
+        Get.snackbar('Error', 'Failed to check for updates.');
       }
     } catch (e) {
-      Logger().e('Update check failed ${e}');
+      Logger().e('Update check failed: $e');
       Get.snackbar('Error', 'Failed to check for updates.');
     }
   }
 
   bool _isNewerVersion(String current, String latest) {
-    final currentParts = current.split('.').map(int.parse).toList();
-    final latestParts = latest.split('.').map(int.parse).toList();
+    try {
+      Logger().i(
+        'Starting version comparison: current=$current, latest=$latest',
+      );
 
-    for (int i = 0; i < currentParts.length; i++) {
-      if (latestParts[i] > currentParts[i]) return true;
-      if (latestParts[i] < currentParts[i]) return false;
+      // Handle build numbers (e.g., 1.0.0+1) by taking only the version part.
+      final currentVersionOnly = current.split('+').first;
+      Logger().i(
+        'Extracted current version without build number: $currentVersionOnly',
+      );
+
+      // Split the version strings into parts and replace nulls with 0
+      final currentParts = currentVersionOnly.split('.').map((part) {
+        final parsed = int.tryParse(part);
+        if (parsed == null) {
+          Logger().w('Failed to parse part of current version: $part');
+        }
+        return parsed ?? 0;
+      }).toList();
+      final latestParts = latest.split('.').map((part) {
+        final parsed = int.tryParse(part);
+        if (parsed == null) {
+          Logger().w('Failed to parse part of latest version: $part');
+        }
+        return parsed ?? 0;
+      }).toList();
+      Logger().i(
+        'Parsed version parts: currentParts=$currentParts, latestParts=$latestParts',
+      );
+
+      // Ensure both lists are the same length by padding with zeros
+      final maxLength = currentParts.length > latestParts.length
+          ? currentParts.length
+          : latestParts.length;
+      while (currentParts.length < maxLength) {
+        currentParts.add(0);
+      }
+      while (latestParts.length < maxLength) {
+        latestParts.add(0);
+      }
+      Logger().i(
+        'Normalized version parts: currentParts=$currentParts, latestParts=$latestParts',
+      );
+
+      // Compare each part of the version numbers
+      for (int i = 0; i < maxLength; i++) {
+        final currentPart = currentParts[i];
+        final latestPart = latestParts[i];
+        Logger().i(
+          'Comparing parts: currentPart=$currentPart, latestPart=$latestPart',
+        );
+        if (latestPart > currentPart) {
+          Logger().i('Latest version is newer.');
+          return true;
+        }
+        if (latestPart < currentPart) {
+          Logger().i('Current version is newer.');
+          return false;
+        }
+      }
+
+      // If all parts are equal, return false
+      Logger().i('Versions are equal.');
+      return false;
+    } catch (e, stackTrace) {
+      Logger().e('Version comparison failed, $e, $stackTrace');
+      Get.snackbar('Error', 'Invalid version format encountered.');
+      return false;
     }
-    return false;
   }
 
   Future<void> _promptUpdate(String version, String apkUrl) async {
@@ -103,7 +203,7 @@ class SettingsController extends GetxController {
       final file = File(filePath);
 
       Get.snackbar('Downloading', 'Downloading update...');
-      await Dio().download(apkUrl, filePath);
+      await _dio.download(apkUrl, filePath);
 
       Get.snackbar('Download Complete', 'Launching installer...');
       await launchUrl(Uri.file(filePath), mode: LaunchMode.externalApplication);
