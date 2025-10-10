@@ -1,122 +1,342 @@
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 
 void showEditProfileDialog(BuildContext context) {
-  final homeController = Get.find<HomeController>();
-  final user = homeController.user.value;
-  if (user == null) return;
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const _EditProfileSheet(),
+  );
+}
 
-  final formKey = GlobalKey<FormState>();
-  final fullNameController = TextEditingController(text: user.fullName);
-  final salaryController = TextEditingController(text: user.salary.toString());
-  final paydayController = TextEditingController(text: user.payday.toString());
-  final ageController = TextEditingController(text: user.age.toString());
-  String budgetingType = user.budgetingType;
+class _EditProfileSheet extends StatefulWidget {
+  const _EditProfileSheet();
 
-  Get.dialog(
-    AlertDialog(
-      title: const Text('Edit Profile'),
-      content: Form(
-        key: formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: fullNameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your full name';
-                  }
-                  return null;
-                },
+  @override
+  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends State<_EditProfileSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _homeController = Get.find<HomeController>();
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _salaryController;
+  late final TextEditingController _paydayController;
+  late final TextEditingController _ageController;
+  late String _budgetingType;
+  bool _loading = false;
+  bool _buttonPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = _homeController.user.value!;
+    _fullNameController = TextEditingController(text: user.fullName);
+    _salaryController = TextEditingController(text: user.salary.toString());
+    _paydayController = TextEditingController(text: user.payday.toString());
+    _ageController = TextEditingController(text: user.age.toString());
+    _budgetingType = user.budgetingType;
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _salaryController.dispose();
+    _paydayController.dispose();
+    _ageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    if (_formKey.currentState!.validate()) {
+      HapticFeedback.heavyImpact();
+      setState(() => _loading = true);
+
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      final updatedUser = LocalUser(
+        fullName: _fullNameController.text,
+        salary: double.parse(_salaryController.text),
+        payday: int.parse(_paydayController.text),
+        age: int.parse(_ageController.text),
+        budgetingType: _budgetingType,
+      );
+      _homeController.user.value = updatedUser;
+
+      if (mounted) {
+        Navigator.pop(context);
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Container(
+            width: 36.w,
+            height: 4.h,
+            margin: EdgeInsets.only(top: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0.h),
+            child: Row(
+              children: [
+                Text('Edit Profile', style: theme.textTheme.headlineSmall),
+                const Spacer(),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pop(context);
+                  },
+                  child: Icon(
+                    CupertinoIcons.xmark,
+                    color: Colors.grey.shade600,
+                    size: 24.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, keyboardHeight + 24.h),
+                child: Column(
+                  children: [
+                    _buildTextFormField(
+                      controller: _fullNameController,
+                      label: 'Full Name',
+                      icon: CupertinoIcons.person_fill,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your full name';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildTextFormField(
+                      controller: _salaryController,
+                      label: 'Salary',
+                      icon: CupertinoIcons.money_dollar_circle_fill,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty || double.tryParse(value) == null) {
+                          return 'Please enter a valid salary';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildTextFormField(
+                      controller: _paydayController,
+                      label: 'Payday (Day of Month)',
+                      icon: CupertinoIcons.calendar,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your payday';
+                        }
+                        final day = int.tryParse(value);
+                        if (day == null || day < 1 || day > 31) {
+                          return 'Please enter a valid day (1-31)';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildTextFormField(
+                      controller: _ageController,
+                      label: 'Age',
+                      icon: CupertinoIcons.person_badge_plus_fill,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty || int.tryParse(value) == null) {
+                          return 'Please enter a valid age';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDropdown(),
+                    SizedBox(height: 48.h),
+                    _buildSaveButton(),
+                  ].animate(interval: 100.ms).slideY(
+                        begin: 0.2,
+                        duration: 400.ms,
+                        curve: Curves.easeOutQuart,
+                      ).fadeIn(),
+                ),
               ),
-              TextFormField(
-                controller: salaryController,
-                decoration: const InputDecoration(labelText: 'Salary'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your salary';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: paydayController,
-                decoration: const InputDecoration(labelText: 'Payday (Day of Month)'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your payday';
-                  }
-                  final day = int.tryParse(value);
-                  if (day == null || day < 1 || day > 31) {
-                    return 'Please enter a valid day (1-31)';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: ageController,
-                decoration: const InputDecoration(labelText: 'Age'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your age';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Please enter a valid age';
-                  }
-                  return null;
-                },
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: budgetingType,
-                decoration: const InputDecoration(labelText: 'Budgeting Type'),
-                items: ['50/30/20', '70/20/10', 'Zero-Based']
-                    .map((label) => DropdownMenuItem(
-                          value: label,
-                          child: Text(label),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  budgetingType = value!;
-                },
-              ),
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        validator: validator,
+        style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          hintText: label,
+          hintStyle: TextStyle(color: Colors.grey.shade500),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 16.h),
+          prefixIcon: Icon(
+            icon,
+            color: Colors.grey.shade500,
+            size: 20.sp,
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Get.back(),
-          child: const Text('Cancel'),
+    );
+  }
+
+  Widget _buildDropdown() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _budgetingType,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          prefixIcon: Icon(
+            CupertinoIcons.chart_pie_fill,
+            color: Colors.grey.shade500,
+            size: 20.sp,
+          ),
         ),
-        TextButton(
-          onPressed: () {
-            if (formKey.currentState!.validate()) {
-              final updatedUser = LocalUser(
-                fullName: fullNameController.text,
-                salary: double.parse(salaryController.text),
-                payday: int.parse(paydayController.text),
-                age: int.parse(ageController.text),
-                budgetingType: budgetingType,
-              );
-              homeController.user.value = updatedUser;
-              Get.back();
-            }
-          },
-          child: const Text('Save'),
+        style: TextStyle(
+          fontSize: 17.sp,
+          fontWeight: FontWeight.w500,
+          color: Colors.black,
         ),
-      ],
-    ),
-  );
+        items: ['50/30/20', '70/20/10', 'Zero-Based']
+            .map((label) => DropdownMenuItem(
+                  value: label,
+                  child: Text(label),
+                ))
+            .toList(),
+        onChanged: (value) {
+          if (value != null) {
+            setState(() => _budgetingType = value);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return AnimatedScale(
+      scale: _buttonPressed ? 0.95 : 1.0,
+      duration: const Duration(milliseconds: 100),
+      child: AnimatedOpacity(
+        opacity: _loading ? 0.7 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: SizedBox(
+          width: double.infinity,
+          height: 56.h,
+          child: CupertinoButton(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(16.r),
+            onPressed: _loading
+                ? null
+                : () async {
+                    setState(() => _buttonPressed = true);
+                    await Future.delayed(const Duration(milliseconds: 100));
+                    setState(() => _buttonPressed = false);
+                    _saveProfile();
+                  },
+            child: _loading
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20.w,
+                        height: 20.h,
+                        child: const CupertinoActivityIndicator(color: Colors.white),
+                      ),
+                      SizedBox(width: 12.w),
+                      Text(
+                        'Saving...',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    'Save Changes',
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
 }

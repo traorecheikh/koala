@@ -8,6 +8,7 @@ abstract class Routes {
   static const login = _Paths.login;
   static const register = _Paths.register;
   static const analytics = _Paths.analytics;
+  static const recurring = _Paths.recurring;
 }
 
 abstract class _Paths {
@@ -17,4 +18,5 @@ abstract class _Paths {
   static const login = '/login';
   static const register = '/register';
   static const analytics = '/analytics';
+  static const recurring = '/recurring';
 }
