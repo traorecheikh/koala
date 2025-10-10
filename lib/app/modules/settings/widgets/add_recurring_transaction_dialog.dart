@@ -1,4 +1,3 @@
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -84,7 +83,7 @@ class _AddRecurringTransactionSheetState
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      height: MediaQuery.of(context).size.height * 0.75,
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -107,7 +106,10 @@ class _AddRecurringTransactionSheetState
             padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0.h),
             child: Row(
               children: [
-                Text('Add Recurring Transaction', style: theme.textTheme.headlineSmall),
+                Text(
+                  'Add Recurring Transaction',
+                  style: theme.textTheme.titleLarge,
+                ),
                 const Spacer(),
                 CupertinoButton(
                   padding: EdgeInsets.zero,
@@ -129,49 +131,63 @@ class _AddRecurringTransactionSheetState
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, keyboardHeight + 24.h),
+                padding: EdgeInsets.fromLTRB(
+                  24.w,
+                  24.h,
+                  24.w,
+                  keyboardHeight + 24.h,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTextFormField(
-                      controller: _amountController,
-                      label: 'Amount',
-                      icon: CupertinoIcons.money_dollar,
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty || double.tryParse(value) == null) {
-                          return 'Please enter a valid amount';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16.h),
-                    _buildTextFormField(
-                      controller: _descriptionController,
-                      label: 'Description',
-                      icon: CupertinoIcons.text_bubble,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a description';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 24.h),
-                    Text('Frequency', style: theme.textTheme.titleMedium),
-                    SizedBox(height: 12.h),
-                    _buildFrequencySelector(),
-                    if (_frequency == Frequency.weekly)
-                      _buildWeeklyDaySelector(),
-                    if (_frequency == Frequency.monthly)
-                      _buildMonthlyDaySelector(),
-                    SizedBox(height: 48.h),
-                    _buildSaveButton(),
-                  ].animate(interval: 100.ms).slideY(
-                        begin: 0.2,
-                        duration: 400.ms,
-                        curve: Curves.easeOutQuart,
-                      ).fadeIn(),
+                  children:
+                      [
+                            _buildTextFormField(
+                              controller: _amountController,
+                              label: 'Amount',
+                              icon: CupertinoIcons.money_dollar,
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null ||
+                                    value.isEmpty ||
+                                    double.tryParse(value) == null) {
+                                  return 'Please enter a valid amount';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: 16.h),
+                            _buildTextFormField(
+                              controller: _descriptionController,
+                              label: 'Description',
+                              icon: CupertinoIcons.text_bubble,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a description';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: 24.h),
+                            Text(
+                              'Frequency',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            SizedBox(height: 12.h),
+                            _buildFrequencySelector(),
+                            if (_frequency == Frequency.weekly)
+                              _buildWeeklyDaySelector(),
+                            if (_frequency == Frequency.monthly)
+                              _buildMonthlyDaySelector(),
+                            SizedBox(height: 48.h),
+                            _buildSaveButton(),
+                          ]
+                          .animate(interval: 100.ms)
+                          .slideY(
+                            begin: 0.2,
+                            duration: 400.ms,
+                            curve: Curves.easeOutQuart,
+                          )
+                          .fadeIn(),
                 ),
               ),
             ),
@@ -198,17 +214,17 @@ class _AddRecurringTransactionSheetState
         controller: controller,
         keyboardType: keyboardType,
         validator: validator,
-        style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontSize: 17.sp,
+          color: Colors.black,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: InputDecoration(
           hintText: label,
           hintStyle: TextStyle(color: Colors.grey.shade500),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 16.h),
-          prefixIcon: Icon(
-            icon,
-            color: Colors.grey.shade500,
-            size: 20.sp,
-          ),
+          prefixIcon: Icon(icon, color: Colors.grey.shade500, size: 20.sp),
         ),
       ),
     );
@@ -228,10 +244,14 @@ class _AddRecurringTransactionSheetState
               duration: const Duration(milliseconds: 200),
               padding: EdgeInsets.symmetric(vertical: 12.h),
               decoration: BoxDecoration(
-                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade100,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(
-                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade200,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey.shade200,
                 ),
               ),
               child: Text(
@@ -277,7 +297,9 @@ class _AddRecurringTransactionSheetState
               width: 40.w,
               height: 40.w,
               decoration: BoxDecoration(
-                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade100,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -319,13 +341,11 @@ class _AddRecurringTransactionSheetState
               child: DropdownButton<int>(
                 value: _dayOfMonth,
                 isExpanded: true,
+                style: TextStyle(color: Colors.black),
                 underline: const SizedBox.shrink(),
                 items: List.generate(31, (index) {
                   final day = index + 1;
-                  return DropdownMenuItem(
-                    value: day,
-                    child: Text('Day $day'),
-                  );
+                  return DropdownMenuItem(value: day, child: Text('Day $day'));
                 }),
                 onChanged: (value) {
                   if (value != null) {
@@ -369,7 +389,9 @@ class _AddRecurringTransactionSheetState
                       SizedBox(
                         width: 20.w,
                         height: 20.h,
-                        child: const CupertinoActivityIndicator(color: Colors.white),
+                        child: const CupertinoActivityIndicator(
+                          color: Colors.white,
+                        ),
                       ),
                       SizedBox(width: 12.w),
                       Text(
@@ -396,4 +418,3 @@ class _AddRecurringTransactionSheetState
     );
   }
 }
-
