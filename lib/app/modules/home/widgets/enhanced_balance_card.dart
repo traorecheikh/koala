@@ -109,7 +109,7 @@ class _FrontCard extends GetView<HomeController> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Your Balance',
+                          'Votre solde', // Translated from 'Your Balance'
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 16.sp,
@@ -199,7 +199,7 @@ class _FrontCard extends GetView<HomeController> {
                         ),
                         const Spacer(),
                         Text(
-                          'Tap to view details',
+                          'Appuyez pour voir les détails', // Translated from 'Tap to view details'
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.5),
                             fontSize: 11.sp,
@@ -229,10 +229,10 @@ class _FrontCard extends GetView<HomeController> {
 
   String _getTimeGreeting() {
     final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return 'Good Morning';
-    if (hour >= 12 && hour < 17) return 'Good Afternoon';
-    if (hour >= 17 && hour < 21) return 'Good Evening';
-    return 'Good Night';
+    if (hour >= 5 && hour < 12) return 'Bonjour'; // Good Morning
+    if (hour >= 12 && hour < 17) return 'Bon après-midi'; // Good Afternoon
+    if (hour >= 17 && hour < 21) return 'Bonsoir'; // Good Evening
+    return 'Bonne nuit'; // Good Night
   }
 }
 
@@ -264,7 +264,7 @@ class _BackCard extends GetView<HomeController> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Quick Summary',
+                  'Résumé rapide', // Translated from 'Quick Summary'
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18.sp,
@@ -284,7 +284,7 @@ class _BackCard extends GetView<HomeController> {
               child: controller.transactions.isEmpty
                   ? Center(
                       child: Text(
-                        'No transactions yet',
+                        'Aucune transaction pour le moment', // Translated from 'No transactions yet'
                         style: TextStyle(
                           color: Colors.white60,
                           fontSize: 14.sp,
@@ -296,7 +296,8 @@ class _BackCard extends GetView<HomeController> {
                         // Last transaction
                         _SummaryItem(
                           icon: CupertinoIcons.time,
-                          title: 'Last Transaction',
+                          title:
+                              'Dernière transaction', // Translated from 'Last Transaction'
                           value: controller.lastTransaction != null
                               ? '${controller.lastTransaction!.description}'
                               : 'N/A',
@@ -313,7 +314,8 @@ class _BackCard extends GetView<HomeController> {
                         // Top spending category
                         _SummaryItem(
                           icon: CupertinoIcons.chart_pie_fill,
-                          title: 'Top Spending',
+                          title:
+                              'Catégorie principale', // Translated from 'Top Spending'
                           value: controller.topSpendingCategory != null
                               ? controller.topSpendingCategory!.key.displayName
                               : 'N/A',
