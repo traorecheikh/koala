@@ -23,8 +23,7 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    Logger.level =
-        Level.verbose; // Set Logger to verbose to ensure all logs are displayed
+    Logger.level = Level.all;
     _setupDioLogger();
     _loadCurrentVersion();
   }
@@ -57,7 +56,7 @@ class SettingsController extends GetxController {
 
   Future<void> checkForUpdates() async {
     const String updateUrl =
-        'https://raw.githubusercontent.com/traorecheikh/koala/refs/heads/main/version.json?token=GHSAT0AAAAAADIKXW7PO7QUB6DKMIBWIX6Q2HJHDTQ';
+        'https://raw.githubusercontent.com/traorecheikh/koala/refs/heads/main/version.json?token=GHSAT0AAAAAADIKXW7OW5OOMBECVLLHZFQI2HKNCCQ';
 
     try {
       Logger().i('Checking for updates...');
