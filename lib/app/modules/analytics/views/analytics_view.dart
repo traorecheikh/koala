@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -327,18 +326,6 @@ class AnalyticsView extends GetView<AnalyticsController> {
                   ),
                 ),
             ],
-          ),
-          SizedBox(height: 20.h),
-          // Wrap chart in RepaintBoundary to isolate repaints
-          RepaintBoundary(
-            child: SizedBox(
-              height: 180.h,
-              child: _SpendingTrendChart(
-                trendData: trendData,
-                primaryColor: theme.colorScheme.primary,
-                surfaceColor: theme.colorScheme.surface,
-              ),
-            ),
           ),
         ],
       ),
@@ -705,139 +692,5 @@ class AnalyticsView extends GetView<AnalyticsController> {
       default:
         return 'Inconnu';
     }
-  }
-}
-
-class _SpendingTrendChart extends StatelessWidget {
-  final Map<DateTime, double> trendData;
-  final Color primaryColor;
-  final Color surfaceColor;
-
-  const _SpendingTrendChart({
-    required this.trendData,
-    required this.primaryColor,
-    required this.surfaceColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: 1,
-          getDrawingHorizontalLine: (value) {
-            return FlLine(color: Colors.grey.shade200, strokeWidth: 1);
-          },
-        ),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40.w,
-              getTitlesWidget: (value, meta) {
-                return Text(
-                  _formatCompactAmount(value),
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                );
-              },
-            ),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30.h,
-              getTitlesWidget: (value, meta) {
-                final index = value.toInt();
-                if (index < 0 || index >= trendData.length) {
-                  return const SizedBox.shrink();
-                }
-                final date = trendData.keys.elementAt(index);
-                return Padding(
-                  padding: EdgeInsets.only(top: 8.h),
-                  child: Text(
-                    DateFormat('EEE').format(date).substring(0, 1),
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        lineBarsData: [
-          LineChartBarData(
-            spots: trendData.entries
-                .toList()
-                .asMap()
-                .entries
-                .map((e) => FlSpot(e.key.toDouble(), e.value.value))
-                .toList(),
-            isCurved: true,
-            color: primaryColor,
-            barWidth: 3,
-            isStrokeCapRound: true,
-            dotData: FlDotData(
-              show: true,
-              getDotPainter: (spot, percent, barData, index) {
-                return FlDotCirclePainter(
-                  radius: 4,
-                  color: surfaceColor,
-                  strokeWidth: 2,
-                  strokeColor: primaryColor,
-                );
-              },
-            ),
-            belowBarData: BarAreaData(
-              show: true,
-              color: primaryColor.withAlpha(25),
-            ),
-          ),
-        ],
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (touchedSpot) => const Color(0xFF1A1B1E),
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((spot) {
-                return LineTooltipItem(
-                  'FCFA ${_formatAmount(spot.y)}',
-                  TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12.sp,
-                  ),
-                );
-              }).toList();
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatAmount(double amount) {
-    return NumberFormat('#,###', 'fr_FR').format(amount.round());
-  }
-
-  String _formatCompactAmount(double value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(0)}k';
-    }
-    return value.toStringAsFixed(0);
   }
 }
