@@ -55,13 +55,16 @@ class SettingsController extends GetxController {
   }
 
   Future<void> checkForUpdates() async {
-    const String updateUrl =
-        'https://raw.githubusercontent.com/traorecheikh/koala/refs/heads/main/version.json?token=GHSAT0AAAAAADIKXW7OW5OOMBECVLLHZFQI2HKNCCQ';
+    // Update this URL to point to your JSON metadata file, not the APK directly
+    const String updateMetadataUrl =
+        'https://github.com/traorecheikh/koala/raw/refs/heads/main/version.json';
 
     try {
       Logger().i('Checking for updates...');
-      final response = await _dio.get(updateUrl);
-      Logger().i('Received response: ${response.statusCode} ${response.data}');
+      final response = await _dio.get(updateMetadataUrl);
+      Logger().i(
+        'Received response: \\${response.statusCode} \\${response.data}',
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data;
@@ -72,8 +75,8 @@ class SettingsController extends GetxController {
         }
         final String latestVersion = data['version'];
         final String apkUrl = data['apk_url'];
-        Logger().i('Latest version from server: $latestVersion');
-        Logger().i('APK URL from server: $apkUrl');
+        Logger().i('Latest version from server: \\${latestVersion}');
+        Logger().i('APK URL from server: \\${apkUrl}');
 
         if (_isNewerVersion(currentVersion.value, latestVersion)) {
           Logger().i('A newer version is available. Prompting update.');
@@ -84,14 +87,21 @@ class SettingsController extends GetxController {
         }
       } else {
         Logger().e(
-          'Failed to fetch update info. Status code: ${response.statusCode}',
+          'Failed to fetch update info. Status code: \\${response.statusCode}',
         );
         Get.snackbar('Error', 'Failed to check for updates.');
       }
     } catch (e) {
-      Logger().e('Update check failed: $e');
+      Logger().e('Update check failed: \\${e}');
       Get.snackbar('Error', 'Failed to check for updates.');
     }
+  }
+
+  /// Fallback: Direct APK download if no JSON metadata is available
+  Future<void> downloadAndInstallApkDirect() async {
+    const String apkUrl =
+        'https://github.com/traorecheikh/koala/raw/refs/heads/main/build/app/outputs/flutter-apk/app-release.apk';
+    await _downloadAndInstallApk(apkUrl);
   }
 
   bool _isNewerVersion(String current, String latest) {
