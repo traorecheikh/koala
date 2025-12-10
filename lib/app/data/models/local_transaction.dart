@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/core/utils/icon_helper.dart';
 
 part 'local_transaction.g.dart';
 
@@ -143,71 +145,76 @@ extension TransactionCategoryExtension on TransactionCategory {
     }
   }
 
-  String get icon {
+  String get iconKey {
     switch (this) {
       // Income
       case TransactionCategory.salary:
-        return '💼';
+        return 'salary';
       case TransactionCategory.freelance:
-        return '💻';
+        return 'freelance';
       case TransactionCategory.investment:
-        return '📈';
+        return 'investment';
       case TransactionCategory.business:
-        return '🏢';
+        return 'business';
       case TransactionCategory.gift:
-        return '🎁';
+        return 'gift';
       case TransactionCategory.bonus:
-        return '🎉';
+        return 'bonus';
       case TransactionCategory.refund:
-        return '↩️';
+        return 'refund';
       case TransactionCategory.rental:
-        return '🏠';
+        return 'rental';
       case TransactionCategory.otherIncome:
-        return '💰';
+        return 'other';
 
       // Expenses
       case TransactionCategory.food:
-        return '🍽️';
+        return 'restaurant';
       case TransactionCategory.transport:
-        return '🚗';
+        return 'transport';
       case TransactionCategory.shopping:
-        return '🛍️';
+        return 'shopping';
       case TransactionCategory.entertainment:
-        return '🎬';
+        return 'entertainment';
       case TransactionCategory.bills:
-        return '📄';
+        return 'bills';
       case TransactionCategory.health:
-        return '⚕️';
+        return 'health';
       case TransactionCategory.education:
-        return '📚';
+        return 'education';
       case TransactionCategory.rent:
-        return '🏡';
+        return 'rent';
       case TransactionCategory.groceries:
-        return '🛒';
+        return 'groceries';
       case TransactionCategory.utilities:
-        return '💡';
+        return 'utilities';
       case TransactionCategory.insurance:
-        return '🛡️';
+        return 'insurance';
       case TransactionCategory.travel:
-        return '✈️';
+        return 'travel';
       case TransactionCategory.clothing:
-        return '👕';
+        return 'clothing';
       case TransactionCategory.fitness:
-        return '💪';
+        return 'fitness';
       case TransactionCategory.beauty:
-        return '💄';
+        return 'beauty';
       case TransactionCategory.gifts:
-        return '🎁';
+        return 'gifts';
       case TransactionCategory.charity:
-        return '❤️';
+        return 'charity';
       case TransactionCategory.subscriptions:
-        return '📱';
+        return 'subscriptions';
       case TransactionCategory.maintenance:
-        return '🔧';
+        return 'maintenance';
       case TransactionCategory.otherExpense:
-        return '📦';
+        return 'other';
     }
   }
+  
+  // Backward compatibility getter if needed, but we prefer iconData
+  String get icon => iconKey; // Return key instead of emoji
+
+  IconData get iconData => IconHelper.getIcon(iconKey);
 
   bool get isIncome {
     return index <= TransactionCategory.otherIncome.index &&

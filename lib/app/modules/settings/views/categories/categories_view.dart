@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
@@ -86,11 +87,10 @@ class CategoriesView extends GetView<CategoriesController> {
                 color: Color(category.colorValue).withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: Center(
-                child: Text(
-                  category.icon,
-                  style: TextStyle(fontSize: 24.sp),
-                ),
+              child: Icon(
+                IconHelper.getIcon(category.icon),
+                color: Color(category.colorValue),
+                size: 24.sp,
               ),
             ),
             title: Text(

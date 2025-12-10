@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/modules/home/widgets/user_setup_dialog.dart';
 import 'package:koaa/app/services/ml_service.dart';
+import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 
 class HomeController extends GetxController {
   final balanceVisible = true.obs;
@@ -32,9 +34,69 @@ class HomeController extends GetxController {
       transactions.assignAll(transactionBox.values.toList());
       calculateBalance();
       _updateInsights();
+      // Refresh intelligence service when transactions change
+      _refreshIntelligence();
+    });
+
+    // Also watch jobs for balance updates
+    final jobBox = Hive.box<Job>('jobBox');
+    jobBox.watch().listen((_) {
+      calculateBalance();
+      generateJobIncomeTransactions(); // Auto-generate when jobs change
+      _refreshIntelligence();
     });
 
     generateRecurringTransactions();
+    generateJobIncomeTransactions();
+  }
+
+  void generateJobIncomeTransactions() {
+    final jobBox = Hive.box<Job>('jobBox');
+    final jobs = jobBox.values.toList();
+    final today = DateTime.now();
+
+    for (var job in jobs) {
+      // Determine last payday
+      DateTime lastPayday;
+      if (today.day >= job.paymentDate.day) {
+        // Paid this month
+        lastPayday = DateTime(today.year, today.month, job.paymentDate.day);
+      } else {
+        // Paid last month
+        if (today.month == 1) {
+          lastPayday = DateTime(today.year - 1, 12, job.paymentDate.day);
+        } else {
+          lastPayday = DateTime(today.year, today.month - 1, job.paymentDate.day);
+        }
+      }
+
+      // Check if transaction exists
+      final exists = transactions.any((tx) =>
+          tx.type == TransactionType.income &&
+          tx.description == 'Salaire: ${job.name}' &&
+          tx.date.year == lastPayday.year &&
+          tx.date.month == lastPayday.month &&
+          tx.date.day == lastPayday.day);
+
+      if (!exists) {
+        addTransaction(LocalTransaction(
+          amount: job.amount,
+          description: 'Salaire: ${job.name}',
+          date: lastPayday,
+          type: TransactionType.income,
+          category: TransactionCategory.salary,
+        ));
+      }
+    }
+  }
+
+  void _refreshIntelligence() {
+    try {
+      final intelligence = Get.find<IntelligenceService>();
+      intelligence.forceRefresh();
+    } catch (_) {
+      // Intelligence service not available
+    }
   }
 
   void _updateInsights() {

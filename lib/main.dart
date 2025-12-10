@@ -13,6 +13,7 @@ import 'package:koaa/app/data/models/savings_goal.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/hive_registrar.g.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 
 import 'app/routes/app_pages.dart';
 
@@ -37,6 +38,10 @@ void main() async {
     await service.onInit();
     return service;
   });
+      Get.lazyPut<CategoriesController>(
+      () => CategoriesController(),
+      fenix: true,
+    );
 
   runApp(AppInfo(data: await AppInfoData.get(), child: const MyApp()));
 }

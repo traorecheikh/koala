@@ -199,6 +199,21 @@ class IntelligenceService extends GetxService {
   IntelligenceSummary getSummary() {
     final f = forecast.value;
     final alertsList = alerts.toList();
+    
+    // Check if we have enough data
+    if (_transactionsBox.isEmpty) {
+      return IntelligenceSummary(
+        riskLevel: RiskLevel.unknown,
+        criticalAlertsCount: 0,
+        warningAlertsCount: 0,
+        positiveAlertsCount: 0,
+        predictedEndBalance: 0,
+        lowestPredictedBalance: 0,
+        savingsRate: 0,
+        topAlert: null,
+        healthScore: 0, // 0 indicates "Need Data" state
+      );
+    }
 
     return IntelligenceSummary(
       riskLevel: f?.summary.riskLevel ?? RiskLevel.unknown,
@@ -214,6 +229,8 @@ class IntelligenceService extends GetxService {
   }
 
   int _calculateHealthScore(CashFlowForecast? forecast, List<ProactiveAlert> alerts) {
+    if (_transactionsBox.length < 5) return 50; // Neutral starting score
+    
     int score = 100;
 
     // Risk level impact

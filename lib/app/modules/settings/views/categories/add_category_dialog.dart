@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
@@ -30,15 +31,10 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
   final _controller = Get.find<CategoriesController>();
   
   late TransactionType _selectedType;
-  late String _selectedIcon;
+  late String _selectedIconKey;
   late Color _selectedColor;
   
-  final List<String> _emojis = [
-    '🍔', '🛒', '🚗', '🏠', '💡', '🎮', '💊', '🎓', '✈️', '🎁',
-    '👗', '🔧', '📱', '💻', '💼', '💰', '📈', '🏦', '👶', '🐾',
-    '🏋️', '🎨', '📚', '🎵', '🎥', '🚌', '⛽', '💇', '💐', '💸',
-    '🍇', '🍻', '🥂', '🧊', '🎲', '🎰', '🎯', '🎳', '🎷', '🎸',
-  ];
+  final List<String> _iconKeys = IconHelper.allKeys;
 
   final List<Color> _colors = [
     Colors.red, Colors.pink, Colors.purple, Colors.deepPurple,
@@ -54,11 +50,11 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
     if (widget.category != null) {
       _nameController.text = widget.category!.name;
       _selectedType = widget.category!.type;
-      _selectedIcon = widget.category!.icon;
+      _selectedIconKey = widget.category!.icon;
       _selectedColor = Color(widget.category!.colorValue);
     } else {
       _selectedType = TransactionType.expense;
-      _selectedIcon = _emojis.first;
+      _selectedIconKey = _iconKeys.first; // Default
       _selectedColor = _colors.first;
     }
   }
@@ -75,14 +71,14 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
       
       if (widget.category != null) {
         widget.category!.name = _nameController.text.trim();
-        widget.category!.icon = _selectedIcon;
+        widget.category!.icon = _selectedIconKey;
         widget.category!.colorValue = _selectedColor.value;
         widget.category!.type = _selectedType;
         await _controller.updateCategory(widget.category!);
       } else {
         await _controller.addCategory(
           name: _nameController.text.trim(),
-          icon: _selectedIcon,
+          icon: _selectedIconKey,
           colorValue: _selectedColor.value,
           type: _selectedType,
         );
@@ -163,11 +159,10 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                         shape: BoxShape.circle,
                         border: Border.all(color: _selectedColor, width: 2),
                       ),
-                      child: Center(
-                        child: Text(
-                          _selectedIcon,
-                          style: TextStyle(fontSize: 40.sp),
-                        ),
+                      child: Icon(
+                        IconHelper.getIcon(_selectedIconKey),
+                        size: 40.sp,
+                        color: _selectedColor,
                       ),
                     ),
                   ),
@@ -205,20 +200,22 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 8,
                       ),
-                      itemCount: _emojis.length,
+                      itemCount: _iconKeys.length,
                       itemBuilder: (context, index) {
-                        final emoji = _emojis[index];
-                        final isSelected = _selectedIcon == emoji;
+                        final key = _iconKeys[index];
+                        final isSelected = _selectedIconKey == key;
                         return GestureDetector(
-                          onTap: () => setState(() => _selectedIcon = emoji),
+                          onTap: () => setState(() => _selectedIconKey = key),
                           child: Container(
                             decoration: BoxDecoration(
                               color: isSelected ? _selectedColor.withOpacity(0.2) : Colors.white,
                               borderRadius: BorderRadius.circular(8.r),
                               border: isSelected ? Border.all(color: _selectedColor) : null,
                             ),
-                            child: Center(
-                              child: Text(emoji, style: TextStyle(fontSize: 24.sp)),
+                            child: Icon(
+                              IconHelper.getIcon(key),
+                              size: 24.sp,
+                              color: isSelected ? _selectedColor : Colors.grey.shade700,
                             ),
                           ),
                         );

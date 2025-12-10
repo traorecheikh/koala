@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:countup/countup.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/home/widgets/add_transaction_dialog.dart';
 import 'package:koaa/app/modules/home/widgets/enhanced_balance_card.dart';
 import 'package:koaa/app/modules/home/widgets/financial_health_widget.dart';
+import '../widgets/smart_insights_widget.dart';
 
 import '../../../routes/app_pages.dart';
 import '../controllers/home_controller.dart';
@@ -20,35 +23,44 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Animate(
-          effects: const [FadeEffect(duration: Duration(milliseconds: 300))],
-          child: ListView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    const _Header(),
+                    const SizedBox(height: 24),
+                    const EnhancedBalanceCard(),
+                    const SizedBox(height: 32),
+                    // Moved QuickActions UP to ensure visibility
+                    const _QuickActions(), 
+                    const SizedBox(height: 24),
+                    // Insights & Health below navigation
+                    const SmartInsightsWidget(),
+                    const SizedBox(height: 16),
+                    const FinancialHealthWidget(),
+                    const SizedBox(height: 32),
+                    const _TransactionsHeader(),
+                    const SizedBox(height: 12),
+                  ]
+                  .animate(interval: 50.ms) // Faster stagger for snappier feel
+                  .slideY(
+                    begin: 0.1, // Reduced slide distance for subtlety
+                    duration: 400.ms,
+                    curve: Curves.easeOutQuart,
+                  )
+                  .fadeIn(),
+                ),
+              ),
             ),
-            children:
-                [
-                      const _Header(),
-                      const SizedBox(height: 24),
-                      const EnhancedBalanceCard(),
-                      const SizedBox(height: 24),
-                      const FinancialHealthWidget(),
-                      const SizedBox(height: 32),
-                      const _QuickActions(),
-                      const SizedBox(height: 32),
-                      const _TransactionsHeader(),
-                      const SizedBox(height: 12),
-                      const _TransactionList(),
-                    ]
-                    .animate(interval: 100.ms)
-                    .slideY(
-                      begin: 0.2,
-                      duration: 400.ms,
-                      curve: Curves.easeOutQuart,
-                    )
-                    .fadeIn(),
-          ),
+            const _TransactionSliverList(),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
         ),
       ),
     );
@@ -224,9 +236,7 @@ class _QuickActions extends GetView<HomeController> {
           icon: CupertinoIcons.star_fill,
           label: 'Objectifs',
           color: Colors.pinkAccent,
-          onTap: () => {
-            // Get.toNamed(Routes.goals)
-          },
+          onTap: () => Get.toNamed(Routes.analytics),
         ),
         _AnimatedActionButton(
           icon: CupertinoIcons.square_grid_2x2_fill,
@@ -280,7 +290,7 @@ class _MoreOptionsSheet extends StatelessWidget {
                 icon: CupertinoIcons.archivebox_fill,
                 label: 'Categorie',
                 color: Colors.brown,
-                onTap: () => Get.toNamed(Routes.analytics),
+                onTap: () => Get.toNamed(Routes.categories),
               ),
               _AnimatedActionButton(
                 icon: CupertinoIcons.settings_solid,
@@ -370,6 +380,82 @@ class _TransactionsHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TransactionSliverList extends GetView<HomeController> {
+  const _TransactionSliverList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final transactions = controller.transactions;
+      
+      // Use SliverList for performance
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final tx = transactions[index];
+            return _TransactionListItem(transaction: tx);
+          },
+          childCount: transactions.length,
+        ),
+      );
+    });
+  }
+}
+
+class _TransactionListItem extends StatelessWidget {
+  final LocalTransaction transaction;
+
+  const _TransactionListItem({required this.transaction});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isExpense = transaction.type == TransactionType.expense;
+    final amountString = isExpense
+        ? '- ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}'
+        : ' ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}';
+
+    final iconData = {
+      TransactionType.income: {
+        'icon': CupertinoIcons.arrow_down,
+        'color': theme.colorScheme.secondary,
+      },
+      TransactionType.expense: {
+        'icon': CupertinoIcons.arrow_up,
+        'color': theme.colorScheme.primary,
+      },
+    };
+
+    final IconData displayIcon =
+        iconData[transaction.type]!['icon']! as IconData;
+    final Color color = iconData[transaction.type]!['color']! as Color;
+
+    return ListTile(
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          leading: CircleAvatar(
+            radius: 25.r,
+            backgroundColor: color.withAlpha(25),
+            child: Icon(displayIcon, color: color, size: 24.sp),
+          ),
+          title: Text(
+            transaction.description,
+            style: theme.textTheme.titleMedium,
+          ),
+          subtitle: Text(
+            DateFormat('dd MMM, yyyy').format(transaction.date),
+            style: theme.textTheme.bodySmall,
+          ),
+          trailing: Text(
+            amountString,
+            style: theme.textTheme.titleMedium?.copyWith(color: null),
+          ),
+        )
+        .animate()
+        .fadeIn(duration: 500.ms)
+        .slideX(begin: -0.2, curve: Curves.easeOutQuart);
   }
 }
 
@@ -510,79 +596,5 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
             .slideY(begin: 0.1, curve: Curves.easeOutQuart);
       },
     );
-  }
-}
-
-class _TransactionList extends GetView<HomeController> {
-  const _TransactionList();
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(
-      () =>
-          Column(
-            children: controller.transactions
-                .map((tx) => _TransactionListItem(transaction: tx))
-                .toList(),
-          ).animate().slideY(
-            begin: 0.5,
-            duration: 500.ms,
-            curve: Curves.easeOutQuart,
-          ),
-    );
-  }
-}
-
-class _TransactionListItem extends StatelessWidget {
-  final LocalTransaction transaction;
-
-  const _TransactionListItem({required this.transaction});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isExpense = transaction.type == TransactionType.expense;
-    final amountString = isExpense
-        ? '- ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}'
-        : ' ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}';
-
-    final iconData = {
-      TransactionType.income: {
-        'icon': CupertinoIcons.arrow_down,
-        'color': theme.colorScheme.secondary,
-      },
-      TransactionType.expense: {
-        'icon': CupertinoIcons.arrow_up,
-        'color': theme.colorScheme.primary,
-      },
-    };
-
-    final IconData displayIcon =
-        iconData[transaction.type]!['icon']! as IconData;
-    final Color color = iconData[transaction.type]!['color']! as Color;
-
-    return ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-          leading: CircleAvatar(
-            radius: 25.r,
-            backgroundColor: color.withAlpha(25),
-            child: Icon(displayIcon, color: color, size: 24.sp),
-          ),
-          title: Text(
-            transaction.description,
-            style: theme.textTheme.titleMedium,
-          ),
-          subtitle: Text(
-            DateFormat('dd MMM, yyyy').format(transaction.date),
-            style: theme.textTheme.bodySmall,
-          ),
-          trailing: Text(
-            amountString,
-            style: theme.textTheme.titleMedium?.copyWith(color: null),
-          ),
-        )
-        .animate()
-        .fadeIn(duration: 500.ms)
-        .slideX(begin: -0.2, curve: Curves.easeOutQuart);
   }
 }

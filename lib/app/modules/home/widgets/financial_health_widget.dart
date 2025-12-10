@@ -384,7 +384,7 @@ class _AlertCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(alert.icon, style: TextStyle(fontSize: 24.sp)),
+          Icon(alert.icon, size: 24.sp, color: alertColor),
           SizedBox(width: 12.w),
           Expanded(
             child: Column(

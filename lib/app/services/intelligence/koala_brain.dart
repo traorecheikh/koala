@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/cupertino.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/job.dart';
@@ -38,30 +39,24 @@ class KoalaBrain {
   // 1. SMART CATEGORIZATION ENGINE
   // ══════════════════════════════════════════════════════════════════════════
 
-  /// Suggests a category based on transaction description
-  /// Uses keyword matching + learned patterns from user behavior
   CategorySuggestion suggestCategory(String description, TransactionType type) {
     final normalizedDesc = description.toLowerCase().trim();
 
-    // First: Check learned patterns (user's own corrections)
     final learnedMatch = _matchLearnedPattern(normalizedDesc, type);
     if (learnedMatch != null && learnedMatch.confidence > 0.7) {
       return learnedMatch;
     }
 
-    // Second: Keyword-based matching
     final keywordMatch = _matchKeywords(normalizedDesc, type);
     if (keywordMatch != null) {
       return keywordMatch;
     }
 
-    // Third: Fuzzy matching with existing descriptions
     final fuzzyMatch = _fuzzyMatchExisting(normalizedDesc, type);
     if (fuzzyMatch != null && fuzzyMatch.confidence > 0.5) {
       return fuzzyMatch;
     }
 
-    // Default fallback
     return CategorySuggestion(
       category: type == TransactionType.income
           ? TransactionCategory.otherIncome
@@ -90,7 +85,6 @@ class KoalaBrain {
   }
 
   CategorySuggestion? _matchKeywords(String desc, TransactionType type) {
-    // Comprehensive keyword mapping for FCFA region context
     final expenseKeywords = <TransactionCategory, List<String>>{
       TransactionCategory.food: [
         'restaurant', 'resto', 'manger', 'dejeuner', 'diner', 'petit-dej',
@@ -205,7 +199,6 @@ class KoalaBrain {
 
     if (transactions.isEmpty) return null;
 
-    // Find similar descriptions
     double bestScore = 0;
     LocalTransaction? bestMatch;
 
@@ -249,13 +242,11 @@ class KoalaBrain {
     return matches / max(wordsA.length, wordsB.length);
   }
 
-  /// Learn from user's category correction
   void learnCategoryChoice(String description, TransactionCategory category,
       String? categoryId, TransactionType type) {
     final normalizedDesc = description.toLowerCase().trim();
     final keywords = _extractKeywords(normalizedDesc);
 
-    // Find or create pattern
     final existingPattern = patternsBox.values.firstWhere(
       (p) => p.category == category && p.type == type,
       orElse: () => CategoryPattern(
@@ -268,7 +259,6 @@ class KoalaBrain {
       ),
     );
 
-    // Update pattern
     final updatedKeywords = {...existingPattern.keywords, ...keywords}.toList();
     final newCount = existingPattern.usageCount + 1;
     final newConfidence = min(0.95, 0.5 + (newCount * 0.05));
@@ -282,7 +272,6 @@ class KoalaBrain {
       usageCount: newCount,
     );
 
-    // Save
     if (existingPattern.isInBox) {
       existingPattern.keywords = updatedKeywords;
       existingPattern.confidence = newConfidence;
@@ -304,10 +293,9 @@ class KoalaBrain {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 2. PREDICTIVE ENGINE - Seasonal, Monthly, Cash Flow
+  // 2. PREDICTIVE ENGINE
   // ══════════════════════════════════════════════════════════════════════════
 
-  /// Predicts cash flow for the next 30 days
   CashFlowForecast forecastCashFlow({int days = 30}) {
     if (_cachedForecast != null &&
         _lastAnalysis != null &&
@@ -318,12 +306,10 @@ class KoalaBrain {
     final now = DateTime.now();
     final predictions = <DateTime, DailyPrediction>{};
 
-    // Get historical data
     final transactions = transactionsBox.values.toList();
     final jobs = jobsBox.values.where((j) => j.isActive).toList();
     final recurring = recurringBox.values.toList();
 
-    // Calculate baseline daily spending
     final dailyAverages = _calculateDailyAverages(transactions);
     final weekdayFactors = _calculateWeekdayFactors(transactions);
     final monthFactors = _calculateMonthFactors(transactions);
@@ -334,28 +320,23 @@ class KoalaBrain {
     for (int i = 0; i < days; i++) {
       final date = DateTime(now.year, now.month, now.day + i);
 
-      // Predicted expenses
       double predictedExpense = dailyAverages.expense;
       predictedExpense *= weekdayFactors[date.weekday] ?? 1.0;
       predictedExpense *= monthFactors[date.month] ?? 1.0;
 
-      // Payday effect (people spend more after payday)
       final daysSincePayday = _daysSinceLastPayday(date, jobs);
       if (daysSincePayday <= 3) {
         predictedExpense *= paydayEffect;
       }
 
-      // Predicted income
       double predictedIncome = 0;
 
-      // Check for job payments
       for (final job in jobs) {
         if (_isPayday(date, job)) {
           predictedIncome += job.amount;
         }
       }
 
-      // Check for recurring transactions
       for (final rec in recurring) {
         if (_recurringDueOn(date, rec)) {
           if (rec.type == TransactionType.income) {
@@ -449,20 +430,9 @@ class KoalaBrain {
     final overallAvg = monthTotals.values.reduce((a, b) => a + b) /
                        monthCounts.values.reduce((a, b) => a + b);
 
-    // Known seasonal patterns for FCFA region
     final seasonalDefaults = <int, double>{
-      1: 0.9,   // January - post-holiday recovery
-      2: 0.95,
-      3: 1.0,
-      4: 1.0,
-      5: 1.05,
-      6: 1.1,   // Mid-year activities
-      7: 1.0,
-      8: 1.15,  // Back to school
-      9: 1.2,   // School expenses peak
-      10: 1.0,
-      11: 1.1,
-      12: 1.3,  // Holidays
+      1: 0.9, 2: 0.95, 3: 1.0, 4: 1.0, 5: 1.05, 6: 1.1,
+      7: 1.0, 8: 1.15, 9: 1.2, 10: 1.0, 11: 1.1, 12: 1.3,
     };
 
     for (int month = 1; month <= 12; month++) {
@@ -470,7 +440,6 @@ class KoalaBrain {
         final monthAvg = monthTotals[month]! / monthCounts[month]!;
         factors[month] = monthAvg / overallAvg;
       } else {
-        // Use seasonal defaults if not enough data
         factors[month] = seasonalDefaults[month]!;
       }
     }
@@ -479,7 +448,7 @@ class KoalaBrain {
   }
 
   double _calculatePaydayEffect(List<LocalTransaction> transactions, List<Job> jobs) {
-    if (jobs.isEmpty || transactions.isEmpty) return 1.2; // Default 20% increase
+    if (jobs.isEmpty || transactions.isEmpty) return 1.2;
 
     final paydays = jobs.map((j) => j.paymentDate.day).toSet();
 
@@ -535,7 +504,6 @@ class KoalaBrain {
       if (currentDay >= payday) {
         minDays = min(minDays, currentDay - payday);
       } else {
-        // Last month's payday
         final lastMonth = DateTime(date.year, date.month - 1, payday);
         minDays = min(minDays, date.difference(lastMonth).inDays);
       }
@@ -552,7 +520,6 @@ class KoalaBrain {
       case RecurringFrequency.daily:
         return true;
       case RecurringFrequency.weekly:
-        // Check if current weekday is in the daysOfWeek list
         return rec.daysOfWeek.contains(date.weekday);
       case RecurringFrequency.monthly:
         return date.day == rec.dayOfMonth;
@@ -560,35 +527,24 @@ class KoalaBrain {
   }
 
   double _calculateConfidence(int dataPoints, int daysAhead) {
-    // Confidence decreases with fewer data points and further predictions
     final dataConfidence = min(1.0, dataPoints / 50);
-    final timeDecay = 1.0 - (daysAhead / 60); // Confidence drops over 60 days
+    final timeDecay = 1.0 - (daysAhead / 60);
     return max(0.1, dataConfidence * timeDecay);
   }
 
   List<String> _getFactorsDescription(DateTime date, List<Job> jobs, int daysSincePayday) {
     final factors = <String>[];
-
-    // Weekday
-    final weekdays = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     if (date.weekday >= 6) {
       factors.add('Weekend (dépenses +)');
     }
-
-    // Payday proximity
     if (daysSincePayday <= 3) {
       factors.add('Proche du jour de paie');
     }
-
-    // Month-end
     if (date.day >= 25) {
       factors.add('Fin de mois');
     }
-
-    // Special months
     if (date.month == 12) factors.add('Période des fêtes');
     if (date.month == 9) factors.add('Rentrée scolaire');
-
     return factors;
   }
 
@@ -672,7 +628,7 @@ class KoalaBrain {
         message: 'Votre solde pourrait devenir négatif le ${_formatDate(forecast.summary.lowestBalanceDate)}',
         severity: AlertSeverity.critical,
         actionSuggestion: 'Réduisez les dépenses non-essentielles cette semaine',
-        icon: '🚨',
+        icon: CupertinoIcons.exclamationmark_shield_fill,
       ));
     } else if (forecast.summary.riskLevel == RiskLevel.high) {
       alerts.add(ProactiveAlert(
@@ -681,7 +637,7 @@ class KoalaBrain {
         message: 'Solde prévu de ${forecast.summary.lowestBalance.toStringAsFixed(0)} FCFA',
         severity: AlertSeverity.high,
         actionSuggestion: 'Surveillez vos dépenses cette semaine',
-        icon: '⚠️',
+        icon: CupertinoIcons.exclamationmark_triangle_fill,
       ));
     }
 
@@ -696,7 +652,7 @@ class KoalaBrain {
             ? AlertSeverity.high
             : AlertSeverity.medium,
         actionSuggestion: 'Il vous reste ${spendingPace.daysRemaining} jours ce mois',
-        icon: '📊',
+        icon: CupertinoIcons.graph_circle_fill,
       ));
     }
 
@@ -711,7 +667,7 @@ class KoalaBrain {
             message: 'Vous êtes à ${progress.currentProgress.toStringAsFixed(0)}% de votre objectif d\'épargne',
             severity: AlertSeverity.medium,
             actionSuggestion: 'Économisez ${progress.dailyNeeded.toStringAsFixed(0)} FCFA/jour pour rattraper',
-            icon: '🎯',
+            icon: CupertinoIcons.scope,
           ));
         } else if (progress.isAhead) {
           alerts.add(ProactiveAlert(
@@ -720,7 +676,7 @@ class KoalaBrain {
             message: 'Vous êtes en avance sur votre objectif d\'épargne (${progress.currentProgress.toStringAsFixed(0)}%)',
             severity: AlertSeverity.positive,
             actionSuggestion: 'Continuez comme ça !',
-            icon: '🌟',
+            icon: CupertinoIcons.star_fill,
           ));
         }
       }
@@ -748,13 +704,11 @@ class KoalaBrain {
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final daysRemaining = daysInMonth - daysElapsed;
 
-    // This month's expenses
     final thisMonthExpenses = transactions
         .where((t) => t.type == TransactionType.expense &&
                      t.date.isAfter(startOfMonth.subtract(const Duration(days: 1))))
         .fold(0.0, (sum, t) => sum + t.amount);
 
-    // Expected based on history
     final lastMonths = <double>[];
     for (int i = 1; i <= 3; i++) {
       final monthStart = DateTime(now.year, now.month - i, 1);
@@ -788,27 +742,21 @@ class KoalaBrain {
 
   GoalProgress? _analyzeGoalProgress(SavingsGoal goal, List<LocalTransaction> transactions) {
     final now = DateTime.now();
-
-    // Check if goal is for current period
     if (goal.year != now.year) return null;
-    // Month 0 means yearly goal, otherwise it's a monthly goal
     final isYearlyGoal = goal.month == 0;
     if (!isYearlyGoal && goal.month != now.month) return null;
 
-    // Calculate current savings
     DateTime periodStart;
     DateTime periodEnd;
     int totalDays;
     int daysElapsed;
 
     if (!isYearlyGoal) {
-      // Monthly goal
       periodStart = DateTime(goal.year, goal.month, 1);
       periodEnd = DateTime(goal.year, goal.month + 1, 0);
       totalDays = periodEnd.day;
       daysElapsed = now.day;
     } else {
-      // Yearly goal (month = 0)
       periodStart = DateTime(goal.year, 1, 1);
       periodEnd = DateTime(goal.year, 12, 31);
       totalDays = 365;
@@ -855,7 +803,6 @@ class KoalaBrain {
     final now = DateTime.now();
     final startOfMonth = DateTime(now.year, now.month, 1);
 
-    // Group this month's expenses by category
     final thisMonthByCategory = <String, double>{};
     final historicalByCategory = <String, List<double>>{};
 
@@ -866,15 +813,12 @@ class KoalaBrain {
         thisMonthByCategory[category] =
             (thisMonthByCategory[category] ?? 0) + tx.amount;
       } else {
-        // Historical data
         final monthKey = '${tx.date.year}-${tx.date.month}';
         historicalByCategory.putIfAbsent(category, () => []);
-        // Only add once per month
         historicalByCategory[category]!.add(tx.amount);
       }
     }
 
-    // Compare to historical averages
     for (final entry in thisMonthByCategory.entries) {
       final historical = historicalByCategory[entry.key];
       if (historical != null && historical.length >= 3) {
@@ -888,7 +832,7 @@ class KoalaBrain {
             message: '${entry.value.toStringAsFixed(0)} FCFA ce mois vs ${avgHistorical.toStringAsFixed(0)} FCFA en moyenne',
             severity: ratio > 2 ? AlertSeverity.high : AlertSeverity.medium,
             actionSuggestion: 'C\'est ${((ratio - 1) * 100).toStringAsFixed(0)}% de plus que d\'habitude',
-            icon: '📈',
+            icon: CupertinoIcons.chart_bar_fill,
           ));
         }
       }
@@ -911,7 +855,6 @@ class KoalaBrain {
           nextDue = DateTime(now.year, now.month, now.day + 1);
           break;
         case RecurringFrequency.weekly:
-          // Find the next day of week from daysOfWeek list
           if (rec.daysOfWeek.isNotEmpty) {
             int minDaysUntil = 8;
             for (final dayOfWeek in rec.daysOfWeek) {
@@ -946,7 +889,7 @@ class KoalaBrain {
                 : 'Dû dans $daysUntilDue jours: ${rec.amount.toStringAsFixed(0)} FCFA',
             severity: daysUntilDue == 0 ? AlertSeverity.high : AlertSeverity.low,
             actionSuggestion: 'Assurez-vous d\'avoir les fonds',
-            icon: '🔔',
+            icon: CupertinoIcons.bell_fill,
           ));
         }
       }
@@ -970,41 +913,34 @@ class KoalaBrain {
     final jobs = jobsBox.values.where((j) => j.isActive).toList();
     final budgets = <String, SmartBudget>{};
 
-    // Calculate total monthly income
     double monthlyIncome = 0;
     for (final job in jobs) {
       monthlyIncome += job.monthlyIncome;
     }
 
-    // Add average non-job income
     final nonJobIncome = _calculateAverageNonJobIncome(transactions);
     monthlyIncome += nonJobIncome;
 
     if (monthlyIncome == 0) {
-      return {}; // Can't recommend budgets without income
+      return {};
     }
 
-    // Analyze historical spending by category
     final categoryAverages = _calculateCategoryAverages(transactions);
 
-    // Apply budget rules
     for (final entry in categoryAverages.entries) {
       final category = entry.key;
       final historicalAvg = entry.value.average;
       final historicalVariance = entry.value.variance;
 
-      // Calculate recommended budget
       double recommended;
       String reasoning;
       BudgetStrategy strategy;
 
-      // Essential categories get more budget
       if (_isEssentialCategory(category)) {
         recommended = max(historicalAvg, monthlyIncome * 0.1);
         strategy = BudgetStrategy.essential;
         reasoning = 'Catégorie essentielle - basé sur vos dépenses';
       } else if (historicalVariance > historicalAvg * 0.5) {
-        // High variance = needs control
         recommended = historicalAvg * 0.8;
         strategy = BudgetStrategy.reduce;
         reasoning = 'Dépenses variables - budget réduit pour stabiliser';
@@ -1014,7 +950,6 @@ class KoalaBrain {
         reasoning = 'Dépenses stables - maintenir le niveau actuel';
       }
 
-      // Cap discretionary spending at 15% of income per category
       if (!_isEssentialCategory(category)) {
         recommended = min(recommended, monthlyIncome * 0.15);
       }
@@ -1032,7 +967,6 @@ class KoalaBrain {
       );
     }
 
-    // Add savings recommendation
     final totalBudgeted = budgets.values.fold(0.0, (sum, b) => sum + b.recommendedAmount);
     final savingsTarget = monthlyIncome - totalBudgeted;
 
@@ -1068,14 +1002,12 @@ class KoalaBrain {
     final stats = <String, CategoryStats>{};
     final categoryMonthly = <String, List<double>>{};
 
-    // Group by category and month
     for (final tx in transactions.where((t) => t.type == TransactionType.expense)) {
       final category = tx.category?.displayName ?? 'Autre';
       final monthKey = '${tx.date.year}-${tx.date.month}';
 
       categoryMonthly.putIfAbsent(category, () => []);
 
-      // Add to monthly totals
       final monthIndex = categoryMonthly[category]!.indexWhere(
         (m) => m == monthKey.hashCode.toDouble());
       if (monthIndex == -1) {
@@ -1085,7 +1017,6 @@ class KoalaBrain {
       }
     }
 
-    // Calculate stats
     for (final entry in categoryMonthly.entries) {
       final amounts = entry.value;
       if (amounts.isEmpty) continue;
@@ -1122,10 +1053,8 @@ class KoalaBrain {
     final transactions = transactionsBox.values.toList();
     final jobs = jobsBox.values.where((j) => j.isActive).toList();
 
-    // Calculate average monthly savings
     final monthlySavings = _calculateAverageMonthlySavings(transactions);
 
-    // Calculate total monthly income
     double monthlyIncome = 0;
     for (final job in jobs) {
       monthlyIncome += job.monthlyIncome;
@@ -1134,7 +1063,7 @@ class KoalaBrain {
 
     final monthlyExpenses = monthlyIncome - monthlySavings;
     final requiredMonthlySaving = targetAmount / months;
-    final maxPossibleSaving = monthlyIncome * 0.5; // Assume max 50% savings rate
+    final maxPossibleSaving = monthlyIncome * 0.5; 
 
     FeasibilityLevel level;
     String assessment;
@@ -1153,7 +1082,6 @@ class KoalaBrain {
       final gap = requiredMonthlySaving - monthlySavings;
       recommendations.add('Réduisez vos dépenses de ${gap.toStringAsFixed(0)} FCFA/mois');
 
-      // Suggest specific cuts
       final budgets = generateSmartBudgets();
       final discretionary = budgets.entries
           .where((e) => !_isEssentialCategory(e.key) && e.key != 'Épargne')
@@ -1218,14 +1146,12 @@ class KoalaBrain {
 
     if (monthlyNet.isEmpty) return 0;
 
-    // Only count positive months (actual savings)
     final positiveSavings = monthlyNet.values.where((v) => v > 0);
     if (positiveSavings.isEmpty) return 0;
 
     return positiveSavings.reduce((a, b) => a + b) / monthlyNet.length;
   }
 
-  /// Clear all caches to force recalculation
   void invalidateCache() {
     _cachedForecast = null;
     _cachedAlerts = null;
@@ -1235,7 +1161,7 @@ class KoalaBrain {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DATA CLASSES
+// DATACLASSES
 // ══════════════════════════════════════════════════════════════════════════════
 
 class CategorySuggestion {
@@ -1365,7 +1291,7 @@ class ProactiveAlert {
   final String message;
   final AlertSeverity severity;
   final String actionSuggestion;
-  final String icon;
+  final IconData icon; // Changed from String to IconData
 
   ProactiveAlert({
     required this.type,
