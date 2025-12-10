@@ -6,6 +6,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/modules/home/widgets/user_setup_dialog.dart';
+import 'package:koaa/app/services/ml_service.dart';
 
 class HomeController extends GetxController {
   final balanceVisible = true.obs;
@@ -14,6 +15,8 @@ class HomeController extends GetxController {
   final RxDouble balance = 0.0.obs;
   final RxList<LocalTransaction> transactions = <LocalTransaction>[].obs;
   final RxBool isCardFlipped = false.obs;
+  final RxList<MLInsight> insights = <MLInsight>[].obs;
+  final _mlService = MLService();
 
   @override
   void onInit() {
@@ -23,13 +26,19 @@ class HomeController extends GetxController {
     final transactionBox = Hive.box<LocalTransaction>('transactionBox');
     transactions.assignAll(transactionBox.values.toList());
     calculateBalance();
+    _updateInsights();
 
     transactionBox.watch().listen((_) {
       transactions.assignAll(transactionBox.values.toList());
       calculateBalance();
+      _updateInsights();
     });
 
     generateRecurringTransactions();
+  }
+
+  void _updateInsights() {
+    insights.value = _mlService.generateInsights(transactions);
   }
 
   void checkUser() {
@@ -116,8 +125,8 @@ class HomeController extends GetxController {
               date: lastGenerated,
               type: TransactionType.expense, // Assuming recurring are expenses
               isRecurring: true,
-              category: TransactionCategory
-                  .otherExpense, // Default category for recurring
+              category: recurring.category, // Pass category from recurring
+              categoryId: recurring.categoryId,
             ),
           );
         }
@@ -146,8 +155,10 @@ class HomeController extends GetxController {
 
     for (var tx in transactions) {
       if (tx.type == TransactionType.expense) {
-        categoryTotals[tx.category!] =
+        if (tx.category != null) {
+           categoryTotals[tx.category!] =
             (categoryTotals[tx.category] ?? 0) + tx.amount;
+        }
       }
     }
 

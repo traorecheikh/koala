@@ -272,7 +272,10 @@ class LocalTransaction extends HiveObject {
   bool isRecurring;
 
   @HiveField(5)
-  TransactionCategory? category; // Make nullable for migration
+  TransactionCategory? category;
+
+  @HiveField(6)
+  String? categoryId;
 
   LocalTransaction({
     required this.amount,
@@ -281,8 +284,8 @@ class LocalTransaction extends HiveObject {
     required this.type,
     this.isRecurring = false,
     TransactionCategory? category,
-  }) : category =
-           category ??
+    this.categoryId,
+  }) : category = category ??
            (type == TransactionType.income
                ? TransactionCategory.otherIncome
                : TransactionCategory.otherExpense);

@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -68,7 +69,10 @@ class TransactionsView extends GetView<TransactionsController> {
 
           return FloatingActionButton.small(
             heroTag: 'clear_filters',
-            onPressed: controller.clearFilters,
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              controller.clearFilters();
+            },
             backgroundColor: theme.colorScheme.error,
             child: const Icon(CupertinoIcons.clear, color: Colors.white),
           ).animate().scale().fadeIn();
@@ -76,7 +80,10 @@ class TransactionsView extends GetView<TransactionsController> {
         const SizedBox(height: 12),
         FloatingActionButton(
           heroTag: 'filter',
-          onPressed: () => _showFilterSheet(context),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            _showFilterSheet(context);
+          },
           backgroundColor: theme.colorScheme.primary,
           child: const Icon(
             CupertinoIcons.slider_horizontal_3,
@@ -114,7 +121,10 @@ class _Header extends StatelessWidget {
         children: [
           IconButton(
             icon: const Icon(CupertinoIcons.back, size: 28),
-            onPressed: () => Get.back(),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Get.back();
+            },
             splashRadius: 24,
           ),
           Expanded(
@@ -238,7 +248,10 @@ class _FilterChip extends StatelessWidget {
     final chipColor = color ?? theme.colorScheme.primary;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
@@ -313,7 +326,10 @@ class _ActiveFiltersBar extends GetView<TransactionsController> {
               ),
             ),
             GestureDetector(
-              onTap: controller.clearFilters,
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                controller.clearFilters();
+              },
               child: Text(
                 'Clear All',
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -377,6 +393,7 @@ class _EnhancedTransactionCard extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
               onTap: () {
+                HapticFeedback.selectionClick();
                 // Could open transaction details
               },
               child: Padding(
@@ -545,7 +562,10 @@ class _EmptyState extends StatelessWidget {
                   if (controller.hasActiveFilters) ...[
                     SizedBox(height: 24.h),
                     ElevatedButton.icon(
-                      onPressed: controller.clearFilters,
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        controller.clearFilters();
+                      },
                       icon: const Icon(CupertinoIcons.clear),
                       label: const Text('Clear Filters'),
                     ),
@@ -582,7 +602,10 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
               Text('Filter & Sort', style: theme.textTheme.titleLarge),
               IconButton(
                 icon: const Icon(CupertinoIcons.xmark_circle_fill),
-                onPressed: () => Get.back(),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Get.back();
+                },
               ),
             ],
           ),
@@ -615,7 +638,10 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
             final hasRange = range != null;
 
             return OutlinedButton.icon(
-              onPressed: () => _selectDateRange(context),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _selectDateRange(context);
+              },
               icon: Icon(
                 hasRange
                     ? CupertinoIcons.calendar_badge_minus
@@ -643,6 +669,7 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () {
+                    HapticFeedback.mediumImpact();
                     controller.clearFilters();
                     Get.back();
                   },
@@ -652,7 +679,10 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => Get.back(),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Get.back();
+                  },
                   child: const Text('Apply'),
                 ),
               ),
@@ -691,7 +721,10 @@ class _SortChip extends GetView<TransactionsController> {
     return FilterChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (_) => controller.setSort(option),
+      onSelected: (_) {
+        HapticFeedback.selectionClick();
+        controller.setSort(option);
+      },
       selectedColor: theme.colorScheme.primary.withAlpha(51),
       checkmarkColor: theme.colorScheme.primary,
       labelStyle: TextStyle(

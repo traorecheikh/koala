@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/data/models/category.dart';
+import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:uuid/uuid.dart';
+
+class CategoriesController extends GetxController {
+  final categories = <Category>[].obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _initializeCategories();
+  }
+
+  Future<void> _initializeCategories() async {
+    final box = Hive.box<Category>('categoryBox');
+    
+    if (box.isEmpty) {
+      await _seedDefaultCategories(box);
+    }
+
+    categories.assignAll(box.values.toList());
+    
+    // Listen to changes
+    box.watch().listen((_) {
+      categories.assignAll(box.values.toList());
+    });
+  }
+
+  Future<void> _seedDefaultCategories(Box<Category> box) async {
+    final List<Category> defaults = [];
+    
+    // Seed Income Categories
+    for (var cat in TransactionCategoryExtension.getByType(TransactionType.income)) {
+      defaults.add(Category(
+        id: const Uuid().v4(),
+        name: cat.displayName,
+        icon: cat.icon,
+        colorValue: Colors.green.value, // Default green for income
+        type: TransactionType.income,
+        isDefault: true,
+      ));
+    }
+
+    // Seed Expense Categories
+    int colorIndex = 0;
+    for (var cat in TransactionCategoryExtension.getByType(TransactionType.expense)) {
+      defaults.add(Category(
+        id: const Uuid().v4(),
+        name: cat.displayName,
+        icon: cat.icon,
+        colorValue: Colors.primaries[colorIndex % Colors.primaries.length].value,
+        type: TransactionType.expense,
+        isDefault: true,
+      ));
+      colorIndex++;
+    }
+
+    await box.addAll(defaults);
+  }
+
+  List<Category> get incomeCategories => 
+      categories.where((c) => c.type == TransactionType.income).toList();
+
+  List<Category> get expenseCategories => 
+      categories.where((c) => c.type == TransactionType.expense).toList();
+
+  Future<void> addCategory({
+    required String name,
+    required String icon,
+    required int colorValue,
+    required TransactionType type,
+  }) async {
+    final box = Hive.box<Category>('categoryBox');
+    final category = Category(
+      id: const Uuid().v4(),
+      name: name,
+      icon: icon,
+      colorValue: colorValue,
+      type: type,
+      isDefault: false,
+    );
+    await box.add(category);
+  }
+
+  Future<void> updateCategory(Category category) async {
+    await category.save();
+  }
+
+  Future<void> deleteCategory(Category category) async {
+    if (category.isDefault) {
+      Get.snackbar(
+        'Action impossible',
+        'Vous ne pouvez pas supprimer une catégorie par défaut',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+    await category.delete();
+  }
+}

@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/home/widgets/add_transaction_dialog.dart';
 import 'package:koaa/app/modules/home/widgets/enhanced_balance_card.dart';
+import 'package:koaa/app/modules/home/widgets/financial_health_widget.dart';
 
 import '../../../routes/app_pages.dart';
 import '../controllers/home_controller.dart';
@@ -31,6 +32,8 @@ class HomeView extends GetView<HomeController> {
                       const _Header(),
                       const SizedBox(height: 24),
                       const EnhancedBalanceCard(),
+                      const SizedBox(height: 24),
+                      const FinancialHealthWidget(),
                       const SizedBox(height: 32),
                       const _QuickActions(),
                       const SizedBox(height: 32),

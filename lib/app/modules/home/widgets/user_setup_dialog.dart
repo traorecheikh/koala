@@ -6,8 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
+import 'package:uuid/uuid.dart';
 
 void showUserSetupDialog(BuildContext context) {
   showModalBottomSheet(
@@ -30,14 +33,43 @@ class _UserSetupSheet extends StatefulWidget {
 class _UserSetupSheetState extends State<_UserSetupSheet> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
-  final _salaryController = TextEditingController();
-  final _paydayController = TextEditingController();
   final _ageController = TextEditingController();
+  final _customJobController = TextEditingController();
+  final _salaryController = TextEditingController();
 
   final _nameFocusNode = FocusNode();
-  final _salaryFocusNode = FocusNode();
-  final _paydayFocusNode = FocusNode();
   final _ageFocusNode = FocusNode();
+
+  String? _selectedJobTitle;
+  double _selectedSalary = 150000;
+  PaymentFrequency _selectedFrequency = PaymentFrequency.monthly;
+  DateTime _paymentDate = DateTime.now();
+  List<Job> _jobs = [];
+
+  final List<String> _jobTitles = [
+    'Développeur FullStack',
+    'Consultant Technique',
+    'Ingénieur Logiciel',
+    'Architecte Solution',
+    'Chef de Projet IT',
+    'DevOps Engineer',
+    'Développeur Mobile',
+    'Développeur Frontend',
+    'Développeur Backend',
+    'Administrateur Système',
+    'Analyste Cybersécurité',
+    'UX/UI Designer',
+    'Product Manager',
+    'Data Scientist',
+    'Ingénieur IA/ML',
+    'Analyste de Données',
+    'Consultant ERP',
+    'Testeur QA',
+    'Enseignant',
+    'Commerçant',
+    'Santé / Médical',
+    'Autre',
+  ];
 
   String _budgetingType = '50/30/20';
   bool _loading = false;
@@ -46,6 +78,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   @override
   void initState() {
     super.initState();
+    _salaryController.text = _formatAmount(_selectedSalary.toStringAsFixed(0));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _nameFocusNode.requestFocus();
     });
@@ -54,12 +87,10 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   @override
   void dispose() {
     _fullNameController.dispose();
-    _salaryController.dispose();
-    _paydayController.dispose();
     _ageController.dispose();
+    _customJobController.dispose();
+    _salaryController.dispose();
     _nameFocusNode.dispose();
-    _salaryFocusNode.dispose();
-    _paydayFocusNode.dispose();
     _ageFocusNode.dispose();
     super.dispose();
   }
@@ -74,23 +105,16 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     );
   }
 
-  String _getNumericValue(String formattedValue) {
-    return formattedValue.replaceAll(' ', '');
-  }
-
   bool get _canContinue {
     switch (_currentStep) {
       case 0:
         return _fullNameController.text.trim().isNotEmpty;
       case 1:
-        return _salaryController.text.trim().isNotEmpty;
+        return true; 
       case 2:
-        final day = int.tryParse(_paydayController.text);
-        return day != null && day >= 1 && day <= 31;
-      case 3:
         final age = int.tryParse(_ageController.text);
         return age != null && age > 0;
-      case 4:
+      case 3:
         return true;
       default:
         return false;
@@ -99,21 +123,13 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
 
   void _nextStep() {
     if (!_canContinue) return;
-
     HapticFeedback.lightImpact();
     setState(() {
-      if (_currentStep < 4) {
+      if (_currentStep < 3) {
         _currentStep++;
-        // Focus management
         WidgetsBinding.instance.addPostFrameCallback((_) {
           switch (_currentStep) {
-            case 1:
-              _salaryFocusNode.requestFocus();
-              break;
             case 2:
-              _paydayFocusNode.requestFocus();
-              break;
-            case 3:
               _ageFocusNode.requestFocus();
               break;
           }
@@ -129,19 +145,32 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     }
   }
 
+  void _skipSetup() {
+    Navigator.pop(context);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     HapticFeedback.heavyImpact();
     setState(() => _loading = true);
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    final jobBox = Hive.box<Job>('jobBox');
+    for (final job in _jobs) {
+      await jobBox.put(job.id, job);
+    }
 
     final homeController = Get.find<HomeController>();
+    final totalMonthlyIncome = _jobs.fold(
+      0.0,
+      (sum, job) => sum + job.monthlyIncome,
+    );
+    final defaultPayday = _jobs.isNotEmpty ? _jobs.first.paymentDate.day : 1;
+
     final newUser = LocalUser(
       fullName: _fullNameController.text.trim(),
-      salary: double.parse(_getNumericValue(_salaryController.text)),
-      payday: int.parse(_paydayController.text),
+      salary: totalMonthlyIncome, 
+      payday: defaultPayday, 
       age: int.parse(_ageController.text),
       budgetingType: _budgetingType,
     );
@@ -171,7 +200,6 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           key: _formKey,
           child: Column(
             children: [
-              // Handle
               Container(
                 width: 36.w,
                 height: 4.h,
@@ -182,41 +210,59 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                 ),
               ),
 
-              // Header
               Padding(
                 padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 16.h),
-                child: Column(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Bienvenue sur Koaa',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Bienvenue sur Koaa',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 24.sp,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Configurons votre profil pour commencer.',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: Colors.grey.shade600,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Configurons votre profil',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey.shade600,
+                    if (_currentStep == 0)
+                      TextButton(
+                        onPressed: _skipSetup,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey.shade600,
+                        ),
+                        child: const Text('Passer'),
                       ),
-                    ),
                   ],
                 ),
               ),
 
-              // Progress indicator
+              // Enhanced Progress Indicator
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
                 child: Row(
-                  children: List.generate(5, (index) {
+                  children: List.generate(4, (index) {
+                    final isActive = index <= _currentStep;
                     return Expanded(
-                      child: Container(
-                        height: 3.h,
-                        margin: EdgeInsets.only(right: index < 4 ? 8.w : 0),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        height: 4.h,
+                        margin: EdgeInsets.only(right: index < 3 ? 8.w : 0),
                         decoration: BoxDecoration(
-                          color: index <= _currentStep
-                              ? Colors.black
-                              : Colors.grey.shade200,
+                          color: isActive ? theme.colorScheme.primary : Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -225,7 +271,6 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                 ),
               ).animate().fadeIn(duration: 300.ms),
 
-              // Content
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.only(
@@ -253,63 +298,47 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                 ),
               ),
 
-              // Navigation buttons
               Padding(
-                padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.h),
+                padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 32.h),
                 child: Row(
                   children: [
                     if (_currentStep > 0)
-                      SizedBox(
-                        width: 56.w,
-                        height: 56.h,
-                        child: CupertinoButton(
-                          padding: EdgeInsets.zero,
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(16.r),
-                          onPressed: _previousStep,
-                          child: Icon(
-                            CupertinoIcons.back,
-                            color: Colors.black,
-                            size: 24.sp,
+                      Padding(
+                        padding: EdgeInsets.only(right: 16.w),
+                        child: SizedBox(
+                          width: 56.w,
+                          height: 56.h,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16.r),
+                              ),
+                              side: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            onPressed: _previousStep,
+                            child: Icon(CupertinoIcons.back, color: Colors.black),
                           ),
                         ),
                       ),
-                    if (_currentStep > 0) SizedBox(width: 12.w),
                     Expanded(
                       child: SizedBox(
                         height: 56.h,
-                        child: CupertinoButton(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(16.r),
-                          onPressed: _canContinue
-                              ? (_currentStep == 4 ? _submit : _nextStep)
-                              : null,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                          ),
+                          onPressed: _canContinue ? (_currentStep == 3 ? _submit : _nextStep) : null,
                           child: _loading
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 20.w,
-                                      height: 20.h,
-                                      child: const CupertinoActivityIndicator(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Text(
-                                      'Enregistrement...',
-                                      style: TextStyle(
-                                        fontSize: 17.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white.withOpacity(0.8),
-                                      ),
-                                    ),
-                                  ],
-                                )
+                              ? const CupertinoActivityIndicator(color: Colors.white)
                               : Text(
-                                  _currentStep == 4 ? 'Terminer' : 'Continuer',
+                                  _currentStep == 3 ? 'Terminer' : 'Continuer',
                                   style: TextStyle(
-                                    fontSize: 17.sp,
+                                    fontSize: 16.sp,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
                                   ),
@@ -329,18 +358,11 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
 
   Widget _buildStepContent() {
     switch (_currentStep) {
-      case 0:
-        return _buildNameStep();
-      case 1:
-        return _buildSalaryStep();
-      case 2:
-        return _buildPaydayStep();
-      case 3:
-        return _buildAgeStep();
-      case 4:
-        return _buildBudgetingTypeStep();
-      default:
-        return const SizedBox.shrink();
+      case 0: return _buildNameStep();
+      case 1: return _buildJobsStep();
+      case 2: return _buildAgeStep();
+      case 3: return _buildBudgetingTypeStep();
+      default: return const SizedBox.shrink();
     }
   }
 
@@ -351,9 +373,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       children: [
         Text(
           'Comment vous appelez-vous ?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
         ),
         SizedBox(height: 24.h),
         _buildTextField(
@@ -368,70 +388,235 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     );
   }
 
-  Widget _buildSalaryStep() {
+  Widget _buildJobsStep() {
     return Column(
-      key: const ValueKey('salaryStep'),
+      key: const ValueKey('jobsStep'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quel est votre salaire mensuel ?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          'Ajoutez vos revenus',
+          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          'Vous pouvez ajouter plusieurs sources de revenus.',
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 15.sp),
         ),
         SizedBox(height: 24.h),
-        _buildTextField(
-          controller: _salaryController,
-          focusNode: _salaryFocusNode,
-          hintText: '0',
-          keyboardType: TextInputType.number,
-          suffix: 'FCFA',
-          onChanged: (value) {
-            final formatted = _formatAmount(value);
-            if (formatted != value) {
-              _salaryController.value = TextEditingValue(
-                text: formatted,
-                selection: TextSelection.collapsed(offset: formatted.length),
-              );
-            }
-            setState(() {});
-          },
-          onSubmitted: (_) => _nextStep(),
+
+        if (_jobs.isNotEmpty) ...[
+          ..._jobs.asMap().entries.map((entry) {
+            final index = entry.key;
+            final job = entry.value;
+            return Container(
+              margin: EdgeInsets.only(bottom: 12.h),
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
+                      ],
+                    ),
+                    child: Icon(CupertinoIcons.briefcase, color: Colors.black, size: 20.sp),
+                  ),
+                  SizedBox(width: 16.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          job.name,
+                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          '${job.frequency.displayName} • FCFA ${_formatAmount(job.amount.toString())}',
+                          style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(CupertinoIcons.minus_circle, color: Colors.red.shade400),
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      setState(() {
+                        _jobs.removeAt(index);
+                      });
+                    },
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          SizedBox(height: 24.h),
+        ],
+
+        Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _jobs.isEmpty ? 'Ajouter une source' : 'Ajouter une autre source',
+                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 16.h),
+              DropdownButtonFormField<String>(
+                value: _selectedJobTitle,
+                decoration: InputDecoration(
+                  hintText: 'Type de poste',
+                  fillColor: Colors.grey.shade50,
+                  filled: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                ),
+                items: _jobTitles.map((job) => DropdownMenuItem(value: job, child: Text(job))).toList(),
+                onChanged: (value) => setState(() => _selectedJobTitle = value),
+              ),
+              
+              if (_selectedJobTitle == 'Autre') ...[
+                SizedBox(height: 12.h),
+                TextField(
+                  controller: _customJobController,
+                  decoration: InputDecoration(
+                    hintText: 'Précisez votre poste',
+                    fillColor: Colors.grey.shade50,
+                    filled: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+              
+              SizedBox(height: 20.h),
+              Text('Revenu Mensuel', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: Colors.grey.shade600)),
+              SizedBox(height: 8.h),
+              
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 16.h),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _salaryController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 28.sp, fontWeight: FontWeight.bold, color: Colors.black),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        suffixText: 'FCFA',
+                        suffixStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey),
+                      ),
+                      onChanged: (value) {
+                        String digits = value.replaceAll(RegExp(r'[^\d]'), '');
+                        if (digits.isNotEmpty) {
+                          double val = double.parse(digits);
+                          setState(() => _selectedSalary = val);
+                        } else {
+                          setState(() => _selectedSalary = 0);
+                        }
+                      },
+                    ),
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: Colors.black,
+                        inactiveTrackColor: Colors.grey.shade300,
+                        thumbColor: Colors.black,
+                        trackHeight: 4.h,
+                        thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
+                        overlayShape: SliderComponentShape.noOverlay,
+                      ),
+                      child: Slider(
+                        value: _selectedSalary.clamp(0, 1000000),
+                        min: 0,
+                        max: 1000000,
+                        onChanged: (value) {
+                          final newValue = (value / 5000).round() * 5000.0;
+                          setState(() {
+                            _selectedSalary = newValue;
+                            _salaryController.text = _formatAmount(newValue.toStringAsFixed(0));
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: 20.h),
+              SizedBox(
+                width: double.infinity,
+                height: 50.h,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                  ),
+                  onPressed: _canAddJob() ? _addJob : null,
+                  child: const Text('Ajouter ce revenu', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildPaydayStep() {
-    return Column(
-      key: const ValueKey('paydayStep'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quel jour du mois êtes-vous payé ?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        SizedBox(height: 8.h),
-        Text(
-          'Entrez un jour entre 1 et 31',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 15.sp,
-          ),
-        ),
-        SizedBox(height: 24.h),
-        _buildTextField(
-          controller: _paydayController,
-          focusNode: _paydayFocusNode,
-          hintText: 'Ex: 15',
-          keyboardType: TextInputType.number,
-          onChanged: (_) => setState(() {}),
-          onSubmitted: (_) => _nextStep(),
-        ),
-      ],
+  bool _canAddJob() {
+    if (_selectedJobTitle == 'Autre') {
+       return _customJobController.text.isNotEmpty && _selectedSalary > 0;
+    }
+    return _selectedJobTitle != null && _selectedSalary > 0;
+  }
+
+  void _addJob() {
+    if (!_canAddJob()) return;
+    
+    String jobName = _selectedJobTitle!;
+    if (jobName == 'Autre') {
+      jobName = _customJobController.text.trim();
+    }
+
+    final job = Job(
+      id: const Uuid().v4(),
+      name: jobName,
+      amount: _selectedSalary,
+      frequency: _selectedFrequency,
+      paymentDate: _paymentDate,
     );
+
+    setState(() {
+      _jobs.add(job);
+      _selectedJobTitle = null;
+      _customJobController.clear();
+      _selectedSalary = 150000;
+      _salaryController.text = _formatAmount(_selectedSalary.toStringAsFixed(0));
+      _selectedFrequency = PaymentFrequency.monthly;
+    });
+
+    HapticFeedback.mediumImpact();
   }
 
   Widget _buildAgeStep() {
@@ -439,12 +624,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       key: const ValueKey('ageStep'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quel âge avez-vous ?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
+        Text('Quel âge avez-vous ?', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700)),
         SizedBox(height: 24.h),
         _buildTextField(
           controller: _ageController,
@@ -463,27 +643,13 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       key: const ValueKey('budgetingStep'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Choisissez votre méthode budgétaire',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
+        Text('Votre méthode budgétaire', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700)),
         SizedBox(height: 24.h),
-        _buildBudgetingOption(
-          '50/30/20',
-          '50% besoins, 30% loisirs, 20% épargne',
-        ),
+        _buildBudgetingOption('50/30/20', '50% besoins, 30% loisirs, 20% épargne'),
         SizedBox(height: 12.h),
-        _buildBudgetingOption(
-          '70/20/10',
-          '70% besoins, 20% loisirs, 10% épargne',
-        ),
+        _buildBudgetingOption('70/20/10', '70% besoins, 20% loisirs, 10% épargne'),
         SizedBox(height: 12.h),
-        _buildBudgetingOption(
-          'Zero-Based',
-          'Chaque franc a une destination',
-        ),
+        _buildBudgetingOption('Zero-Based', 'Chaque franc a une destination'),
       ],
     );
   }
@@ -491,20 +657,15 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   Widget _buildBudgetingOption(String type, String description) {
     final isSelected = _budgetingType == type;
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        setState(() => _budgetingType = type);
-      },
+      onTap: () => setState(() => _budgetingType = type),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.grey.shade50,
+          color: isSelected ? Colors.black : Colors.white,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: isSelected ? Colors.black : Colors.grey.shade200,
-            width: 2,
-          ),
+          border: Border.all(color: isSelected ? Colors.black : Colors.grey.shade200, width: 1.5),
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))] : [],
         ),
         child: Row(
           children: [
@@ -512,33 +673,13 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    type,
-                    style: TextStyle(
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : Colors.black,
-                    ),
-                  ),
+                  Text(type, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : Colors.black)),
                   SizedBox(height: 4.h),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: isSelected
-                          ? Colors.white.withOpacity(0.8)
-                          : Colors.grey.shade600,
-                    ),
-                  ),
+                  Text(description, style: TextStyle(fontSize: 14.sp, color: isSelected ? Colors.white70 : Colors.grey.shade600)),
                 ],
               ),
             ),
-            if (isSelected)
-              Icon(
-                CupertinoIcons.check_mark_circled_solid,
-                color: Colors.white,
-                size: 24.sp,
-              ),
+            if (isSelected) Icon(CupertinoIcons.check_mark_circled_solid, color: Colors.white, size: 24.sp),
           ],
         ),
       ),
@@ -555,43 +696,25 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     Function(String)? onSubmitted,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 4.h),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              keyboardType: keyboardType,
-              style: TextStyle(
-                fontSize: 17.sp,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: hintText,
-                hintStyle: TextStyle(color: Colors.grey.shade500),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 16.h),
-              ),
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
-            ),
-          ),
-          if (suffix != null)
-            Text(
-              suffix,
-              style: TextStyle(
-                fontSize: 17.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade600,
-              ),
-            ),
-        ],
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: TextStyle(color: Colors.grey.shade400),
+          border: InputBorder.none,
+          suffixText: suffix,
+        ),
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
       ),
     );
   }

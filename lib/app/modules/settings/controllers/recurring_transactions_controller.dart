@@ -20,8 +20,11 @@ class RecurringTransactionsController extends GetxController {
     recurringTransactionBox.add(transaction);
   }
 
-  void deleteRecurringTransaction(int index) {
-    final recurringTransactionBox = Hive.box<RecurringTransaction>('recurringTransactionBox');
-    recurringTransactionBox.deleteAt(index);
+  Future<void> updateRecurringTransaction(RecurringTransaction transaction) async {
+    await transaction.save();
+  }
+
+  Future<void> deleteRecurringTransaction(RecurringTransaction transaction) async {
+    await transaction.delete();
   }
 }

@@ -4,9 +4,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/core/theme.dart';
+import 'package:koaa/app/data/models/category.dart';
+import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
+import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/hive_registrar.g.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -22,7 +26,17 @@ void main() async {
   await Hive.openBox<LocalUser>('userBox');
   await Hive.openBox<LocalTransaction>('transactionBox');
   await Hive.openBox<RecurringTransaction>('recurringTransactionBox');
+  await Hive.openBox<Job>('jobBox');
+  await Hive.openBox<SavingsGoal>('savingsGoalBox');
+  await Hive.openBox<Category>('categoryBox');
   // await Hive.deleteFromDisk();
+
+  // Initialize Intelligence Service (Koala Brain)
+  await Get.putAsync<IntelligenceService>(() async {
+    final service = IntelligenceService();
+    await service.onInit();
+    return service;
+  });
 
   runApp(AppInfo(data: await AppInfoData.get(), child: const MyApp()));
 }

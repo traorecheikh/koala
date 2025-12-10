@@ -1,13 +1,18 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
+import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
+import 'package:koaa/app/services/intelligence/intelligence_service.dart';
+import 'package:koaa/app/services/intelligence/koala_brain.dart';
 
 void showAddTransactionDialog(BuildContext context, TransactionType type) {
   showModalBottomSheet(
@@ -31,10 +36,15 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final FocusNode _amountFocusNode = FocusNode();
-  TransactionCategory? _selectedCategory;
+  Category? _selectedCategory;
   bool _loading = false;
   String? _error;
   bool _buttonPressed = false;
+
+  // Smart categorization
+  CategorySuggestion? _categorySuggestion;
+  Timer? _debounceTimer;
+  bool _showSuggestion = false;
 
   @override
   void initState() {
@@ -42,14 +52,102 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _amountFocusNode.requestFocus();
     });
+    // Listen to description changes for smart categorization
+    _descriptionController.addListener(_onDescriptionChanged);
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _descriptionController.removeListener(_onDescriptionChanged);
     _amountController.dispose();
     _descriptionController.dispose();
     _amountFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onDescriptionChanged() {
+    _debounceTimer?.cancel();
+    final description = _descriptionController.text.trim();
+
+    if (description.length < 3) {
+      setState(() {
+        _categorySuggestion = null;
+        _showSuggestion = false;
+      });
+      return;
+    }
+
+    // Debounce to avoid too many calls
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+      _getSuggestion(description);
+    });
+  }
+
+  void _getSuggestion(String description) {
+    try {
+      final intelligenceService = Get.find<IntelligenceService>();
+      final suggestion = intelligenceService.suggestCategory(description, widget.type);
+
+      // Only show if confidence is reasonable and no category selected yet
+      if (suggestion.confidence >= 0.5 && _selectedCategory == null) {
+        setState(() {
+          _categorySuggestion = suggestion;
+          _showSuggestion = true;
+        });
+      } else {
+        setState(() {
+          _showSuggestion = false;
+        });
+      }
+    } catch (e) {
+      // Intelligence service not available, silently ignore
+    }
+  }
+
+  void _acceptSuggestion() {
+    if (_categorySuggestion == null) return;
+
+    final categoriesController = Get.find<CategoriesController>();
+    final categories = widget.type == TransactionType.income
+        ? categoriesController.incomeCategories
+        : categoriesController.expenseCategories;
+
+    // Find matching category by name
+    final suggestedCategoryName = _categorySuggestion!.category?.displayName;
+    final matchingCategory = categories.firstWhereOrNull(
+      (c) => c.name.toLowerCase() == suggestedCategoryName?.toLowerCase(),
+    );
+
+    if (matchingCategory != null) {
+      HapticFeedback.lightImpact();
+      setState(() {
+        _selectedCategory = matchingCategory;
+        _showSuggestion = false;
+      });
+
+      // Learn from the accepted suggestion
+      try {
+        final intelligenceService = Get.find<IntelligenceService>();
+        if (_categorySuggestion!.category != null) {
+          intelligenceService.learnFromCategoryChoice(
+            _descriptionController.text.trim(),
+            _categorySuggestion!.category!,
+            matchingCategory.id,
+            widget.type,
+          );
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
+  }
+
+  void _dismissSuggestion() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _showSuggestion = false;
+    });
   }
 
   String _formatAmount(String value) {
@@ -89,17 +187,19 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       _error = null;
     });
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Artificial delay removed
 
     final homeController = Get.find<HomeController>();
     final transaction = LocalTransaction(
       amount: double.parse(numericAmount),
       description: _descriptionController.text.trim().isEmpty
-          ? _selectedCategory!.displayName
+          ? _selectedCategory!.name
           : _descriptionController.text.trim(),
       date: DateTime.now(),
       type: widget.type,
-      category: _selectedCategory!,
+      categoryId: _selectedCategory!.id,
+      // Fallback for old enum if needed by other parts of app
+      category: null, 
     );
 
     homeController.addTransaction(transaction);
@@ -301,14 +401,26 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                           ),
                           child: Row(
                             children: [
-                              Text(
-                                _selectedCategory?.icon ?? '📦',
-                                style: TextStyle(fontSize: 24.sp),
+                              Container(
+                                width: 40.w,
+                                height: 40.w,
+                                decoration: BoxDecoration(
+                                  color: _selectedCategory != null 
+                                    ? Color(_selectedCategory!.colorValue).withOpacity(0.2)
+                                    : Colors.transparent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    _selectedCategory?.icon ?? '📦',
+                                    style: TextStyle(fontSize: 24.sp),
+                                  ),
+                                ),
                               ),
                               SizedBox(width: 12.w),
                               Expanded(
                                 child: Text(
-                                  _selectedCategory?.displayName ??
+                                  _selectedCategory?.name ??
                                       'Sélectionner une catégorie',
                                   style: TextStyle(
                                     fontSize: 17.sp,
@@ -354,7 +466,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             fontWeight: FontWeight.w500,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Note (optionnel)',
+                            hintText: 'Description (suggestion auto)',
                             hintStyle: TextStyle(color: Colors.grey.shade500),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.symmetric(
@@ -381,6 +493,16 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                         curve: Curves.easeOutQuart,
                       )
                       .fadeIn(),
+
+                  // Smart Category Suggestion
+                  if (_showSuggestion && _categorySuggestion != null) ...[
+                    SizedBox(height: 12.h),
+                    _SmartSuggestionChip(
+                      suggestion: _categorySuggestion!,
+                      onAccept: _acceptSuggestion,
+                      onDismiss: _dismissSuggestion,
+                    ),
+                  ],
 
                   if (_error != null) ...[
                     SizedBox(height: 24.h),
@@ -474,101 +596,255 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
 class _CategoryPickerSheet extends StatelessWidget {
   final TransactionType type;
-  final Function(TransactionCategory) onSelect;
+  final Function(Category) onSelect;
 
   const _CategoryPickerSheet({required this.type, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categories = TransactionCategoryExtension.getByType(type);
+    final controller = Get.find<CategoriesController>();
+    
+    return Obx(() {
+      final categories = type == TransactionType.income 
+          ? controller.incomeCategories 
+          : controller.expenseCategories;
+
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              width: 36.w,
+              height: 4.h,
+              margin: EdgeInsets.only(top: 12.h),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 16.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Choisir une catégorie',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.settings, color: Colors.grey),
+                    onPressed: () {
+                      // Navigate to Category Settings
+                      Get.toNamed('/categories'); // Need to register this route
+                    },
+                  )
+                ],
+              ),
+            ),
+
+            // Categories grid
+            Expanded(
+              child: GridView.builder(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12.w,
+                  mainAxisSpacing: 12.h,
+                  childAspectRatio: 1,
+                ),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      onSelect(category);
+                    },
+                    child:
+                        Container(
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                category.icon,
+                                style: TextStyle(fontSize: 32.sp),
+                              ),
+                              SizedBox(height: 8.h),
+                              Text(
+                                category.name,
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ).animate().scale(
+                          delay: (index * 30).ms,
+                          duration: 300.ms,
+                          curve: Curves.easeOutBack,
+                        ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+/// Smart suggestion chip that appears when AI detects a category
+class _SmartSuggestionChip extends StatelessWidget {
+  final CategorySuggestion suggestion;
+  final VoidCallback onAccept;
+  final VoidCallback onDismiss;
+
+  const _SmartSuggestionChip({
+    required this.suggestion,
+    required this.onAccept,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryName = suggestion.category?.displayName ?? 'Autre';
+    final categoryIcon = suggestion.category?.icon ?? '📦';
+    final confidence = (suggestion.confidence * 100).toInt();
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        gradient: LinearGradient(
+          colors: [
+            Colors.blue.withOpacity(0.1),
+            Colors.purple.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.3),
+          width: 1,
+        ),
       ),
-      child: Column(
+      child: Row(
         children: [
-          // Handle
+          // AI Icon
           Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h),
+            padding: EdgeInsets.all(6.w),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
+              color: Colors.blue.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              CupertinoIcons.sparkles,
+              color: Colors.blue,
+              size: 16.sp,
             ),
           ),
+          SizedBox(width: 10.w),
 
-          // Header
-          Padding(
-            padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 16.h),
-            child: Text(
-              'Choisir une catégorie',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-
-          // Categories grid
+          // Suggestion text
           Expanded(
-            child: GridView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 12.w,
-                mainAxisSpacing: 12.h,
-                childAspectRatio: 1,
-              ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    onSelect(category);
-                  },
-                  child:
-                      Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              category.icon,
-                              style: TextStyle(fontSize: 32.sp),
-                            ),
-                            SizedBox(height: 8.h),
-                            Text(
-                              category.displayName,
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ).animate().scale(
-                        delay: (index * 30).ms,
-                        duration: 300.ms,
-                        curve: Curves.easeOutBack,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      categoryIcon,
+                      style: TextStyle(fontSize: 14.sp),
+                    ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      categoryName,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
                       ),
-                );
-              },
+                    ),
+                    SizedBox(width: 6.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: confidence > 70 ? Colors.green.withOpacity(0.2) : Colors.amber.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Text(
+                        '$confidence%',
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                          color: confidence > 70 ? Colors.green.shade700 : Colors.amber.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  suggestion.reason,
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Accept button
+          GestureDetector(
+            onTap: onAccept,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Text(
+                'Utiliser',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 8.w),
+
+          // Dismiss button
+          GestureDetector(
+            onTap: onDismiss,
+            child: Icon(
+              CupertinoIcons.xmark,
+              color: Colors.grey.shade400,
+              size: 18.sp,
             ),
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.1);
   }
 }

@@ -3,28 +3,46 @@
 // Check in to version control
 
 import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/data/models/category.dart';
+import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
+import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/services/intelligence/koala_brain.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
+    registerAdapter(CategoryAdapter());
     registerAdapter(FrequencyAdapter());
+    registerAdapter(JobAdapter());
     registerAdapter(LocalTransactionAdapter());
     registerAdapter(LocalUserAdapter());
+    registerAdapter(PaymentFrequencyAdapter());
     registerAdapter(RecurringTransactionAdapter());
+    registerAdapter(SavingsGoalAdapter());
     registerAdapter(TransactionCategoryAdapter());
     registerAdapter(TransactionTypeAdapter());
+    // Intelligence adapters
+    registerAdapter(CategoryPatternAdapter());
+    registerAdapter(UserBehaviorAdapter());
   }
 }
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
+    registerAdapter(CategoryAdapter());
     registerAdapter(FrequencyAdapter());
+    registerAdapter(JobAdapter());
     registerAdapter(LocalTransactionAdapter());
     registerAdapter(LocalUserAdapter());
+    registerAdapter(PaymentFrequencyAdapter());
     registerAdapter(RecurringTransactionAdapter());
+    registerAdapter(SavingsGoalAdapter());
     registerAdapter(TransactionCategoryAdapter());
     registerAdapter(TransactionTypeAdapter());
+    // Intelligence adapters
+    registerAdapter(CategoryPatternAdapter());
+    registerAdapter(UserBehaviorAdapter());
   }
 }

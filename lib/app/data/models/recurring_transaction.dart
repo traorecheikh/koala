@@ -1,4 +1,5 @@
 import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/data/models/local_transaction.dart';
 
 part 'recurring_transaction.g.dart';
 
@@ -34,6 +35,15 @@ class RecurringTransaction extends HiveObject {
   @HiveField(5)
   DateTime lastGeneratedDate;
 
+  @HiveField(6)
+  TransactionCategory category;
+
+  @HiveField(7)
+  TransactionType type;
+
+  @HiveField(8)
+  String? categoryId;
+
   RecurringTransaction({
     required this.amount,
     required this.description,
@@ -41,5 +51,8 @@ class RecurringTransaction extends HiveObject {
     this.daysOfWeek = const [],
     this.dayOfMonth = 1,
     required this.lastGeneratedDate,
+    required this.category,
+    required this.type,
+    this.categoryId,
   });
 }
