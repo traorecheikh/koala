@@ -232,7 +232,7 @@ class MLService {
 
     final insights = <MLInsight>[];
 
-    if (transactions.length < 5) {
+    if (transactions.length < 1) {
       insights.add(
         MLInsight(
           title: 'Commencez à suivre',

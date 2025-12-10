@@ -9,7 +9,7 @@ import 'package:koaa/app/services/intelligence/koala_brain.dart';
 /// Service that provides intelligent features across the app
 /// Singleton pattern - use Get.find<IntelligenceService>() to access
 class IntelligenceService extends GetxService {
-  late final KoalaBrain _brain;
+  KoalaBrain? _brain;
 
   // Observable states for UI binding
   final alerts = <ProactiveAlert>[].obs;
@@ -54,6 +54,7 @@ class IntelligenceService extends GetxService {
   }
 
   void _initializeBrain() {
+    if (_brain != null) return;
     _brain = KoalaBrain(
       transactionsBox: _transactionsBox,
       jobsBox: _jobsBox,
@@ -69,13 +70,13 @@ class IntelligenceService extends GetxService {
     isLoading.value = true;
     try {
       // Generate alerts
-      alerts.value = _brain.generateAlerts();
+      alerts.value = _brain!.generateAlerts();
 
       // Generate forecast
-      forecast.value = _brain.forecastCashFlow();
+      forecast.value = _brain!.forecastCashFlow();
 
       // Generate smart budgets
-      budgets.value = _brain.generateSmartBudgets();
+      budgets.value = _brain!.generateSmartBudgets();
     } finally {
       isLoading.value = false;
     }
@@ -83,7 +84,7 @@ class IntelligenceService extends GetxService {
 
   /// Invalidate cache and force refresh
   Future<void> forceRefresh() async {
-    _brain.invalidateCache();
+    _brain!.invalidateCache();
     await refresh();
   }
 
@@ -93,7 +94,7 @@ class IntelligenceService extends GetxService {
 
   /// Get a category suggestion for a transaction description
   CategorySuggestion suggestCategory(String description, TransactionType type) {
-    return _brain.suggestCategory(description, type);
+    return _brain!.suggestCategory(description, type);
   }
 
   /// Learn from user's category choice to improve future suggestions
@@ -103,7 +104,7 @@ class IntelligenceService extends GetxService {
     String? categoryId,
     TransactionType type,
   ) {
-    _brain.learnCategoryChoice(description, category, categoryId, type);
+    _brain!.learnCategoryChoice(description, category, categoryId, type);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -112,7 +113,7 @@ class IntelligenceService extends GetxService {
 
   /// Get cash flow forecast for the next N days
   CashFlowForecast getCashFlowForecast({int days = 30}) {
-    return _brain.forecastCashFlow(days: days);
+    return _brain!.forecastCashFlow(days: days);
   }
 
   /// Get summary risk level
@@ -133,7 +134,7 @@ class IntelligenceService extends GetxService {
   // ══════════════════════════════════════════════════════════════════════════
 
   /// Get all current alerts
-  List<ProactiveAlert> getAlerts() => _brain.generateAlerts();
+  List<ProactiveAlert> getAlerts() => _brain!.generateAlerts();
 
   /// Get critical alerts only
   List<ProactiveAlert> get criticalAlerts =>
@@ -158,7 +159,7 @@ class IntelligenceService extends GetxService {
   // ══════════════════════════════════════════════════════════════════════════
 
   /// Get smart budget recommendations
-  Map<String, SmartBudget> getSmartBudgets() => _brain.generateSmartBudgets();
+  Map<String, SmartBudget> getSmartBudgets() => _brain!.generateSmartBudgets();
 
   /// Get budget for a specific category
   SmartBudget? getBudgetForCategory(String category) => budgets[category];
@@ -176,7 +177,7 @@ class IntelligenceService extends GetxService {
 
   /// Analyze if a savings goal is feasible
   GoalFeasibility analyzeGoalFeasibility(double targetAmount, int months) {
-    return _brain.analyzeGoalFeasibility(targetAmount, months);
+    return _brain!.analyzeGoalFeasibility(targetAmount, months);
   }
 
   /// Quick check if a goal amount is realistic in given timeframe
