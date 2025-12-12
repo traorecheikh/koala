@@ -5,6 +5,14 @@ import 'package:koaa/app/modules/settings/bindings/categories_binding.dart';
 import 'package:koaa/app/modules/settings/views/categories/categories_view.dart';
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
 import 'package:koaa/app/modules/settings/views/persona/discover_persona_view.dart';
+import 'package:koaa/app/modules/transactions/bindings/transactions_binding.dart';
+import 'package:koaa/app/modules/transactions/views/transactions_view.dart';
+import 'package:koaa/app/modules/budget/bindings/budget_binding.dart';
+import 'package:koaa/app/modules/budget/views/budget_view.dart';
+import 'package:koaa/app/modules/debt/bindings/debt_binding.dart';
+import 'package:koaa/app/modules/debt/views/debt_view.dart';
+import 'package:koaa/app/modules/simulator/bindings/simulator_binding.dart';
+import 'package:koaa/app/modules/simulator/views/simulator_view.dart';
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -53,6 +61,30 @@ class AppPages {
       name: _Paths.persona,
       page: () => const DiscoverPersonaView(),
       transition: Transition.zoom,
+    ),
+    GetPage(
+      name: _Paths.transactions,
+      page: () => const TransactionsView(),
+      binding: TransactionsBinding(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: _Paths.budget,
+      page: () => const BudgetView(),
+      binding: BudgetBinding(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: _Paths.debt,
+      page: () => const DebtView(),
+      binding: DebtBinding(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: _Paths.simulator,
+      page: () => const SimulatorView(),
+      binding: SimulatorBinding(),
+      transition: Transition.cupertino,
     ),
   ];
 }

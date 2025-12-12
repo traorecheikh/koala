@@ -24,12 +24,24 @@ class SmartInsightsWidget extends GetView<HomeController> {
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(CupertinoIcons.lightbulb_fill, color: Colors.amber, size: 20.sp),
-                SizedBox(width: 8.w),
-                Text(
-                  'Insights',
-                  style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Icon(CupertinoIcons.lightbulb_fill, color: Colors.amber, size: 20.sp),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Insights',
+                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // Quick dismiss all logic for demo (or implement per-card dismiss)
+                    controller.insights.clear(); 
+                  },
+                  child: Icon(CupertinoIcons.xmark_circle_fill, color: Colors.grey.withOpacity(0.5), size: 20.sp),
                 ),
               ],
             ),
@@ -42,7 +54,10 @@ class SmartInsightsWidget extends GetView<HomeController> {
               padEnds: false,
               itemBuilder: (context, index) {
                 final insight = topInsights[index];
-                return _InsightCard(insight: insight);
+                return _InsightCard(
+                  insight: insight, 
+                  onDismiss: () => controller.insights.remove(insight), // Pass dismiss handler
+                );
               },
             ),
           ),
@@ -54,8 +69,9 @@ class SmartInsightsWidget extends GetView<HomeController> {
 
 class _InsightCard extends StatelessWidget {
   final MLInsight insight;
+  final VoidCallback onDismiss; // Add callback
 
-  const _InsightCard({required this.insight});
+  const _InsightCard({required this.insight, required this.onDismiss});
 
   @override
   Widget build(BuildContext context) {
@@ -83,79 +99,91 @@ class _InsightCard extends StatelessWidget {
         break;
     }
 
-    return Container(
-      margin: EdgeInsets.only(right: 12.w),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2A2A3E) : Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Stack( // Wrap in stack for close button
+      children: [
+        Container(
+          margin: EdgeInsets.only(right: 12.w),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF2A2A3E) : Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              width: 6.w,
-              color: color,
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+          clipBehavior: Clip.hardEdge,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 6.w,
+                  color: color,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: EdgeInsets.all(8.w),
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(icon, color: color, size: 16.sp),
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8.w),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(icon, color: color, size: 16.sp),
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Text(
+                                insight.title,
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: 12.w),
+                        SizedBox(height: 12.h),
                         Expanded(
                           child: Text(
-                            insight.title,
+                            insight.description,
                             style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 13.sp,
+                              color: isDark ? Colors.white70 : Colors.black54,
+                              height: 1.4,
                             ),
-                            maxLines: 1,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 12.h),
-                    Expanded(
-                      child: Text(
-                        insight.description,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          height: 1.4,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        Positioned(
+          top: 8.h,
+          right: 20.w,
+          child: GestureDetector(
+            onTap: onDismiss,
+            child: Icon(CupertinoIcons.xmark, size: 16.sp, color: Colors.grey.withOpacity(0.5)),
+          ),
+        ),
+      ],
     );
   }
 }

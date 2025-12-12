@@ -165,20 +165,24 @@ class AnalyticsView extends GetView<AnalyticsController> {
   }
 
   Widget _buildMonthlySummary(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return Column(
       children: [
         Container(
           padding: EdgeInsets.all(24.w),
           decoration: BoxDecoration(
-            color: Colors.black,
+            color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
             borderRadius: BorderRadius.circular(24.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
               ),
             ],
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,10 +195,14 @@ class AnalyticsView extends GetView<AnalyticsController> {
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white70,
+                      color: isDark ? Colors.white70 : Colors.grey.shade600,
                     ),
                   ),
-                  Icon(CupertinoIcons.money_dollar_circle, color: Colors.white70, size: 20.sp),
+                  Icon(
+                    CupertinoIcons.money_dollar_circle,
+                    color: isDark ? Colors.white70 : Colors.grey.shade400,
+                    size: 20.sp,
+                  ),
                 ],
               ),
               SizedBox(height: 12.h),
@@ -203,8 +211,8 @@ class AnalyticsView extends GetView<AnalyticsController> {
                 style: TextStyle(
                   fontSize: 32.sp,
                   fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
+                  color: isDark ? Colors.white : const Color(0xFF2D3250),
+                  letterSpacing: -1,
                 ),
               ),
               SizedBox(height: 8.h),
@@ -213,14 +221,18 @@ class AnalyticsView extends GetView<AnalyticsController> {
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: (controller.netBalance >= 0 ? Colors.green : Colors.orange).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Text(
                       controller.netBalance >= 0
                           ? 'Épargne positive ✨'
                           : 'Attention au budget ⚠️',
-                      style: TextStyle(fontSize: 12.sp, color: Colors.white, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: controller.netBalance >= 0 ? Colors.green : Colors.orange,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   if (controller.selectedTimeRange.value != TimeRange.all) ...[
@@ -241,7 +253,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
                 'Revenus',
                 controller.totalIncome,
                 CupertinoIcons.arrow_down_left_circle_fill,
-                Colors.green.shade400,
+                Colors.green,
               ),
             ),
             SizedBox(width: 12.w),
@@ -251,7 +263,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
                 'Dépenses',
                 controller.totalExpenses,
                 CupertinoIcons.arrow_up_right_circle_fill,
-                Colors.orange.shade400,
+                Colors.red,
               ),
             ),
           ],
@@ -265,23 +277,22 @@ class AnalyticsView extends GetView<AnalyticsController> {
     if (trend == 0) return const SizedBox.shrink();
     
     final isUp = trend > 0;
-    final color = isUp ? Colors.red.shade300 : Colors.green.shade300;
+    final color = isUp ? Colors.red : Colors.green;
     final icon = isUp ? CupertinoIcons.arrow_up_right : CupertinoIcons.arrow_down_right;
     
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 12.sp, color: Colors.white),
+          Icon(icon, size: 12.sp, color: color),
           SizedBox(width: 2.w),
           Text(
             '${trend.abs().toStringAsFixed(0)}%',
-            style: TextStyle(fontSize: 12.sp, color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 12.sp, color: color, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -295,16 +306,17 @@ class AnalyticsView extends GetView<AnalyticsController> {
     IconData icon,
     Color color,
   ) {
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -312,14 +324,21 @@ class AnalyticsView extends GetView<AnalyticsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 28.sp),
+          Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 20.sp),
+          ),
           SizedBox(height: 12.h),
           Text(
             label,
             style: TextStyle(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
-              color: Colors.grey.shade500,
+              color: isDark ? Colors.white70 : Colors.grey.shade500,
             ),
           ),
           SizedBox(height: 4.h),
@@ -328,7 +347,7 @@ class AnalyticsView extends GetView<AnalyticsController> {
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: isDark ? Colors.white : const Color(0xFF2D3250),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

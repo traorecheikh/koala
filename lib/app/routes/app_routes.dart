@@ -11,6 +11,10 @@ abstract class Routes {
   static const recurring = _Paths.recurring;
   static const categories = _Paths.categories;
   static const persona = _Paths.persona;
+  static const transactions = _Paths.transactions;
+  static const budget = _Paths.budget;
+  static const debt = _Paths.debt;
+  static const simulator = _Paths.simulator;
 }
 
 abstract class _Paths {
@@ -23,4 +27,8 @@ abstract class _Paths {
   static const recurring = '/recurring';
   static const categories = '/categories';
   static const persona = '/persona';
+  static const transactions = '/transactions';
+  static const budget = '/budget';
+  static const debt = '/debt';
+  static const simulator = '/simulator';
 }

@@ -3,7 +3,9 @@
 // Check in to version control
 
 import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/category.dart';
+import 'package:koaa/app/data/models/debt.dart';
 import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
@@ -15,7 +17,10 @@ import 'package:koaa/app/data/models/savings_goal.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
+    registerAdapter(BudgetAdapter());
     registerAdapter(CategoryAdapter());
+    registerAdapter(DebtAdapter());
+    registerAdapter(DebtTypeAdapter());
     registerAdapter(FinancialPatternAdapter());
     registerAdapter(FrequencyAdapter());
     registerAdapter(JobAdapter());
@@ -33,7 +38,10 @@ extension HiveRegistrar on HiveInterface {
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
+    registerAdapter(BudgetAdapter());
     registerAdapter(CategoryAdapter());
+    registerAdapter(DebtAdapter());
+    registerAdapter(DebtTypeAdapter());
     registerAdapter(FinancialPatternAdapter());
     registerAdapter(FrequencyAdapter());
     registerAdapter(JobAdapter());

@@ -3,6 +3,7 @@
 import 'package:countup/countup.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -19,12 +20,198 @@ import '../widgets/smart_insights_widget.dart';
 import '../../../routes/app_pages.dart';
 import '../controllers/home_controller.dart';
 
+// --- Global Widgets (Accessible across the file for reuse) ---
+
+class _TransactionListItem extends StatelessWidget {
+  final LocalTransaction transaction;
+
+  const _TransactionListItem({super.key, required this.transaction});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isExpense = transaction.type == TransactionType.expense;
+    
+    // Amount formatting with +/- symbol
+    final amountString = isExpense
+        ? '- ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}'
+        : '+ ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}';
+
+    // Resolve Category & Color
+    final categoriesController = Get.find<CategoriesController>();
+    Category? category;
+    String iconKey = 'other';
+    
+    if (transaction.categoryId != null) {
+      category = categoriesController.categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
+    }
+    
+    if (category != null) {
+      iconKey = category.icon;
+    } else if (transaction.category != null) {
+      iconKey = transaction.category!.iconKey;
+    }
+
+    // Determine icon background color based on category color, with subtle opacity
+    final categoryColor = category != null ? Color(category.colorValue) : (isExpense ? Colors.red : Colors.green);
+    final containerColor = categoryColor.withOpacity(isDark ? 0.15 : 0.1);
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
+      decoration: BoxDecoration(
+        color: isDark ? theme.scaffoldBackgroundColor.withOpacity(0.8) : Colors.white,
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        leading: Container(
+          width: 50.w,
+          height: 50.w,
+          decoration: BoxDecoration(
+            color: containerColor,
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          padding: EdgeInsets.all(10.w),
+          child: CategoryIcon(
+            iconKey: iconKey,
+            size: 24.sp,
+            useOriginalColor: true,
+          ),
+        ),
+        title: Text(
+          transaction.description,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? Colors.white : const Color(0xFF2D3250),
+            fontWeight: FontWeight.w600,
+            fontSize: 16.sp,
+          ),
+        ),
+        subtitle: Padding(
+          padding: EdgeInsets.only(top: 4.h),
+          child: Text(
+            DateFormat('dd MMM, HH:mm', 'fr_FR').format(transaction.date),
+            style: theme.textTheme.bodySmall?.copyWith(
+               color: isDark ? Colors.white38 : Colors.grey.shade500,
+               fontSize: 12.sp,
+            ),
+          ),
+        ),
+        trailing: Text(
+          amountString,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? Colors.white : const Color(0xFF2D3250),
+            fontWeight: FontWeight.bold,
+            fontSize: 16.sp,
+          ),
+        ),
+        onTap: () {
+           // Navigate to details if needed
+        },
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart);
+  }
+}
+
+class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
+  TransactionSearchDelegate();
+
+  @override
+  String get searchFieldLabel => 'Rechercher...';
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.copyWith(
+      appBarTheme: theme.appBarTheme.copyWith(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        iconTheme: theme.iconTheme,
+        titleTextStyle: theme.textTheme.titleLarge,
+      ),
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        border: InputBorder.none,
+      ),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(CupertinoIcons.clear),
+          onPressed: () => query = '',
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(CupertinoIcons.back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildResultsList(context);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildResultsList(context);
+  }
+
+  Widget _buildResultsList(BuildContext context) {
+    if (query.isEmpty) {
+      return Center(
+        child: Text(
+          'Commencez à taper pour rechercher des transactions.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    final controller = Get.find<HomeController>();
+    final results = controller.transactions.where((tx) {
+      final q = query.toLowerCase();
+      
+      final descriptionMatch = tx.description.toLowerCase().contains(q);
+      final amountMatch = tx.amount.toString().contains(q);
+      final categoryMatch = tx.category?.displayName.toLowerCase().contains(q) ?? false;
+      
+      return descriptionMatch || amountMatch || categoryMatch;
+    }).toList();
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16.w),
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        return _TransactionListItem(transaction: results[index]); 
+      },
+    );
+  }
+}
+
+// --- Main HomeView and its Private Widgets ---
+
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -40,10 +227,8 @@ class HomeView extends GetView<HomeController> {
                     const SizedBox(height: 24),
                     const EnhancedBalanceCard(),
                     const SizedBox(height: 32),
-                    // Moved QuickActions UP to ensure visibility
                     const _QuickActions(), 
                     const SizedBox(height: 24),
-                    // Insights & Health below navigation
                     const SmartInsightsWidget(),
                     const SizedBox(height: 16),
                     const FinancialHealthWidget(),
@@ -51,9 +236,9 @@ class HomeView extends GetView<HomeController> {
                     const _TransactionsHeader(),
                     const SizedBox(height: 12),
                   ]
-                  .animate(interval: 50.ms) // Faster stagger for snappier feel
+                  .animate(interval: 50.ms)
                   .slideY(
-                    begin: 0.1, // Reduced slide distance for subtlety
+                    begin: 0.1,
                     duration: 400.ms,
                     curve: Curves.easeOutQuart,
                   )
@@ -61,7 +246,7 @@ class HomeView extends GetView<HomeController> {
                 ),
               ),
             ),
-            const _TransactionSliverList(),
+            _TransactionSliverList(), // Removed const as it builds dynamically
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -95,113 +280,6 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _WalletCard extends StatelessWidget {
-  const _WalletCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 215.h,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1B1E),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.3 * 255).round()),
-            blurRadius: 12.r,
-            offset: const Offset(0, 6),
-          ),
-        ],
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1A1B1E),
-            const Color(0xFF1A1B1E).withAlpha((0.95 * 255).round()),
-          ],
-        ),
-      ),
-      child: const _BalanceView(),
-    );
-  }
-}
-
-class _BalanceView extends StatelessWidget {
-  const _BalanceView();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final controller = Get.find<HomeController>();
-    return Padding(
-      key: const ValueKey('balanceView'),
-      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Votre solde',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white70,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => controller.toggleBalanceVisibility(),
-                child: Obx(
-                  () => Icon(
-                    controller.balanceVisible.value
-                        ? CupertinoIcons.eye_slash_fill
-                        : CupertinoIcons.eye_fill,
-                    size: 24,
-                    color: Colors.white70,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          const _BalanceDisplay(),
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-}
-
-class _BalanceDisplay extends GetView<HomeController> {
-  const _BalanceDisplay();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Obx(
-      () => controller.balanceVisible.value
-          ? Countup(
-              begin: 0,
-              end: controller.balance.value,
-              duration: const Duration(milliseconds: 800),
-              separator: ' ',
-              style: theme.textTheme.headlineMedium!.copyWith(
-                fontSize: 42,
-                color: Colors.white,
-              ),
-              curve: Curves.easeOut,
-              prefix: 'FCFA ',
-            )
-          : Text(
-              '••••••••',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontSize: 42,
-                color: Colors.white,
-              ),
-            ),
     );
   }
 }
@@ -290,8 +368,26 @@ class _MoreOptionsSheet extends StatelessWidget {
                 onTap: () => Get.toNamed(Routes.analytics),
               ),
               _AnimatedActionButton(
+                icon: CupertinoIcons.chart_pie_fill,
+                label: 'Budgets',
+                color: Colors.orange,
+                onTap: () => Get.toNamed(Routes.budget),
+              ),
+              _AnimatedActionButton(
+                icon: CupertinoIcons.person_2_fill,
+                label: 'Dettes',
+                color: Colors.teal,
+                onTap: () => Get.toNamed(Routes.debt),
+              ),
+              _AnimatedActionButton(
+                icon: CupertinoIcons.wand_stars,
+                label: 'Simulateur',
+                color: Colors.purpleAccent,
+                onTap: () => Get.toNamed(Routes.simulator),
+              ),
+              _AnimatedActionButton(
                 icon: CupertinoIcons.archivebox_fill,
-                label: 'Categorie',
+                label: 'Catégories',
                 color: Colors.brown,
                 onTap: () => Get.toNamed(Routes.categories),
               ),
@@ -316,6 +412,7 @@ class _AnimatedActionButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _AnimatedActionButton({
+    super.key,
     required this.icon,
     required this.label,
     required this.color,
@@ -387,15 +484,17 @@ class _TransactionsHeader extends StatelessWidget {
 }
 
 class _TransactionSliverList extends GetView<HomeController> {
-  const _TransactionSliverList();
+  // Removed const here because SliverChildBuilderDelegate uses dynamic data
+  _TransactionSliverList({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      // Filter out hidden transactions for the UI list
-      final transactions = controller.transactions.where((t) => !t.isHidden).toList();
+      final transactions = controller.transactions
+          .where((t) => !t.isHidden)
+          .take(5)
+          .toList();
       
-      // Use SliverList for performance
       return SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -406,281 +505,5 @@ class _TransactionSliverList extends GetView<HomeController> {
         ),
       );
     });
-  }
-}
-
-class _TransactionListItem extends StatelessWidget {
-  final LocalTransaction transaction;
-
-  const _TransactionListItem({required this.transaction});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final isExpense = transaction.type == TransactionType.expense;
-    final amountString = isExpense
-        ? '- ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}'
-        : ' ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}';
-
-    // Resolve Category
-    final categoriesController = Get.find<CategoriesController>();
-    Category? category;
-    String iconKey = 'other';
-    Color iconColor = isExpense ? theme.colorScheme.primary : theme.colorScheme.secondary;
-
-    if (transaction.categoryId != null) {
-      category = categoriesController.categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
-    }
-    
-    if (category != null) {
-      iconKey = category.icon;
-      iconColor = Color(category.colorValue);
-    } else if (transaction.category != null) {
-      iconKey = transaction.category!.iconKey;
-    }
-
-    // Default arrows if no specific category icon or fallback
-    final displayIconWidget = CategoryIcon(
-      iconKey: iconKey,
-      color: iconColor,
-      size: 24.sp,
-    );
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        // No border for blended look
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-        leading: CircleAvatar(
-          radius: 25.r,
-          backgroundColor: iconColor.withOpacity(0.1),
-          child: displayIconWidget,
-        ),
-        title: Text(
-          transaction.description,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: isDark ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(
-          DateFormat('dd MMM, HH:mm', 'fr_FR').format(transaction.date),
-          style: theme.textTheme.bodySmall?.copyWith(
-             color: isDark ? Colors.white54 : Colors.grey,
-          ),
-        ),
-        trailing: Text(
-          amountString,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: isExpense ? Colors.red : Colors.green,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        onTap: () {
-           // Navigate to details
-           // Get.to(() => TransactionDetailsView(transaction: transaction));
-        },
-      ),
-    ).animate().fadeIn(duration: 500.ms).slideX(begin: -0.2, curve: Curves.easeOutQuart);
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Row(
-      children: [
-        Container(
-          padding: EdgeInsets.all(10.w),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Icon(icon, size: 20.sp, color: Colors.grey),
-        ),
-        SizedBox(width: 16.w),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey,
-              ),
-            ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// --- Flowy, smooth search page for transactions ---
-class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
-  TransactionSearchDelegate();
-
-  @override
-  String get searchFieldLabel => 'Rechercher un transfert...';
-
-  @override
-  TextStyle? get searchFieldStyle =>
-      const TextStyle(fontSize: 18, fontWeight: FontWeight.w400);
-
-  @override
-  ThemeData appBarTheme(BuildContext context) {
-    final theme = Theme.of(context);
-    return theme.copyWith(
-      appBarTheme: theme.appBarTheme.copyWith(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
-        iconTheme: theme.iconTheme,
-        titleTextStyle: theme.textTheme.titleLarge,
-      ),
-      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
-        border: InputBorder.none,
-        hintStyle: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey),
-      ),
-    );
-  }
-
-  @override
-  List<Widget>? buildActions(BuildContext context) {
-    return [
-      if (query.isNotEmpty)
-        IconButton(
-          icon: const Icon(CupertinoIcons.clear),
-          onPressed: () => query = '',
-        ),
-    ];
-  }
-
-  @override
-  Widget? buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(CupertinoIcons.back),
-      onPressed: () => close(context, null),
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return _buildResultsList(context);
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return _buildResultsList(context);
-  }
-
-  Widget _buildResultsList(BuildContext context) {
-    final controller = Get.find<HomeController>();
-    final results = controller.transactions.where((tx) {
-      final q = query.toLowerCase();
-      return tx.description.toLowerCase().contains(q) ||
-          NumberFormat.currency(
-            locale: 'fr_FR',
-            symbol: 'FCFA',
-          ).format(tx.amount).contains(q);
-    }).toList();
-
-    if (results.isEmpty) {
-      return Center(
-        child: Text(
-          'Aucun transfert trouvé',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: Colors.grey),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
-      itemCount: results.length,
-      separatorBuilder: (_, __) => SizedBox(height: 12.h),
-      itemBuilder: (context, index) {
-        final tx = results[index];
-        final isExpense = tx.type == TransactionType.expense;
-        final color = isExpense
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.secondary;
-        final icon = isExpense
-            ? CupertinoIcons.arrow_up
-            : CupertinoIcons.arrow_down;
-        return AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutQuart,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(18.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.08),
-                    blurRadius: 12.r,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: color.withAlpha(30),
-                  child: Icon(icon, color: color, size: 22.sp),
-                ),
-                title: Text(
-                  tx.description,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                subtitle: Text(
-                  DateFormat('dd MMM, yyyy').format(tx.date),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                trailing: Text(
-                  (isExpense ? '- ' : '+ ') +
-                      NumberFormat.currency(
-                        locale: 'fr_FR',
-                        symbol: 'FCFA',
-                      ).format(tx.amount),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: color),
-                ),
-                onTap: () => close(context, tx),
-              ),
-            )
-            .animate()
-            .fadeIn(duration: 400.ms)
-            .slideY(begin: 0.1, curve: Curves.easeOutQuart);
-      },
-    );
   }
 }

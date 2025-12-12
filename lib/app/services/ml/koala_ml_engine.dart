@@ -10,7 +10,9 @@ import 'package:koaa/app/services/ml/models/category_classifier.dart';
 import 'package:koaa/app/services/ml/models/financial_health_scorer.dart';
 import 'package:koaa/app/services/ml/models/goal_optimizer.dart';
 import 'package:koaa/app/services/ml/models/insight_generator.dart';
+import 'package:koaa/app/services/ml/models/budget_suggester.dart';
 import 'package:koaa/app/services/ml/models/pattern_recognizer.dart';
+import 'package:koaa/app/services/ml/models/simulator_engine.dart';
 import 'package:koaa/app/services/ml/models/time_series_engine.dart';
 
 class KoalaMLEngine extends GetxService {
@@ -25,6 +27,8 @@ class KoalaMLEngine extends GetxService {
   late final FinancialHealthScorer healthScorer;
   late final InsightGenerator insightGenerator;
   late final GoalOptimizer goalOptimizer;
+  late final SimulatorEngine simulatorEngine;
+  late final BudgetSuggester budgetSuggester;
 
   // Cached state
   UserFinancialProfile? _currentUserProfile;
@@ -43,6 +47,8 @@ class KoalaMLEngine extends GetxService {
     healthScorer = FinancialHealthScorer();
     insightGenerator = InsightGenerator(behaviorProfiler);
     goalOptimizer = GoalOptimizer(timeSeriesEngine);
+    simulatorEngine = SimulatorEngine(timeSeriesEngine);
+    budgetSuggester = BudgetSuggester();
 
     _currentUserProfile = modelStore.getUserProfile();
     
@@ -124,4 +130,8 @@ class KoalaMLEngine extends GetxService {
   FinancialHealthScore? get currentHealth => _currentHealth;
   ForecastResult? get currentForecast => _currentForecast;
   UserFinancialProfile? get currentUserProfile => _currentUserProfile;
+
+  double suggestBudgetForCategory(String categoryId, List<LocalTransaction> history) {
+    return budgetSuggester.suggestBudgetForCategory(categoryId, history);
+  }
 }
