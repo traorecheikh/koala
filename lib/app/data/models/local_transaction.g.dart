@@ -24,13 +24,14 @@ class LocalTransactionAdapter extends TypeAdapter<LocalTransaction> {
       isRecurring: fields[4] == null ? false : fields[4] as bool,
       category: fields[5] as TransactionCategory?,
       categoryId: fields[6] as String?,
+      isHidden: fields[7] == null ? false : fields[7] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, LocalTransaction obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.amount)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class LocalTransactionAdapter extends TypeAdapter<LocalTransaction> {
       ..writeByte(5)
       ..write(obj.category)
       ..writeByte(6)
-      ..write(obj.categoryId);
+      ..write(obj.categoryId)
+      ..writeByte(7)
+      ..write(obj.isHidden);
   }
 
   @override

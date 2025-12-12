@@ -159,8 +159,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                         shape: BoxShape.circle,
                         border: Border.all(color: _selectedColor, width: 2),
                       ),
-                      child: Icon(
-                        IconHelper.getIcon(_selectedIconKey),
+                      child: CategoryIcon(
+                        iconKey: _selectedIconKey,
                         size: 40.sp,
                         color: _selectedColor,
                       ),
@@ -212,8 +212,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                               borderRadius: BorderRadius.circular(8.r),
                               border: isSelected ? Border.all(color: _selectedColor) : null,
                             ),
-                            child: Icon(
-                              IconHelper.getIcon(key),
+                            child: CategoryIcon(
+                              iconKey: key,
                               size: 24.sp,
                               color: isSelected ? _selectedColor : Colors.grey.shade700,
                             ),

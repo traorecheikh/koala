@@ -3,6 +3,7 @@ import 'package:flutter_app_info/flutter_app_info.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:koaa/app/core/theme.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/job.dart';
@@ -11,6 +12,7 @@ import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
+import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/hive_registrar.g.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
@@ -19,6 +21,7 @@ import 'app/routes/app_pages.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('fr_FR', null);
 
   final appDocDir = await getApplicationDocumentsDirectory();
 
@@ -31,6 +34,11 @@ void main() async {
   await Hive.openBox<SavingsGoal>('savingsGoalBox');
   await Hive.openBox<Category>('categoryBox');
   // await Hive.deleteFromDisk();
+
+  // Initialize ML Engine
+  await Get.putAsync<KoalaMLEngine>(() async {
+    return await KoalaMLEngine().init();
+  });
 
   // Initialize Intelligence Service (Koala Brain)
   await Get.putAsync<IntelligenceService>(() async {

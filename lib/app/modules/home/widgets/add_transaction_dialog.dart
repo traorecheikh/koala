@@ -312,18 +312,19 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                                     : Colors.transparent,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Center(
-                                  child: Icon(
-                                    _selectedCategory != null 
-                                        ? IconHelper.getIcon(_selectedCategory!.icon) 
-                                        : CupertinoIcons.cube_box,
-                                    size: 24.sp,
-                                    color: _selectedCategory != null
-                                        ? Color(_selectedCategory!.colorValue)
-                                        : Colors.grey.shade400,
-                                  ),
-                                ),
-                              ),
+                                                                  child: Center(
+                                                                    child: _selectedCategory != null 
+                                                                        ? CategoryIcon(
+                                                                            iconKey: _selectedCategory!.icon,
+                                                                            size: 24.sp,
+                                                                            color: Color(_selectedCategory!.colorValue),
+                                                                          )
+                                                                        : Icon(
+                                                                            CupertinoIcons.cube_box,
+                                                                            size: 24.sp,
+                                                                            color: Colors.grey.shade400,
+                                                                          ),
+                                                                  ),                              ),
                               SizedBox(width: 12.w),
                               Expanded(
                                 child: Text(
@@ -576,8 +577,8 @@ class _CategoryPickerSheet extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                IconHelper.getIcon(category.icon),
+                              CategoryIcon(
+                                iconKey: category.icon,
                                 size: 32.sp,
                                 color: Color(category.colorValue),
                               ),

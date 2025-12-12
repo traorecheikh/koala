@@ -5,8 +5,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/core/utils/icon_helper.dart';
+import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
 import 'package:koaa/app/modules/settings/widgets/add_recurring_transaction_dialog.dart';
 
@@ -18,7 +21,6 @@ class RecurringTransactionsView
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
@@ -138,23 +140,32 @@ class _TransactionListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<RecurringTransactionsController>();
-
+    final categoriesController = Get.find<CategoriesController>();
+    
     String amountPrefix = '';
     Color amountColor = Colors.black;
-    String iconEmoji = '📅';
+    String iconKey = 'other';
+    Color iconColor = Colors.grey;
 
     try {
-      if (transaction.category != null) {
-         iconEmoji = transaction.category.icon;
-      }
-      
       if (transaction.type == TransactionType.expense) {
         amountPrefix = '-';
         amountColor = Colors.orange.shade800;
+        iconColor = Colors.orange;
       } else {
         amountPrefix = '+';
         amountColor = Colors.green.shade700;
+        iconColor = Colors.green;
+      }
+
+      if (transaction.categoryId != null) {
+        final cat = categoriesController.categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
+        if (cat != null) {
+          iconKey = cat.icon;
+          iconColor = Color(cat.colorValue);
+        }
+      } else {
+         iconKey = transaction.category.iconKey;
       }
     } catch (e) {
       // Fallback
@@ -190,13 +201,14 @@ class _TransactionListItem extends StatelessWidget {
                   width: 48.w,
                   height: 48.w,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: iconColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Center(
-                    child: Text(
-                      iconEmoji,
-                      style: TextStyle(fontSize: 24.sp),
+                    child: CategoryIcon(
+                      iconKey: iconKey,
+                      size: 24.sp,
+                      color: iconColor,
                     ),
                   ),
                 ),

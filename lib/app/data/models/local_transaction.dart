@@ -199,7 +199,7 @@ extension TransactionCategoryExtension on TransactionCategory {
       case TransactionCategory.beauty:
         return 'beauty';
       case TransactionCategory.gifts:
-        return 'gifts';
+        return 'gift'; // Reused gift
       case TransactionCategory.charity:
         return 'charity';
       case TransactionCategory.subscriptions:
@@ -211,10 +211,11 @@ extension TransactionCategoryExtension on TransactionCategory {
     }
   }
   
-  // Backward compatibility getter if needed, but we prefer iconData
-  String get icon => iconKey; // Return key instead of emoji
+  // Return the key directly for use with CategoryIcon
+  String get icon => iconKey;
 
-  IconData get iconData => IconHelper.getIcon(iconKey);
+  // REMOVED: IconData get iconData => ... 
+  // We should stop using IconData directly for categories.
 
   bool get isIncome {
     return index <= TransactionCategory.otherIncome.index &&
@@ -284,6 +285,9 @@ class LocalTransaction extends HiveObject {
   @HiveField(6)
   String? categoryId;
 
+  @HiveField(7)
+  bool isHidden;
+
   LocalTransaction({
     required this.amount,
     required this.description,
@@ -292,6 +296,7 @@ class LocalTransaction extends HiveObject {
     this.isRecurring = false,
     TransactionCategory? category,
     this.categoryId,
+    this.isHidden = false,
   }) : category = category ??
            (type == TransactionType.income
                ? TransactionCategory.otherIncome

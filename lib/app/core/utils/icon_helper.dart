@@ -2,52 +2,69 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class IconHelper {
-  static const Map<String, IconData> _iconMap = {
-    // General
-    'other': CupertinoIcons.square_grid_2x2,
-    'salary': CupertinoIcons.money_dollar_circle_fill,
-    'freelance': CupertinoIcons.briefcase_fill,
-    'investment': CupertinoIcons.graph_circle_fill,
-    'business': CupertinoIcons.building_2_fill,
-    'gift': CupertinoIcons.gift_fill,
-    'bonus': CupertinoIcons.star_circle_fill,
-    'refund': CupertinoIcons.arrow_2_circlepath_circle_fill,
-    'rental': CupertinoIcons.house_fill,
-    
-    // Expenses
-    'food': CupertinoIcons.cart_fill, // Using cart for general food/groceries or similar
-    'restaurant': CupertinoIcons.tickets_fill, // Abstract for dining/tickets
-    'transport': CupertinoIcons.car_detailed,
-    'shopping': CupertinoIcons.bag_fill,
-    'entertainment': CupertinoIcons.game_controller_solid,
-    'bills': CupertinoIcons.doc_text_fill,
-    'health': CupertinoIcons.heart_fill,
-    'education': CupertinoIcons.book_fill,
-    'rent': CupertinoIcons.house_alt_fill,
-    'groceries': CupertinoIcons.cart, 
-    'utilities': CupertinoIcons.lightbulb_fill,
-    'insurance': CupertinoIcons.shield_fill,
-    'travel': CupertinoIcons.airplane,
-    'clothing': CupertinoIcons.tag_fill,
-    'fitness': CupertinoIcons.sportscourt_fill,
-    'beauty': CupertinoIcons.scissors,
-    'charity': CupertinoIcons.heart_circle_fill,
-    'subscriptions': CupertinoIcons.arrow_2_squarepath,
-    'maintenance': CupertinoIcons.wrench_fill,
-    'tech': CupertinoIcons.device_laptop,
-    'family': CupertinoIcons.person_2_fill,
-    'pets': CupertinoIcons.paw_solid,
+  // We keep this list for reference, but we primarily rely on PNGs now.
+  static const Set<String> supportedPngs = {
+    'beauty', 'bills', 'bonus', 'business', 'charity', 'clothing', 'education', 
+    'entertainment', 'family', 'fitness', 'food', 'freelance', 'groceries', 
+    'health', 'insurance', 'investment', 'maintenance', 'other', 'pets', 
+    'refund', 'rent', 'rental', 'restaurant', 'salary', 'shopping', 
+    'subscriptions', 'tech', 'transport', 'travel', 'utilities', 'gift',
   };
 
-  static IconData getIcon(String key) {
-    return _iconMap[key] ?? CupertinoIcons.question_circle;
+  static bool isEmoji(String text) {
+    final RegExp regex = RegExp(
+        r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])');
+    return regex.hasMatch(text);
   }
 
-  static String getKey(IconData icon) {
-    return _iconMap.entries
-        .firstWhere((element) => element.value == icon, orElse: () => const MapEntry('other', CupertinoIcons.square_grid_2x2))
-        .key;
+  // Deprecated: getIcon (returning IconData) should be avoided if we want PNGs.
+  // We keep a minimal fallback just in case.
+  static IconData getFallbackIcon(String key) {
+    return CupertinoIcons.square_grid_2x2;
   }
+}
 
-  static List<String> get allKeys => _iconMap.keys.toList();
+class CategoryIcon extends StatelessWidget {
+  final String iconKey;
+  final Color? color;
+  final double size;
+  final bool useOriginalColor;
+
+  const CategoryIcon({
+    super.key,
+    required this.iconKey,
+    this.color,
+    this.size = 24,
+    this.useOriginalColor = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // 1. Check if it's an emoji (legacy data)
+    if (IconHelper.isEmoji(iconKey)) {
+      return Text(
+        iconKey,
+        style: TextStyle(fontSize: size),
+      );
+    }
+
+    // 2. Default to PNG asset
+    // We assume the key matches the filename exactly
+    // If color is provided AND useOriginalColor is false, we tint it.
+    // Otherwise we show the vibrant original PNG.
+    return Image.asset(
+      'assets/icons/$iconKey.png',
+      width: size,
+      height: size,
+      color: useOriginalColor ? null : color,
+      errorBuilder: (context, error, stackTrace) {
+        // Fallback if PNG missing
+        return Icon(
+          CupertinoIcons.photo, // Placeholder
+          size: size,
+          color: color,
+        );
+      },
+    );
+  }
 }

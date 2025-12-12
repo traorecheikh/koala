@@ -7,10 +7,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/core/utils/icon_helper.dart';
+import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/home/widgets/add_transaction_dialog.dart';
 import 'package:koaa/app/modules/home/widgets/enhanced_balance_card.dart';
 import 'package:koaa/app/modules/home/widgets/financial_health_widget.dart';
+import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import '../widgets/smart_insights_widget.dart';
 
 import '../../../routes/app_pages.dart';
@@ -389,7 +392,8 @@ class _TransactionSliverList extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final transactions = controller.transactions;
+      // Filter out hidden transactions for the UI list
+      final transactions = controller.transactions.where((t) => !t.isHidden).toList();
       
       // Use SliverList for performance
       return SliverList(
@@ -413,49 +417,131 @@ class _TransactionListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isExpense = transaction.type == TransactionType.expense;
     final amountString = isExpense
         ? '- ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}'
         : ' ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(transaction.amount)}';
 
-    final iconData = {
-      TransactionType.income: {
-        'icon': CupertinoIcons.arrow_down,
-        'color': theme.colorScheme.secondary,
-      },
-      TransactionType.expense: {
-        'icon': CupertinoIcons.arrow_up,
-        'color': theme.colorScheme.primary,
-      },
-    };
+    // Resolve Category
+    final categoriesController = Get.find<CategoriesController>();
+    Category? category;
+    String iconKey = 'other';
+    Color iconColor = isExpense ? theme.colorScheme.primary : theme.colorScheme.secondary;
 
-    final IconData displayIcon =
-        iconData[transaction.type]!['icon']! as IconData;
-    final Color color = iconData[transaction.type]!['color']! as Color;
+    if (transaction.categoryId != null) {
+      category = categoriesController.categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
+    }
+    
+    if (category != null) {
+      iconKey = category.icon;
+      iconColor = Color(category.colorValue);
+    } else if (transaction.category != null) {
+      iconKey = transaction.category!.iconKey;
+    }
 
-    return ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-          leading: CircleAvatar(
-            radius: 25.r,
-            backgroundColor: color.withAlpha(25),
-            child: Icon(displayIcon, color: color, size: 24.sp),
+    // Default arrows if no specific category icon or fallback
+    final displayIconWidget = CategoryIcon(
+      iconKey: iconKey,
+      color: iconColor,
+      size: 24.sp,
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          title: Text(
-            transaction.description,
-            style: theme.textTheme.titleMedium,
+        ],
+        // No border for blended look
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+        leading: CircleAvatar(
+          radius: 25.r,
+          backgroundColor: iconColor.withOpacity(0.1),
+          child: displayIconWidget,
+        ),
+        title: Text(
+          transaction.description,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w600,
           ),
-          subtitle: Text(
-            DateFormat('dd MMM, yyyy').format(transaction.date),
-            style: theme.textTheme.bodySmall,
+        ),
+        subtitle: Text(
+          DateFormat('dd MMM, HH:mm', 'fr_FR').format(transaction.date),
+          style: theme.textTheme.bodySmall?.copyWith(
+             color: isDark ? Colors.white54 : Colors.grey,
           ),
-          trailing: Text(
-            amountString,
-            style: theme.textTheme.titleMedium?.copyWith(color: null),
+        ),
+        trailing: Text(
+          amountString,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isExpense ? Colors.red : Colors.green,
+            fontWeight: FontWeight.bold,
           ),
-        )
-        .animate()
-        .fadeIn(duration: 500.ms)
-        .slideX(begin: -0.2, curve: Curves.easeOutQuart);
+        ),
+        onTap: () {
+           // Navigate to details
+           // Get.to(() => TransactionDetailsView(transaction: transaction));
+        },
+      ),
+    ).animate().fadeIn(duration: 500.ms).slideX(begin: -0.2, curve: Curves.easeOutQuart);
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(10.w),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Icon(icon, size: 20.sp, color: Colors.grey),
+        ),
+        SizedBox(width: 16.w),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey,
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 

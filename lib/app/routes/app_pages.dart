@@ -4,6 +4,7 @@ import 'package:koaa/app/modules/analytics/views/analytics_view.dart';
 import 'package:koaa/app/modules/settings/bindings/categories_binding.dart';
 import 'package:koaa/app/modules/settings/views/categories/categories_view.dart';
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
+import 'package:koaa/app/modules/settings/views/persona/discover_persona_view.dart';
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -47,6 +48,11 @@ class AppPages {
       page: () => const CategoriesView(),
       binding: CategoriesBinding(),
       transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: _Paths.persona,
+      page: () => const DiscoverPersonaView(),
+      transition: Transition.zoom,
     ),
   ];
 }

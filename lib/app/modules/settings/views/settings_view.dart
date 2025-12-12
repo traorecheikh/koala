@@ -68,6 +68,19 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
+            title: 'Intelligence Artificielle', // New section
+            children: [
+              _buildSettingsItem(
+                context,
+                icon: CupertinoIcons.sparkles,
+                title: 'Mon Profil Financier',
+                onTap: () => Get.toNamed('/persona'), // Use named route
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSettingsSection(
+            context,
             title: 'Compte', // Translated from 'Account'
             children: [
               _buildSettingsItem(

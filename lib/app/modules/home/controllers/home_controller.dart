@@ -138,6 +138,8 @@ class HomeController extends GetxController {
   void calculateBalance() {
     double total = 0;
     for (var transaction in transactions) {
+      if (transaction.isHidden) continue;
+      
       if (transaction.type == TransactionType.income) {
         total += transaction.amount;
       } else {
@@ -150,6 +152,15 @@ class HomeController extends GetxController {
   Future<void> addTransaction(LocalTransaction transaction) async {
     final transactionBox = Hive.box<LocalTransaction>('transactionBox');
     await transactionBox.add(transaction);
+  }
+
+  Future<void> deleteTransaction(LocalTransaction transaction) async {
+    // Soft delete: Mark as hidden but keep in database for calculations
+    transaction.isHidden = true;
+    await transaction.save();
+    // Refresh list to hide it from UI
+    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
+    transactions.assignAll(transactionBox.values.toList());
   }
 
   void generateRecurringTransactions() {
