@@ -69,3 +69,4 @@ class SimulatorController extends GetxController {
   }
 }
 
+
