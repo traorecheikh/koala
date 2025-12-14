@@ -124,3 +124,4 @@ class DailyForecast {
 
 enum ForecastRiskLevel { low, medium, high }
 
+
