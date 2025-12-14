@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/financial_goal.dart'; // New import
 import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
@@ -9,7 +8,6 @@ import 'package:koaa/app/modules/settings/controllers/categories_controller.dart
 import 'package:koaa/app/services/financial_context_service.dart'; // New import
 import 'package:koaa/app/services/ml_service.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:math';
 
 enum TimeRange { month, year, all }
 
