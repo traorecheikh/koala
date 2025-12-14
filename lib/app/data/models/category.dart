@@ -32,3 +32,4 @@ class Category extends HiveObject {
     this.isDefault = false,
   });
 }
+
