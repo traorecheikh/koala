@@ -127,3 +127,4 @@ class ErrorLogEntry {
 
 enum ErrorSeverity { error, warning, info }
 
+
