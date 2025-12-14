@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:confetti/confetti.dart';
 import 'package:koaa/app/services/events/financial_events_service.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
@@ -87,3 +86,4 @@ class CelebrationService extends GetxService {
     // using a global OverlayEntry or a dedicated CelebrationView wrapper.
   }
 }
+
