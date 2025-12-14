@@ -51,3 +51,4 @@ class SavingsGoalAdapter extends TypeAdapter<SavingsGoal> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
