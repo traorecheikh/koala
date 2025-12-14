@@ -287,3 +287,4 @@ class FinancialGoal extends HiveObject {
     }
 
   }
+
