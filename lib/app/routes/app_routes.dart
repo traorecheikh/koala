@@ -39,3 +39,4 @@ abstract class _Paths {
   static const intelligence = '/intelligence';
 }
 
+
