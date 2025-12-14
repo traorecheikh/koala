@@ -61,3 +61,4 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(UserFinancialProfileAdapter());
   }
 }
+
