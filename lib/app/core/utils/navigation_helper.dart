@@ -17,8 +17,9 @@ class NavigationHelper {
     } catch (e) {
       // 3. Last resort: just try to close dialog/bottomsheet/snackbar if any
       try {
-        if (Get.isDialogOpen ?? false) Get.back();
-        else if (Get.isBottomSheetOpen ?? false) Get.back();
+        if (Get.isDialogOpen ?? false) {
+          Get.back();
+        } else if (Get.isBottomSheetOpen ?? false) Get.back();
         else if (Get.isSnackbarOpen) Get.closeCurrentSnackbar();
       } catch (_) {}
     }
@@ -45,4 +46,10 @@ class NavigationHelper {
       // Silently ignore
     }
   }
+
+  /// Safely navigate to a named route
+  static Future<dynamic>? toNamed(String page, {dynamic arguments}) {
+    return Get.toNamed(page, arguments: arguments);
+  }
 }
+
