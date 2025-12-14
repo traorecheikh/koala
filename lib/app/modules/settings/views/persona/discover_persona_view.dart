@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
@@ -31,10 +32,9 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
 
           return AnimatedSwitcher(
             duration: const Duration(milliseconds: 600),
-            child:
-                !_isRevealed
-                    ? _buildRevealScreen(persona)
-                    : _buildPersonaDetails(persona),
+            child: !_isRevealed
+                ? _buildRevealScreen(persona)
+                : _buildPersonaDetails(persona),
           );
         },
       ),
@@ -74,10 +74,10 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-                CupertinoIcons.sparkles,
-                size: 80.sp,
-                color: Colors.white.withOpacity(0.9),
-              )
+            CupertinoIcons.sparkles,
+            size: 80.sp,
+            color: Colors.white.withOpacity(0.9),
+          )
               .animate(onPlay: (controller) => controller.repeat(reverse: true))
               .scale(
                 begin: const Offset(0.9, 0.9),
@@ -87,10 +87,9 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           SizedBox(height: 32.h),
           Text(
             'Analyse de vos habitudes...',
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w300,
+            style: KoalaTypography.heading2(context).copyWith(
               color: Colors.white,
+              fontWeight: FontWeight.w300,
               letterSpacing: 0.5,
             ),
           ).animate().fadeIn(duration: 800.ms).slideY(begin: 0.2, end: 0),
@@ -98,8 +97,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           Text(
             'L\'IA de Koala étudie vos transactions\npour découvrir votre profil unique.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14.sp,
+            style: KoalaTypography.bodyMedium(context).copyWith(
               color: Colors.white60,
               height: 1.5,
             ),
@@ -111,10 +109,9 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
             padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 16.h),
             child: Text(
               'Révéler mon profil',
-              style: TextStyle(
+              style: KoalaTypography.bodyLarge(context).copyWith(
                 color: const Color(0xFF1E3A5F),
                 fontWeight: FontWeight.w600,
-                fontSize: 16.sp,
               ),
             ),
             onPressed: () => setState(() => _isRevealed = true),
@@ -126,19 +123,15 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
 
   Widget _buildPersonaDetails(FinancialPersona persona) {
     final info = _getPersonaInfo(persona);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F1E) : const Color(0xFFF8F9FE),
-      // surfaceTintColor: Colors.transparent, // Not needed here as backgroundColor is explicit, but good practice
+      backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             CupertinoIcons.xmark,
-            color: isDark ? Colors.white : Colors.black87,
+            color: KoalaColors.text(context),
           ),
           onPressed: () => NavigationHelper.safeBack(),
         ),
@@ -186,15 +179,13 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
                         color: Colors.white,
                       ),
                     ).animate().scale(
-                      duration: 600.ms,
-                      curve: Curves.easeOutBack,
-                    ),
+                          duration: 600.ms,
+                          curve: Curves.easeOutBack,
+                        ),
                     SizedBox(height: 24.h),
                     Text(
                       info.title,
-                      style: TextStyle(
-                        fontSize: 28.sp,
-                        fontWeight: FontWeight.bold,
+                      style: KoalaTypography.heading1(context).copyWith(
                         color: Colors.white,
                         letterSpacing: -0.5,
                       ),
@@ -211,8 +202,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
                       ),
                       child: Text(
                         info.tagline,
-                        style: TextStyle(
-                          fontSize: 14.sp,
+                        style: KoalaTypography.bodyMedium(context).copyWith(
                           color: Colors.white.withOpacity(0.9),
                           fontWeight: FontWeight.w500,
                         ),
@@ -228,20 +218,18 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
             // Description
             Text(
               'Analyse',
-              style: TextStyle(
-                fontSize: 14.sp,
+              style: KoalaTypography.caption(context).copyWith(
                 fontWeight: FontWeight.w600,
-                color: Colors.grey,
+                color: KoalaColors.textSecondary(context),
                 letterSpacing: 1,
               ),
             ).animate().fadeIn(delay: 300.ms),
             SizedBox(height: 12.h),
             Text(
               info.description,
-              style: TextStyle(
-                fontSize: 16.sp,
+              style: KoalaTypography.bodyLarge(context).copyWith(
                 height: 1.6,
-                color: isDark ? Colors.white70 : const Color(0xFF2D3250),
+                color: KoalaColors.text(context),
               ),
             ).animate().fadeIn(delay: 400.ms),
 
@@ -255,27 +243,26 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
             ...info.strengths.asMap().entries.map(
                   (entry) => _buildListItem(
                     entry.value,
-                    isDark,
                     delay: 600 + (entry.key * 100),
                     icon: CupertinoIcons.check_mark_circled_solid,
-                    iconColor: Colors.green,
+                    iconColor: KoalaColors.success,
                   ),
                 ),
 
             SizedBox(height: 32.h),
 
             // Tips Section
-            _buildSectionHeader('Pistes d\'Amélioration', CupertinoIcons.lightbulb_fill)
+            _buildSectionHeader(
+                    'Pistes d\'Amélioration', CupertinoIcons.lightbulb_fill)
                 .animate()
                 .fadeIn(delay: 800.ms),
             SizedBox(height: 16.h),
             ...info.tips.asMap().entries.map(
                   (entry) => _buildListItem(
                     entry.value,
-                    isDark,
                     delay: 900 + (entry.key * 100),
                     icon: CupertinoIcons.arrow_up_right_circle_fill,
-                    iconColor: Colors.orange,
+                    iconColor: KoalaColors.warning,
                   ),
                 ),
           ],
@@ -285,28 +272,20 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    
     return Row(
       children: [
-        Icon(icon, size: 20.sp, color: isDark ? const Color(0xFF64B5F6) : const Color(0xFF4A6C9B)),
+        Icon(icon, size: 20.sp, color: KoalaColors.primaryUi(context)),
         SizedBox(width: 8.w),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-            color: theme.textTheme.titleLarge?.color,
-          ),
+          style: KoalaTypography.heading3(context),
         ),
       ],
     );
   }
 
   Widget _buildListItem(
-    String text,
-    bool isDark, {
+    String text, {
     required int delay,
     required IconData icon,
     required Color iconColor,
@@ -315,17 +294,11 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1B1E) : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: KoalaColors.shadowSubtle,
         border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade100,
+          color: KoalaColors.border(context),
         ),
       ),
       child: Row(
@@ -339,9 +312,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: isDark ? Colors.white70 : Colors.black87,
+              style: KoalaTypography.bodyMedium(context).copyWith(
                 height: 1.4,
               ),
             ),
@@ -459,3 +430,4 @@ class _PersonaInfo {
     required this.tips,
   });
 }
+
