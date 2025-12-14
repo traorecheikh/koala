@@ -9,3 +9,4 @@ class TransactionsBinding extends Bindings {
     );
   }
 }
+
