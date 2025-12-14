@@ -14,6 +14,7 @@ import 'package:koaa/app/modules/settings/controllers/categories_controller.dart
 import 'package:koaa/app/modules/settings/controllers/settings_controller.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:intl/intl.dart';
 
 void showAddTransactionDialog(BuildContext context, TransactionType type) {
   showModalBottomSheet(
@@ -64,9 +65,9 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     if (digitsOnly.isEmpty) return '';
     final number = int.parse(digitsOnly);
     return number.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match match) => '${match[1]} ',
-    );
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match match) => '${match[1]} ',
+        );
   }
 
   String _getNumericValue(String formattedValue) {
@@ -252,43 +253,270 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     required double overage,
   }) async {
     final theme = Theme.of(context);
-    final result = await showDialog<bool>(
+    final isDark = theme.brightness == Brightness.dark;
+    final percentUsed =
+        ((currentSpent + transactionAmount) / budgetAmount * 100).clamp(0, 999);
+
+    String _formatAmount(double amount) {
+      return NumberFormat.compact(locale: 'fr_FR').format(amount.round());
+    }
+
+    final result = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Budget Warning'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Adding this transaction will exceed your $categoryName budget.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            SizedBox(height: 16),
-            _BudgetWarningRow(label: 'Budget:', value: '${budgetAmount.toStringAsFixed(2)} F'),
-            _BudgetWarningRow(label: 'Already spent:', value: '${currentSpent.toStringAsFixed(2)} F'),
-            _BudgetWarningRow(label: 'This transaction:', value: '${transactionAmount.toStringAsFixed(2)} F'),
-            Divider(height: 16),
-            _BudgetWarningRow(
-              label: 'Will exceed by:',
-              value: '${overage.toStringAsFixed(2)} F',
-              isWarning: true,
-            ),
-          ],
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => NavigationHelper.safeBack(result: false),
-            child: const Text('Cancel'),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 36.w,
+                height: 4.h,
+                margin: EdgeInsets.only(top: 12.h),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Warning header with gradient
+              Container(
+                margin: EdgeInsets.all(16.w),
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF6B6B).withOpacity(0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        CupertinoIcons.exclamationmark_triangle_fill,
+                        color: Colors.white,
+                        size: 28.sp,
+                      ),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dépassement de budget',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            categoryName,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Stats cards
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Column(
+                  children: [
+                    // Progress bar
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Utilisation du budget',
+                                style: TextStyle(
+                                  color:
+                                      isDark ? Colors.white70 : Colors.black54,
+                                  fontSize: 13.sp,
+                                ),
+                              ),
+                              Text(
+                                '${percentUsed.toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                  color: const Color(0xFFFF6B6B),
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 12.h),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8.r),
+                            child: LinearProgressIndicator(
+                              value: (percentUsed / 100).clamp(0, 1),
+                              minHeight: 10.h,
+                              backgroundColor: isDark
+                                  ? Colors.white10
+                                  : Colors.grey.shade200,
+                              valueColor: AlwaysStoppedAnimation(
+                                percentUsed > 100
+                                    ? const Color(0xFFFF3B30)
+                                    : const Color(0xFFFF9500),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 12.h),
+
+                    // Amount breakdown
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                      child: Column(
+                        children: [
+                          _PremiumBudgetRow(
+                            icon: CupertinoIcons.chart_pie,
+                            iconColor: Colors.blue,
+                            label: 'Budget alloué',
+                            value: '${_formatAmount(budgetAmount)} F',
+                            isDark: isDark,
+                          ),
+                          Divider(
+                              height: 20.h,
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.grey.shade200),
+                          _PremiumBudgetRow(
+                            icon: CupertinoIcons.money_dollar_circle,
+                            iconColor: Colors.orange,
+                            label: 'Déjà dépensé',
+                            value: '${_formatAmount(currentSpent)} F',
+                            isDark: isDark,
+                          ),
+                          Divider(
+                              height: 20.h,
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.grey.shade200),
+                          _PremiumBudgetRow(
+                            icon: CupertinoIcons.plus_circle,
+                            iconColor: Colors.purple,
+                            label: 'Cette transaction',
+                            value: '${_formatAmount(transactionAmount)} F',
+                            isDark: isDark,
+                          ),
+                          Divider(
+                              height: 20.h,
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.grey.shade200),
+                          _PremiumBudgetRow(
+                            icon: CupertinoIcons.exclamationmark_circle,
+                            iconColor: const Color(0xFFFF3B30),
+                            label: 'Dépassement',
+                            value: '+${_formatAmount(overage)} F',
+                            isDark: isDark,
+                            isWarning: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 20.h),
+
+              // Action buttons
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CupertinoButton(
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        color: isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(14.r),
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text(
+                          'Annuler',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: CupertinoButton(
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        color: const Color(0xFFFF6B6B),
+                        borderRadius: BorderRadius.circular(14.r),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text(
+                          'Confirmer',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 16.h),
+            ],
           ),
-          TextButton(
-            onPressed: () => NavigationHelper.safeBack(result: true),
-            child: const Text(
-              'Add Anyway',
-              style: TextStyle(color: Colors.orange),
-            ),
-          ),
-        ],
+        ),
       ),
     );
     return result ?? false;
@@ -434,72 +662,75 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       ),
                     ],
                   ).animate().scale(
-                    duration: 500.ms,
-                    curve: Curves.easeOutBack,
-                  ),
+                        duration: 500.ms,
+                        curve: Curves.easeOutBack,
+                      ),
 
                   SizedBox(height: 32.h),
 
                   // Category selector
                   GestureDetector(
-                        onTap: _showCategoryPicker,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 16.h,
+                    onTap: _showCategoryPicker,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 16.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40.w,
+                            height: 40.w,
+                            decoration: BoxDecoration(
+                              color: _selectedCategory != null
+                                  ? Color(_selectedCategory!.colorValue)
+                                      .withOpacity(0.2)
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: _selectedCategory != null
+                                  ? CategoryIcon(
+                                      iconKey: _selectedCategory!.icon,
+                                      size: 24.sp,
+                                      color:
+                                          Color(_selectedCategory!.colorValue),
+                                    )
+                                  : Icon(
+                                      CupertinoIcons.cube_box,
+                                      size: 24.sp,
+                                      color: Colors.grey.shade400,
+                                    ),
+                            ),
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40.w,
-                                height: 40.w,
-                                decoration: BoxDecoration(
-                                  color: _selectedCategory != null 
-                                    ? Color(_selectedCategory!.colorValue).withOpacity(0.2)
-                                    : Colors.transparent,
-                                  shape: BoxShape.circle,
-                                ),
-                                                                  child: Center(
-                                                                    child: _selectedCategory != null 
-                                                                        ? CategoryIcon(
-                                                                            iconKey: _selectedCategory!.icon,
-                                                                            size: 24.sp,
-                                                                            color: Color(_selectedCategory!.colorValue),
-                                                                          )
-                                                                        : Icon(
-                                                                            CupertinoIcons.cube_box,
-                                                                            size: 24.sp,
-                                                                            color: Colors.grey.shade400,
-                                                                          ),
-                                                                  ),                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Text(
-                                  _selectedCategory?.name ??
-                                      'Sélectionner une catégorie',
-                                  style: TextStyle(
-                                    fontSize: 17.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: _selectedCategory != null
-                                        ? Colors.black
-                                        : Colors.grey.shade500,
-                                  ),
-                                ),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: Text(
+                              _selectedCategory?.name ??
+                                  'Sélectionner une catégorie',
+                              style: TextStyle(
+                                fontSize: 17.sp,
+                                fontWeight: FontWeight.w500,
+                                color: _selectedCategory != null
+                                    ? Colors.black
+                                    : Colors.grey.shade500,
                               ),
-                              Icon(
-                                CupertinoIcons.chevron_right,
-                                color: Colors.grey.shade400,
-                                size: 20.sp,
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      )
+                          Icon(
+                            CupertinoIcons.chevron_right,
+                            color: Colors.grey.shade400,
+                            size: 20.sp,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                       .animate()
                       .slideY(
                         begin: 0.2,
@@ -513,38 +744,38 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
                   // Optional description
                   Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(color: Colors.grey.shade200),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextField(
+                      controller: _descriptionController,
+                      style: TextStyle(
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Note (optionnel)',
+                        hintStyle: TextStyle(color: Colors.grey.shade500),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 16.h,
                         ),
-                        child: TextField(
-                          controller: _descriptionController,
-                          style: TextStyle(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Note (optionnel)',
-                            hintStyle: TextStyle(color: Colors.grey.shade500),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: 16.h,
-                            ),
-                            prefixIcon: Icon(
-                              CupertinoIcons.text_alignleft,
-                              color: Colors.grey.shade500,
-                              size: 20.sp,
-                            ),
-                          ),
-                          onChanged: (_) {
-                            if (_error != null) {
-                              setState(() => _error = null);
-                            }
-                          },
+                        prefixIcon: Icon(
+                          CupertinoIcons.text_alignleft,
+                          color: Colors.grey.shade500,
+                          size: 20.sp,
                         ),
-                      )
+                      ),
+                      onChanged: (_) {
+                        if (_error != null) {
+                          setState(() => _error = null);
+                        }
+                      },
+                    ),
+                  )
                       .animate()
                       .slideY(
                         begin: 0.2,
@@ -560,7 +791,8 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       opacity: 1.0,
                       duration: const Duration(milliseconds: 300),
                       child: Obx(() {
-                        final settingsController = Get.find<SettingsController>();
+                        final settingsController =
+                            Get.find<SettingsController>();
                         final errorWidget = Text(
                           _error!,
                           style: TextStyle(
@@ -640,11 +872,11 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       ),
                     ),
                   ).animate().slideY(
-                    begin: 0.3,
-                    duration: 600.ms,
-                    delay: 300.ms,
-                    curve: Curves.easeOutQuart,
-                  ),
+                        begin: 0.3,
+                        duration: 600.ms,
+                        delay: 300.ms,
+                        curve: Curves.easeOutQuart,
+                      ),
                 ],
               ),
             ),
@@ -665,10 +897,10 @@ class _CategoryPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = Get.find<CategoriesController>();
-    
+
     return Obx(() {
-      final categories = type == TransactionType.income 
-          ? controller.incomeCategories 
+      final categories = type == TransactionType.income
+          ? controller.incomeCategories
           : controller.expenseCategories;
 
       return Container(
@@ -705,7 +937,7 @@ class _CategoryPickerSheet extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.settings, color: Colors.grey),
                     onPressed: () {
-                      Get.toNamed('/categories'); 
+                      Get.toNamed('/categories');
                     },
                   )
                 ],
@@ -730,35 +962,34 @@ class _CategoryPickerSheet extends StatelessWidget {
                       HapticFeedback.lightImpact();
                       onSelect(category);
                     },
-                    child:
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(color: Colors.grey.shade200),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CategoryIcon(
+                            iconKey: category.icon,
+                            size: 32.sp,
+                            color: Color(category.colorValue),
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CategoryIcon(
-                                iconKey: category.icon,
-                                size: 32.sp,
-                                color: Color(category.colorValue),
-                              ),
-                              SizedBox(height: 8.h),
-                              Text(
-                                category.name,
-                                style: TextStyle(
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                          SizedBox(height: 8.h),
+                          Text(
+                            category.name,
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ).animate().scale(
+                        ],
+                      ),
+                    ).animate().scale(
                           delay: (index * 30).ms,
                           duration: 300.ms,
                           curve: Curves.easeOutBack,
@@ -774,35 +1005,58 @@ class _CategoryPickerSheet extends StatelessWidget {
   }
 }
 
-/// Helper widget for displaying budget warning rows
-class _BudgetWarningRow extends StatelessWidget {
+/// Premium helper widget for displaying budget warning rows
+class _PremiumBudgetRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
   final String label;
   final String value;
+  final bool isDark;
   final bool isWarning;
 
-  const _BudgetWarningRow({
+  const _PremiumBudgetRow({
+    required this.icon,
+    required this.iconColor,
     required this.label,
     required this.value,
+    required this.isDark,
     this.isWarning = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
-          Text(
-            value,
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8.w),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor, size: 18.sp),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: Text(
+            label,
             style: TextStyle(
-              color: isWarning ? Colors.red : Colors.black87,
-              fontWeight: isWarning ? FontWeight.bold : FontWeight.normal,
+              color: isDark ? Colors.white70 : Colors.black54,
+              fontSize: 14.sp,
             ),
           ),
-        ],
-      ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: isWarning
+                ? const Color(0xFFFF3B30)
+                : (isDark ? Colors.white : Colors.black87),
+            fontSize: 15.sp,
+            fontWeight: isWarning ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
+
