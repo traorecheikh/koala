@@ -486,13 +486,9 @@ class _AnalyticsViewState extends State<AnalyticsView>
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Text(
-                      controller.netBalance >= 0
-                          ? 'Épargne positive ✨'
-                          : 'Attention au budget ⚠️',
+                      controller.savingsStatus.label,
                       style: KoalaTypography.bodySmall(context).copyWith(
-                        color: controller.netBalance >= 0
-                            ? KoalaColors.success
-                            : KoalaColors.warning,
+                        color: Color(controller.savingsStatus.color),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
