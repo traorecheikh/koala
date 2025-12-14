@@ -10,10 +10,13 @@ import 'package:koaa/app/modules/settings/controllers/recurring_transactions_con
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 
-void showAddRecurringTransactionDialog(BuildContext context, {RecurringTransaction? transaction}) {
+void showAddRecurringTransactionDialog(BuildContext context,
+    {RecurringTransaction? transaction}) {
   Get.bottomSheet(
     KoalaBottomSheet(
-      title: transaction != null ? 'Modifier la récurrence' : 'Nouvelle récurrence',
+      title: transaction != null
+          ? 'Modifier la récurrence'
+          : 'Nouvelle récurrence',
       icon: CupertinoIcons.repeat,
       child: _AddRecurringTransactionSheet(transaction: transaction),
     ),
@@ -42,7 +45,7 @@ class _AddRecurringTransactionSheetState
   int _dayOfMonth = 1;
   bool _loading = false;
   bool _buttonPressed = false;
-  
+
   // New fields
   TransactionType _selectedType = TransactionType.expense;
   TransactionCategory? _selectedCategory;
@@ -52,7 +55,8 @@ class _AddRecurringTransactionSheetState
     super.initState();
     final t = widget.transaction;
     if (t != null) {
-      _amountController = TextEditingController(text: t.amount.toStringAsFixed(0));
+      _amountController =
+          TextEditingController(text: t.amount.toStringAsFixed(0));
       _descriptionController = TextEditingController(text: t.description);
       _frequency = t.frequency;
       _selectedDays.addAll(t.daysOfWeek);
@@ -71,15 +75,15 @@ class _AddRecurringTransactionSheetState
     _descriptionController.dispose();
     super.dispose();
   }
-  
+
   String _formatAmount(String value) {
     String digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
     if (digitsOnly.isEmpty) return '';
     final number = int.parse(digitsOnly);
     return number.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match match) => '${match[1]} ',
-    );
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match match) => '${match[1]} ',
+        );
   }
 
   Future<void> _addTransaction() async {
@@ -113,7 +117,8 @@ class _AddRecurringTransactionSheetState
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Jour $_dayOfMonth peut ne pas exister dans tous les mois (ex: février)'),
+            content: Text(
+                'Jour $_dayOfMonth peut ne pas exister dans tous les mois (ex: février)'),
             backgroundColor: KoalaColors.warning,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
@@ -138,7 +143,8 @@ class _AddRecurringTransactionSheetState
     setState(() => _loading = true);
 
     try {
-      final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^\d]'), '');
+      final cleanAmount =
+          _amountController.text.replaceAll(RegExp(r'[^\d]'), '');
       final amount = double.parse(cleanAmount);
 
       // Validate amount bounds
@@ -155,7 +161,8 @@ class _AddRecurringTransactionSheetState
         return;
       }
 
-      if (amount > 1000000000) { // 1 billion max
+      if (amount > 1000000000) {
+        // 1 billion max
         if (mounted) {
           setState(() => _loading = false);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -263,174 +270,169 @@ class _AddRecurringTransactionSheetState
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children:
-                [     
-                      // Type Selector (Income/Expense)
-                      Container(
-                        padding: EdgeInsets.all(KoalaSpacing.xs),
-                        decoration: BoxDecoration(
-                          color: KoalaColors.border(context),
-                          borderRadius: BorderRadius.circular(KoalaRadius.sm),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildTypeOption(
-                              'Dépense', 
-                              TransactionType.expense, 
-                              Colors.orange
-                            ),
-                            _buildTypeOption(
-                              'Revenu', 
-                              TransactionType.income, 
-                              Colors.green
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: KoalaSpacing.xxl),
+            children: [
+              // Type Selector (Income/Expense)
+              Container(
+                padding: EdgeInsets.all(KoalaSpacing.xs),
+                decoration: BoxDecoration(
+                  color: KoalaColors.border(context),
+                  borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                ),
+                child: Row(
+                  children: [
+                    _buildTypeOption(
+                        'Dépense', TransactionType.expense, Colors.orange),
+                    _buildTypeOption(
+                        'Revenu', TransactionType.income, Colors.green),
+                  ],
+                ),
+              ),
+              SizedBox(height: KoalaSpacing.xxl),
 
-                      // Amount Field
-                      KoalaTextField(
-                        controller: _amountController,
-                        label: 'Montant',
-                        icon: CupertinoIcons.money_dollar,
-                        keyboardType: TextInputType.number,
-                        isAmount: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Veuillez entrer un montant';
-                          }
-                          final cleanAmount = value.replaceAll(RegExp(r'[^\d]'), '');
-                          final amount = double.tryParse(cleanAmount);
-                          if (amount == null || amount <= 0) {
-                            return 'Le montant doit être supérieur à 0';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: KoalaSpacing.lg),
-                      
-                      // Category Selector
-                      GestureDetector(
-                        onTap: _showCategoryPicker,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 16.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.brightness == Brightness.dark ? KoalaColors.darkInputBackground : Colors.white,
-                            borderRadius: BorderRadius.circular(KoalaRadius.md),
-                            border: Border.all(
-                                color: theme.brightness == Brightness.dark ? KoalaColors.darkBorder : KoalaColors.border(context)
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                _selectedCategory?.icon ?? '📦',
-                                style: TextStyle(fontSize: 24.sp),
-                              ),
-                              SizedBox(width: KoalaSpacing.md),
-                              Expanded(
-                                child: Text(
-                                  _selectedCategory?.displayName ??
-                                      'Sélectionner une catégorie',
-                                  style: TextStyle(
-                                    fontSize: 17.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: _selectedCategory != null
-                                        ? (theme.brightness == Brightness.dark ? Colors.white : Colors.black)
-                                        : KoalaColors.textSecondary(context),
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                CupertinoIcons.chevron_right,
-                                color: KoalaColors.textSecondary(context),
-                                size: 20.sp,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: KoalaSpacing.lg),
+              // Amount Field
+              KoalaTextField(
+                controller: _amountController,
+                label: 'Montant',
+                icon: CupertinoIcons.money_dollar,
+                keyboardType: TextInputType.number,
+                isAmount: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un montant';
+                  }
+                  final cleanAmount = value.replaceAll(RegExp(r'[^\d]'), '');
+                  final amount = double.tryParse(cleanAmount);
+                  if (amount == null || amount <= 0) {
+                    return 'Le montant doit être supérieur à 0';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: KoalaSpacing.lg),
 
-                      // Description Field
-                      KoalaTextField(
-                        controller: _descriptionController,
-                        label: 'Description',
-                        icon: CupertinoIcons.text_bubble,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Veuillez entrer une description';
-                          }
-                          return null;
-                        },
+              // Category Selector
+              GestureDetector(
+                onTap: _showCategoryPicker,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 16.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: KoalaColors.inputBackground(context),
+                    borderRadius: BorderRadius.circular(KoalaRadius.md),
+                    border: Border.all(color: KoalaColors.border(context)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      SizedBox(height: KoalaSpacing.xxl),
-                      
+                    ],
+                  ),
+                  child: Row(
+                    children: [
                       Text(
-                        'Fréquence',
-                        style: theme.textTheme.titleMedium,
+                        _selectedCategory?.icon ?? '📦',
+                        style: TextStyle(fontSize: 24.sp),
                       ),
-                      SizedBox(height: KoalaSpacing.md),
-                      _buildFrequencySelector(),
-                      if (_frequency == Frequency.weekly)
-                        _buildWeeklyDaySelector(),
-                      if (_frequency == Frequency.monthly)
-                        _buildMonthlyDaySelector(),
-                      SizedBox(height: KoalaSpacing.huge),
-                      
-                      KoalaButton(
-                        text: isEditing ? 'Modifier' : 'Enregistrer',
-                        onPressed: _loading ? () {} : () async {
-                           setState(() => _buttonPressed = true);
-                           await Future.delayed(const Duration(milliseconds: 100));
-                           setState(() => _buttonPressed = false);
-                           _addTransaction();
-                        },
-                        isLoading: _loading,
-                        backgroundColor: Colors.black,
+                      SizedBox(width: KoalaSpacing.md),
+                      Expanded(
+                        child: Text(
+                          _selectedCategory?.displayName ??
+                              'Sélectionner une catégorie',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w500,
+                            color: _selectedCategory != null
+                                ? KoalaColors.text(context)
+                                : KoalaColors.textSecondary(context),
+                          ),
+                        ),
                       ),
-                    ], // End of Column children
+                      Icon(
+                        CupertinoIcons.chevron_right,
+                        color: KoalaColors.textSecondary(context),
+                        size: 20.sp,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: KoalaSpacing.lg),
+
+              // Description Field
+              KoalaTextField(
+                controller: _descriptionController,
+                label: 'Description',
+                icon: CupertinoIcons.text_bubble,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer une description';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: KoalaSpacing.xxl),
+
+              Text(
+                'Fréquence',
+                style: theme.textTheme.titleMedium,
+              ),
+              SizedBox(height: KoalaSpacing.md),
+              _buildFrequencySelector(),
+              if (_frequency == Frequency.weekly) _buildWeeklyDaySelector(),
+              if (_frequency == Frequency.monthly) _buildMonthlyDaySelector(),
+              SizedBox(height: KoalaSpacing.huge),
+
+              KoalaButton(
+                text: isEditing ? 'Modifier' : 'Enregistrer',
+                onPressed: _loading
+                    ? () {}
+                    : () async {
+                        setState(() => _buttonPressed = true);
+                        await Future.delayed(const Duration(milliseconds: 100));
+                        setState(() => _buttonPressed = false);
+                        _addTransaction();
+                      },
+                isLoading: _loading,
+                backgroundColor: KoalaColors.primaryUi(context),
+              ),
+            ], // End of Column children
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTypeOption(String label, TransactionType type, Color activeColor) {
+  Widget _buildTypeOption(
+      String label, TransactionType type, Color activeColor) {
     final isSelected = _selectedType == type;
     return Expanded(
       child: GestureDetector(
         onTap: () {
-           HapticFeedback.lightImpact();
-           setState(() {
-             _selectedType = type;
-             _selectedCategory = null; // Reset category when type changes
-           });
+          HapticFeedback.lightImpact();
+          setState(() {
+            _selectedType = type;
+            _selectedCategory = null; // Reset category when type changes
+          });
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.symmetric(vertical: 10.h),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color:
+                isSelected ? KoalaColors.surface(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(KoalaRadius.sm),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              )
-            ] : null,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: KoalaColors.shadowSubtle[0].color,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : null,
           ),
           child: Text(
             label,
@@ -438,7 +440,8 @@ class _AddRecurringTransactionSheetState
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
-              color: isSelected ? activeColor : KoalaColors.textSecondary(context),
+              color:
+                  isSelected ? activeColor : KoalaColors.textSecondary(context),
             ),
           ),
         ),
@@ -451,12 +454,18 @@ class _AddRecurringTransactionSheetState
       children: Frequency.values.map((frequency) {
         final isSelected = _frequency == frequency;
         String label;
-        switch(frequency) {
-          case Frequency.daily: label = 'Quotidien'; break;
-          case Frequency.weekly: label = 'Hebdo'; break;
-          case Frequency.monthly: label = 'Mensuel'; break;
+        switch (frequency) {
+          case Frequency.daily:
+            label = 'Quotidien';
+            break;
+          case Frequency.weekly:
+            label = 'Hebdo';
+            break;
+          case Frequency.monthly:
+            label = 'Mensuel';
+            break;
         }
-        
+
         return Expanded(
           child: GestureDetector(
             onTap: () {
@@ -469,12 +478,12 @@ class _AddRecurringTransactionSheetState
               margin: EdgeInsets.symmetric(horizontal: 4.w),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Theme.of(context).colorScheme.primary
+                    ? KoalaColors.primaryUi(context)
                     : KoalaColors.border(context),
                 borderRadius: BorderRadius.circular(KoalaRadius.sm),
                 border: Border.all(
                   color: isSelected
-                      ? Theme.of(context).colorScheme.primary
+                      ? KoalaColors.primaryUi(context)
                       : KoalaColors.border(context),
                 ),
               ),
@@ -503,7 +512,8 @@ class _AddRecurringTransactionSheetState
         children: [
           Text(
             'Jours de la semaine',
-             style: TextStyle(fontSize: 14.sp, color: KoalaColors.textSecondary(context)),
+            style: TextStyle(
+                fontSize: 14.sp, color: KoalaColors.textSecondary(context)),
           ),
           SizedBox(height: KoalaSpacing.sm),
           Wrap(
@@ -531,7 +541,7 @@ class _AddRecurringTransactionSheetState
                   height: 40.w,
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary
+                        ? KoalaColors.primaryUi(context)
                         : KoalaColors.border(context),
                     shape: BoxShape.circle,
                   ),
@@ -541,7 +551,9 @@ class _AddRecurringTransactionSheetState
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : KoalaColors.text(context),
+                        color: isSelected
+                            ? Colors.white
+                            : KoalaColors.text(context),
                       ),
                     ),
                   ),
@@ -611,7 +623,7 @@ class _CategoryPickerSheet extends StatelessWidget {
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: KoalaColors.surface(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
@@ -622,7 +634,7 @@ class _CategoryPickerSheet extends StatelessWidget {
             height: 4.h,
             margin: EdgeInsets.only(top: 12.h),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: KoalaColors.border(context),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -656,34 +668,33 @@ class _CategoryPickerSheet extends StatelessWidget {
                     HapticFeedback.lightImpact();
                     onSelect(category);
                   },
-                  child:
-                      Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(KoalaRadius.md),
-                          border: Border.all(color: KoalaColors.border(context)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(KoalaRadius.md),
+                      border: Border.all(color: KoalaColors.border(context)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          category.icon,
+                          style: TextStyle(fontSize: 32.sp),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              category.icon,
-                              style: TextStyle(fontSize: 32.sp),
-                            ),
-                            SizedBox(height: KoalaSpacing.sm),
-                            Text(
-                              category.displayName,
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                        SizedBox(height: KoalaSpacing.sm),
+                        Text(
+                          category.displayName,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ).animate().scale(
+                      ],
+                    ),
+                  ).animate().scale(
                         delay: (index * 30).ms,
                         duration: 300.ms,
                         curve: Curves.easeOutBack,
@@ -697,3 +708,4 @@ class _CategoryPickerSheet extends StatelessWidget {
     );
   }
 }
+
