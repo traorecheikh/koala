@@ -11,3 +11,4 @@ class Assets {
   static const String imgWave = 'assets/img/wave.png';
 }
 
+
