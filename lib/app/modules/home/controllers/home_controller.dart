@@ -14,22 +14,6 @@ import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/core/utils/debounce.dart';
 import 'package:uuid/uuid.dart';
 import 'package:logger/logger.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart';
-import 'package:intl/intl.dart';
-import 'package:koaa/app/data/models/job.dart';
-import 'package:koaa/app/data/models/local_transaction.dart';
-import 'package:koaa/app/data/models/local_user.dart';
-import 'package:koaa/app/data/models/recurring_transaction.dart';
-import 'package:koaa/app/modules/home/widgets/user_setup_dialog.dart';
-import 'package:koaa/app/services/financial_context_service.dart'; // New Import
-import 'package:koaa/app/services/events/financial_events_service.dart'; // New Import
-import 'package:koaa/app/services/ml_service.dart';
-import 'package:koaa/app/services/intelligence/intelligence_service.dart';
-import 'package:koaa/app/core/utils/debounce.dart';
-import 'package:uuid/uuid.dart';
-import 'package:logger/logger.dart';
 import 'dart:math';
 import 'dart:async'; // Added import for StreamSubscription
 
@@ -41,6 +25,7 @@ enum QuickActionType {
   simulator,
   categories,
   settings,
+  intelligence,
 }
 
 class HomeController extends GetxController {
@@ -52,13 +37,13 @@ class HomeController extends GetxController {
   final RxBool isCardFlipped = false.obs;
   final RxList<MLInsight> insights = <MLInsight>[].obs;
   final _mlService = MLService();
-  
+
   // Customizable Quick Action (Slot 3)
   final thirdAction = QuickActionType.goals.obs;
-  
+
   // Sheet Actions Order
   final sheetActions = <QuickActionType>[].obs;
-  
+
   // Sheet State
   final isMoreOptionsOpen = false.obs;
   final isSheetHidden = false.obs; // Hidden while dragging
@@ -78,12 +63,26 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    try {
+
+    // Robust service retrieval
+    if (Get.isRegistered<FinancialContextService>()) {
       _financialContextService = Get.find<FinancialContextService>();
+    } else {
+      // This should theoretically not happen if main.dart is correct,
+      // but in case of weird restart/binding loops:
+      _logger
+          .w('FinancialContextService not found in onInit. Waiting for it...');
+      // We can't really "wait" here effectively without async,
+      // but we can try to put it if missing (dangerous) or just throw a better error.
+      // Better: assume it will be put and we can find it later? No.
+      // Let's try to find it.
+      _financialContextService = Get.find<FinancialContextService>();
+    }
+
+    try {
       _financialEventsService = Get.find<FinancialEventsService>();
     } catch (e) {
-      _logger.e('Failed to initialize services: $e');
-      rethrow;
+      _logger.e('Failed to find FinancialEventsService: $e');
     }
 
     checkUser();
@@ -97,30 +96,45 @@ class HomeController extends GetxController {
       () => _onTransactionsChanged(),
     );
 
+    // Wait until FinancialContextService is initialized
+    _workers
+        .add(ever(_financialContextService.isInitialized, (bool initialized) {
+      if (initialized) {
+        _logger.i(
+            'FinancialContextService initialized (via ever). Generating transactions.');
+        _onServiceInitialized();
+      }
+    }));
+
+    // Check immediately in case it's already initialized
+    if (_financialContextService.isInitialized.value) {
+      _logger.i(
+          'FinancialContextService already initialized. Generating transactions.');
+      _onServiceInitialized();
+    }
+
     _workers.add(ever(_financialContextService.allTransactions, (_) {
       _debounceTransactionUpdate?.call();
     }));
-    _workers.add(ever(_financialContextService.currentBalance, (_) => calculateBalance()));
+    _workers.add(ever(
+        _financialContextService.currentBalance, (_) => calculateBalance()));
 
-
-    transactions.assignAll(_financialContextService.allTransactions.where((t) => !t.isHidden).toList());
-    calculateBalance();
-    _updateInsights();
-
-    // Also watch jobs for balance updates
-    // This will now be handled by FinancialContextService and its listener above
-    // final jobBox = Hive.box<Job>('jobBox');
-    // jobBox.watch().listen((_) {
-    //   calculateBalance();
-    //   generateJobIncomeTransactions(); // Auto-generate when jobs change
-    //   _refreshIntelligence();
-    // });
-
-    generateRecurringTransactions();
-    generateJobIncomeTransactions();
+    // Initial load for transactions and balance if already initialized
+    if (_financialContextService.isInitialized.value) {
+      transactions.assignAll(_financialContextService.allTransactions
+          .where((t) => !t.isHidden)
+          .toList());
+      calculateBalance();
+      _updateInsights();
+    }
 
     // Archive old transactions on startup (fire and forget)
     archiveOldTransactions();
+  }
+
+  Future<void> _onServiceInitialized() async {
+    await generateRecurringTransactions();
+    await generateJobIncomeTransactions();
   }
 
   /// Handle transaction changes with debouncing to prevent excessive rebuilds
@@ -131,8 +145,7 @@ class HomeController extends GetxController {
       transactions.clear();
     } else {
       final transactionsCopy = List<LocalTransaction>.from(
-        allTransactions.where((t) => !t.isHidden)
-      );
+          allTransactions.where((t) => !t.isHidden));
       transactions.assignAll(transactionsCopy);
     }
     _rebuildTransactionCache(); // Update cache on transaction changes
@@ -203,13 +216,14 @@ class HomeController extends GetxController {
       // Default order (excluding Goals which is default on home, but we include all for flexibility)
       // We prioritize the ones NOT on home usually.
       sheetActions.assignAll([
+        QuickActionType.intelligence, // AI Intelligence - prioritized
         QuickActionType.analytics,
         QuickActionType.budget,
         QuickActionType.debt,
         QuickActionType.simulator,
         QuickActionType.categories,
         QuickActionType.settings,
-        QuickActionType.goals, 
+        QuickActionType.goals,
       ]);
     }
   }
@@ -220,47 +234,116 @@ class HomeController extends GetxController {
     if (oldIndex != -1 && newIndex != -1) {
       sheetActions.removeAt(oldIndex);
       sheetActions.insert(newIndex, item);
-      Hive.box('settingsBox').put('sheetActionsOrder', sheetActions.map((e) => e.index).toList());
+      Hive.box('settingsBox')
+          .put('sheetActionsOrder', sheetActions.map((e) => e.index).toList());
     }
   }
 
-  void generateJobIncomeTransactions() {
+  Future<void> generateJobIncomeTransactions() async {
     final jobBox = Hive.box<Job>('jobBox');
-    final jobs = jobBox.values.toList();
+    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
+    final jobs = jobBox.values.where((job) => job.isActive).toList();
     final today = DateTime.now();
 
-    // NEW: Create a set of existing job-related transaction identifiers for O(1) lookups
-    final Set<String> existingJobTransactions = _financialContextService.allTransactions
-        .where((tx) => tx.linkedJobId != null && tx.type == TransactionType.income)
-        .map((tx) => '${tx.linkedJobId}-${tx.date.year}-${tx.date.month}-${tx.date.day}')
-        .toSet();
+    // DEBUG: Log all transactions in the box
+    _logger.d('TransactionBox total items: ${transactionBox.length}');
+    for (var tx in transactionBox.values) {
+      _logger.d(
+          '  TX: id=${tx.id}, linkedJobId=${tx.linkedJobId}, type=${tx.type}, isHidden=${tx.isHidden}, desc=${tx.description}');
+    }
+
+    // FIXED: Read transactions directly from Hive to ensure we check duplicates
+    // even when FinancialContextService hasn't loaded yet (e.g., during onboarding)
+    final Set<String> existingJobTransactions = transactionBox.values
+        .where((tx) =>
+            tx.linkedJobId != null &&
+            tx.type == TransactionType.income &&
+            !tx.isHidden)
+        .map((tx) {
+      final normalizedDate = DateTime(tx.date.year, tx.date.month, tx.date.day);
+      return '${tx.linkedJobId}-${normalizedDate.year}-${normalizedDate.month}-${normalizedDate.day}';
+    }).toSet();
+
+    // FALLBACK: Also check by description pattern + date for legacy data with null linkedJobId
+    // This handles transactions saved before the Hive adapter was fixed
+    final Set<String> existingByDescription = transactionBox.values
+        .where((tx) =>
+            tx.description.startsWith('Salaire: ') &&
+            tx.type == TransactionType.income &&
+            tx.category == TransactionCategory.salary &&
+            !tx.isHidden)
+        .map((tx) {
+      final normalizedDate = DateTime(tx.date.year, tx.date.month, tx.date.day);
+      // Extract job name from description "Salaire: JobName"
+      final jobName = tx.description.replaceFirst('Salaire: ', '');
+      return '$jobName-${normalizedDate.year}-${normalizedDate.month}-${normalizedDate.day}';
+    }).toSet();
+
+    _logger.d(
+        'Found ${existingJobTransactions.length} existing job transactions (by linkedJobId).');
+    _logger.d(
+        'Found ${existingByDescription.length} existing salary transactions (by description fallback).');
+    _logger.d('Processing ${jobs.length} active jobs.');
 
     for (var job in jobs) {
       // Determine last payday
       DateTime lastPayday;
-      if (today.day >= job.paymentDate.day) {
-        // Paid this month
-        lastPayday = DateTime(today.year, today.month, job.paymentDate.day);
+
+      // Calculate payment date for THIS month
+      final thisMonthPayday =
+          DateTime(today.year, today.month, job.paymentDate.day);
+
+      if (today.isAfter(thisMonthPayday) ||
+          today.isAtSameMomentAs(thisMonthPayday)) {
+        // Payday has passed this month
+        lastPayday = thisMonthPayday;
       } else {
-        // Paid last month
+        // Payday hasn't happened yet this month, so it was last month
         if (today.month == 1) {
           lastPayday = DateTime(today.year - 1, 12, job.paymentDate.day);
         } else {
-          lastPayday = DateTime(today.year, today.month - 1, job.paymentDate.day);
+          lastPayday =
+              DateTime(today.year, today.month - 1, job.paymentDate.day);
         }
       }
 
       // Check if transaction exists using the pre-computed set
-      final jobTransactionIdentifier = '${job.id}-${lastPayday.year}-${lastPayday.month}-${lastPayday.day}';
-      if (!existingJobTransactions.contains(jobTransactionIdentifier)) {
-        addTransaction(LocalTransaction( // Use addTransaction to also emit event
+      final jobTransactionIdentifier =
+          '${job.id}-${lastPayday.year}-${lastPayday.month}-${lastPayday.day}';
+
+      // Fallback identifier using job name instead of job id
+      final descriptionIdentifier =
+          '${job.name}-${lastPayday.year}-${lastPayday.month}-${lastPayday.day}';
+
+      // Check BOTH methods - linkedJobId (new) and description fallback (legacy)
+      final existsByLinkedJobId =
+          existingJobTransactions.contains(jobTransactionIdentifier);
+      final existsByDescription =
+          existingByDescription.contains(descriptionIdentifier);
+
+      if (!existsByLinkedJobId && !existsByDescription) {
+        _logger.i(
+            'Generating salary for job ${job.name} on $lastPayday (ID: $jobTransactionIdentifier)');
+
+        final transaction = LocalTransaction(
           amount: job.amount,
           description: 'Salaire: ${job.name}',
           date: lastPayday,
           type: TransactionType.income,
           category: TransactionCategory.salary,
           linkedJobId: job.id,
-        ));
+        );
+
+        // Use await to ensure transaction is persisted before continuing
+        await addTransaction(transaction);
+
+        // Add to both sets to prevent duplicates within the same loop iteration
+        existingJobTransactions.add(jobTransactionIdentifier);
+        existingByDescription.add(descriptionIdentifier);
+      } else {
+        _logger.d(
+            'Skipping duplicate salary for job ${job.name} on $lastPayday '
+            '(existsByLinkedJobId: $existsByLinkedJobId, existsByDescription: $existsByDescription)');
       }
     }
   }
@@ -275,18 +358,22 @@ class HomeController extends GetxController {
   }
 
   void _updateInsights() {
-    insights.value = _mlService.generateInsights(_financialContextService.allTransactions);
+    insights.value =
+        _mlService.generateInsights(_financialContextService.allTransactions);
   }
 
   void checkUser() {
     final userBox = Hive.box<LocalUser>('userBox');
+    _logger.i('checkUser: userBox is empty: ${userBox.isEmpty}');
     if (userBox.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _logger.i('checkUser: Showing user setup dialog.');
         showUserSetupDialog(Get.context!);
       });
     } else {
       user.value = userBox.getAt(0);
       userName.value = user.value?.fullName ?? 'User';
+      _logger.i('checkUser: User found: ${userName.value}');
     }
 
     _userSubscription = user.listen((newUser) {
@@ -294,8 +381,11 @@ class HomeController extends GetxController {
         final userBox = Hive.box<LocalUser>('userBox');
         if (userBox.isEmpty) {
           userBox.add(newUser);
+          _logger.i('checkUser: Added new user to userBox during listen.');
         } else {
           userBox.putAt(0, newUser);
+          _logger
+              .i('checkUser: Updated existing user in userBox during listen.');
         }
         userName.value = newUser.fullName;
       }
@@ -316,7 +406,12 @@ class HomeController extends GetxController {
 
   Future<void> addTransaction(LocalTransaction transaction) async {
     final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    await transactionBox.put(transaction.id, transaction); // Use put with stable id to avoid duplicate entries
+    await transactionBox.put(transaction.id, transaction);
+    // CRITICAL: Force flush to disk to survive hot restart
+    await transactionBox.flush();
+    _logger.i(
+        'Transaction saved to Hive with ID: ${transaction.id}, linkedJobId: ${transaction.linkedJobId}');
+    _logger.d('TransactionBox now has ${transactionBox.length} items');
     _financialEventsService.emitTransactionAdded(transaction);
   }
 
@@ -326,7 +421,8 @@ class HomeController extends GetxController {
     await transaction.save();
     // Refresh list to hide it from UI (filter out hidden transactions)
     final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    transactions.assignAll(transactionBox.values.where((t) => !t.isHidden).toList());
+    transactions
+        .assignAll(transactionBox.values.where((t) => !t.isHidden).toList());
     _financialEventsService.emitTransactionDeleted(transaction.id);
   }
 
@@ -338,7 +434,8 @@ class HomeController extends GetxController {
       final today = DateTime.now();
       int generatedCount = 0;
 
-      _logger.i('Starting recurring transaction generation for ${recurringBox.length} items');
+      _logger.i(
+          'Starting recurring transaction generation for ${recurringBox.length} items');
 
       for (var recurring in recurringBox.values) {
         try {
@@ -351,28 +448,28 @@ class HomeController extends GetxController {
           // EFFICIENT: Calculate due dates instead of looping days
           final dueDates = _calculateDueDates(
             recurring,
-            recurring.lastGeneratedDate ?? DateTime(2020, 1, 1),
+            recurring.lastGeneratedDate,
             today,
           );
 
-          _logger.i(
-            'Recurring "${recurring.description}": '
-            'Found ${dueDates.length} due dates'
-          );
+          _logger.i('Recurring "${recurring.description}": '
+              'Found ${dueDates.length} due dates');
 
-          // NEW: Create a set of existing recurring transaction identifiers for O(1) lookups
-          final Set<String> existingRecurringTransactions = _financialContextService.allTransactions
-              .where((tx) => tx.linkedRecurringId != null)
-              .map((tx) => '${tx.linkedRecurringId}-${tx.date.year}-${tx.date.month}-${tx.date.day}')
+          // FIXED: Read transactions directly from Hive instead of FinancialContextService
+          final txBox = Hive.box<LocalTransaction>('transactionBox');
+          final Set<String> existingRecurringTransactions = txBox.values
+              .where((tx) => tx.linkedRecurringId != null && !tx.isHidden)
+              .map((tx) =>
+                  '${tx.linkedRecurringId}-${tx.date.year}-${tx.date.month}-${tx.date.day}')
               .toSet();
 
           // NEW: Batch create transactions with duplicate prevention
           for (var dueDate in dueDates) {
             // NEW: Prevent duplicates
-            if (_transactionExists(recurring, dueDate, existingRecurringTransactions)) {
+            if (_transactionExists(
+                recurring, dueDate, existingRecurringTransactions)) {
               _logger.i(
-                'Skipping duplicate: ${recurring.description} on ${dueDate.toIso8601String()}'
-              );
+                  'Skipping duplicate: ${recurring.description} on ${dueDate.toIso8601String()}');
               continue;
             }
 
@@ -396,8 +493,7 @@ class HomeController extends GetxController {
               generatedCount++;
 
               _logger.i(
-                'Generated: ${recurring.description} ($dueDate) - Amount: ${recurring.amount}'
-              );
+                  'Generated: ${recurring.description} ($dueDate) - Amount: ${recurring.amount}');
             } catch (e, st) {
               _logger.e(
                 'Failed to generate transaction for ${recurring.description}',
@@ -421,11 +517,11 @@ class HomeController extends GetxController {
         }
       }
 
-      _logger.i('Recurring transaction generation complete: Generated $generatedCount transactions');
+      _logger.i(
+          'Recurring transaction generation complete: Generated $generatedCount transactions');
 
       // NEW: Trigger balance recalculation
       await _financialContextService.calculateBalance();
-
     } catch (e, st) {
       _logger.e(
         'Recurring transaction generation failed',
@@ -484,8 +580,10 @@ class HomeController extends GetxController {
 
           final dueDate = DateTime(current.year, current.month, targetDay);
 
-          if ((dueDate.isAfter(startDate) || dueDate.isAtSameMomentAs(startDate)) &&
-              (dueDate.isBefore(endDate) || dueDate.isAtSameMomentAs(endDate))) {
+          if ((dueDate.isAfter(startDate) ||
+                  dueDate.isAtSameMomentAs(startDate)) &&
+              (dueDate.isBefore(endDate) ||
+                  dueDate.isAtSameMomentAs(endDate))) {
             dueDates.add(dueDate);
           }
 
@@ -508,8 +606,10 @@ class HomeController extends GetxController {
     DateTime dueDate,
     Set<String> existingRecurringTransactions, // Pass the pre-computed set
   ) {
-    final recurringTransactionIdentifier = '${recurring.id}-${dueDate.year}-${dueDate.month}-${dueDate.day}';
-    return existingRecurringTransactions.contains(recurringTransactionIdentifier);
+    final recurringTransactionIdentifier =
+        '${recurring.id}-${dueDate.year}-${dueDate.month}-${dueDate.day}';
+    return existingRecurringTransactions
+        .contains(recurringTransactionIdentifier);
   }
 
   /// Archive old transactions older than 1 year
@@ -565,8 +665,8 @@ class HomeController extends GetxController {
     for (var tx in transactions) {
       if (tx.type == TransactionType.expense) {
         if (tx.category != null) {
-           categoryTotals[tx.category!] =
-            (categoryTotals[tx.category] ?? 0) + tx.amount;
+          categoryTotals[tx.category!] =
+              (categoryTotals[tx.category] ?? 0) + tx.amount;
         }
       }
     }
@@ -648,3 +748,4 @@ class HomeController extends GetxController {
     }
   }
 }
+
