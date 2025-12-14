@@ -96,3 +96,4 @@ class Debt extends HiveObject {
     );
   }
 }
+
