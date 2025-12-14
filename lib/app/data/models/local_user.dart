@@ -28,3 +28,4 @@ class LocalUser extends HiveObject {
     required this.budgetingType,
   });
 }
+
