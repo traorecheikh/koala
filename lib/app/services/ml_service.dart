@@ -54,3 +54,4 @@ class MLService {
   // Backward compatibility methods if needed
   // ...
 }
+
