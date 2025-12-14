@@ -51,3 +51,4 @@ class LocalUserAdapter extends TypeAdapter<LocalUser> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
