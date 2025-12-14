@@ -7,8 +7,41 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/modules/home/widgets/user_setup_dialog.dart';
+import 'package:koaa/app/services/financial_context_service.dart'; // New Import
+import 'package:koaa/app/services/events/financial_events_service.dart'; // New Import
 import 'package:koaa/app/services/ml_service.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
+import 'package:koaa/app/core/utils/debounce.dart';
+import 'package:uuid/uuid.dart';
+import 'package:logger/logger.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:intl/intl.dart';
+import 'package:koaa/app/data/models/job.dart';
+import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/data/models/local_user.dart';
+import 'package:koaa/app/data/models/recurring_transaction.dart';
+import 'package:koaa/app/modules/home/widgets/user_setup_dialog.dart';
+import 'package:koaa/app/services/financial_context_service.dart'; // New Import
+import 'package:koaa/app/services/events/financial_events_service.dart'; // New Import
+import 'package:koaa/app/services/ml_service.dart';
+import 'package:koaa/app/services/intelligence/intelligence_service.dart';
+import 'package:koaa/app/core/utils/debounce.dart';
+import 'package:uuid/uuid.dart';
+import 'package:logger/logger.dart';
+import 'dart:math';
+import 'dart:async'; // Added import for StreamSubscription
+
+enum QuickActionType {
+  goals,
+  analytics,
+  budget,
+  debt,
+  simulator,
+  categories,
+  settings,
+}
 
 class HomeController extends GetxController {
   final balanceVisible = true.obs;
@@ -19,41 +52,188 @@ class HomeController extends GetxController {
   final RxBool isCardFlipped = false.obs;
   final RxList<MLInsight> insights = <MLInsight>[].obs;
   final _mlService = MLService();
+  
+  // Customizable Quick Action (Slot 3)
+  final thirdAction = QuickActionType.goals.obs;
+  
+  // Sheet Actions Order
+  final sheetActions = <QuickActionType>[].obs;
+  
+  // Sheet State
+  final isMoreOptionsOpen = false.obs;
+  final isSheetHidden = false.obs; // Hidden while dragging
+
+  late FinancialContextService _financialContextService;
+  late FinancialEventsService _financialEventsService;
+  Debounce? _debounceTransactionUpdate;
+  final _logger = Logger();
+
+  // Cached transaction index for quick lookups (optimization)
+  final Map<String, LocalTransaction> _transactionCache = {};
+
+  // Workers for cleanup and StreamSubscriptions
+  final List<Worker> _workers = [];
+  StreamSubscription? _userSubscription; // Store the user subscription
 
   @override
   void onInit() {
     super.onInit();
-    checkUser();
+    try {
+      _financialContextService = Get.find<FinancialContextService>();
+      _financialEventsService = Get.find<FinancialEventsService>();
+    } catch (e) {
+      _logger.e('Failed to initialize services: $e');
+      rethrow;
+    }
 
-    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    transactions.assignAll(transactionBox.values.toList());
+    checkUser();
+    _loadThirdAction();
+    _loadSheetActions(); // Load sheet order
+
+    // Listen to changes from FinancialContextService with debouncing (500ms)
+    // This prevents excessive rebuilds when multiple transactions are added quickly
+    _debounceTransactionUpdate = Debounce(
+      const Duration(milliseconds: 500),
+      () => _onTransactionsChanged(),
+    );
+
+    _workers.add(ever(_financialContextService.allTransactions, (_) {
+      _debounceTransactionUpdate?.call();
+    }));
+    _workers.add(ever(_financialContextService.currentBalance, (_) => calculateBalance()));
+
+
+    transactions.assignAll(_financialContextService.allTransactions.where((t) => !t.isHidden).toList());
     calculateBalance();
     _updateInsights();
 
-    transactionBox.watch().listen((_) {
-      transactions.assignAll(transactionBox.values.toList());
-      calculateBalance();
-      _updateInsights();
-      // Refresh intelligence service when transactions change
-      _refreshIntelligence();
-    });
-
     // Also watch jobs for balance updates
-    final jobBox = Hive.box<Job>('jobBox');
-    jobBox.watch().listen((_) {
-      calculateBalance();
-      generateJobIncomeTransactions(); // Auto-generate when jobs change
-      _refreshIntelligence();
-    });
+    // This will now be handled by FinancialContextService and its listener above
+    // final jobBox = Hive.box<Job>('jobBox');
+    // jobBox.watch().listen((_) {
+    //   calculateBalance();
+    //   generateJobIncomeTransactions(); // Auto-generate when jobs change
+    //   _refreshIntelligence();
+    // });
 
     generateRecurringTransactions();
     generateJobIncomeTransactions();
+
+    // Archive old transactions on startup (fire and forget)
+    archiveOldTransactions();
+  }
+
+  /// Handle transaction changes with debouncing to prevent excessive rebuilds
+  void _onTransactionsChanged() {
+    // FIX: Create immutable copy to prevent concurrent modification
+    final allTransactions = _financialContextService.allTransactions;
+    if (allTransactions.isEmpty) {
+      transactions.clear();
+    } else {
+      final transactionsCopy = List<LocalTransaction>.from(
+        allTransactions.where((t) => !t.isHidden)
+      );
+      transactions.assignAll(transactionsCopy);
+    }
+    _rebuildTransactionCache(); // Update cache on transaction changes
+    calculateBalance();
+    _updateInsights();
+    _refreshIntelligence();
+  }
+
+  /// Rebuild the transaction cache for fast lookups (optimization)
+  void _rebuildTransactionCache() {
+    _transactionCache.clear();
+    for (var transaction in transactions) {
+      if (transaction.id.isNotEmpty) {
+        _transactionCache[transaction.id] = transaction;
+      }
+    }
+  }
+
+  /// Get transaction by ID using cached index (O(1) instead of O(n))
+  /// Returns null if transaction not found
+  LocalTransaction? getTransactionById(String id) {
+    return _transactionCache[id];
+  }
+
+  @override
+  void onClose() {
+    // Cancel debounce
+    _debounceTransactionUpdate?.cancel();
+    _debounceTransactionUpdate = null;
+
+    // Dispose all workers
+    for (var worker in _workers) {
+      worker.dispose();
+    }
+    _workers.clear();
+
+    // Clear all observables
+    transactions.clear();
+    insights.clear();
+    sheetActions.clear();
+
+    _userSubscription?.cancel(); // Cancel user subscription
+    super.onClose();
+  }
+
+  Future<void> _loadThirdAction() async {
+    // Open box safely if not already open (though SettingsController usually opens it)
+    final box = await Hive.openBox('settingsBox');
+    final savedIndex = box.get('thirdAction');
+    if (savedIndex != null) {
+      thirdAction.value = QuickActionType.values[savedIndex];
+    }
+  }
+
+  void setThirdAction(QuickActionType type) {
+    thirdAction.value = type;
+    Hive.box('settingsBox').put('thirdAction', type.index);
+  }
+
+  Future<void> _loadSheetActions() async {
+    final box = await Hive.openBox('settingsBox');
+    final savedIndices = box.get('sheetActionsOrder');
+
+    if (savedIndices != null) {
+      final indices = List<int>.from(savedIndices);
+      sheetActions.assignAll(indices.map((i) => QuickActionType.values[i]));
+    } else {
+      // Default order (excluding Goals which is default on home, but we include all for flexibility)
+      // We prioritize the ones NOT on home usually.
+      sheetActions.assignAll([
+        QuickActionType.analytics,
+        QuickActionType.budget,
+        QuickActionType.debt,
+        QuickActionType.simulator,
+        QuickActionType.categories,
+        QuickActionType.settings,
+        QuickActionType.goals, 
+      ]);
+    }
+  }
+
+  void reorderSheetAction(QuickActionType item, QuickActionType target) {
+    final oldIndex = sheetActions.indexOf(item);
+    final newIndex = sheetActions.indexOf(target);
+    if (oldIndex != -1 && newIndex != -1) {
+      sheetActions.removeAt(oldIndex);
+      sheetActions.insert(newIndex, item);
+      Hive.box('settingsBox').put('sheetActionsOrder', sheetActions.map((e) => e.index).toList());
+    }
   }
 
   void generateJobIncomeTransactions() {
     final jobBox = Hive.box<Job>('jobBox');
     final jobs = jobBox.values.toList();
     final today = DateTime.now();
+
+    // NEW: Create a set of existing job-related transaction identifiers for O(1) lookups
+    final Set<String> existingJobTransactions = _financialContextService.allTransactions
+        .where((tx) => tx.linkedJobId != null && tx.type == TransactionType.income)
+        .map((tx) => '${tx.linkedJobId}-${tx.date.year}-${tx.date.month}-${tx.date.day}')
+        .toSet();
 
     for (var job in jobs) {
       // Determine last payday
@@ -70,21 +250,16 @@ class HomeController extends GetxController {
         }
       }
 
-      // Check if transaction exists
-      final exists = transactions.any((tx) =>
-          tx.type == TransactionType.income &&
-          tx.description == 'Salaire: ${job.name}' &&
-          tx.date.year == lastPayday.year &&
-          tx.date.month == lastPayday.month &&
-          tx.date.day == lastPayday.day);
-
-      if (!exists) {
-        addTransaction(LocalTransaction(
+      // Check if transaction exists using the pre-computed set
+      final jobTransactionIdentifier = '${job.id}-${lastPayday.year}-${lastPayday.month}-${lastPayday.day}';
+      if (!existingJobTransactions.contains(jobTransactionIdentifier)) {
+        addTransaction(LocalTransaction( // Use addTransaction to also emit event
           amount: job.amount,
           description: 'Salaire: ${job.name}',
           date: lastPayday,
           type: TransactionType.income,
           category: TransactionCategory.salary,
+          linkedJobId: job.id,
         ));
       }
     }
@@ -100,7 +275,7 @@ class HomeController extends GetxController {
   }
 
   void _updateInsights() {
-    insights.value = _mlService.generateInsights(transactions);
+    insights.value = _mlService.generateInsights(_financialContextService.allTransactions);
   }
 
   void checkUser() {
@@ -114,7 +289,7 @@ class HomeController extends GetxController {
       userName.value = user.value?.fullName ?? 'User';
     }
 
-    user.listen((newUser) {
+    _userSubscription = user.listen((newUser) {
       if (newUser != null) {
         final userBox = Hive.box<LocalUser>('userBox');
         if (userBox.isEmpty) {
@@ -136,76 +311,237 @@ class HomeController extends GetxController {
   }
 
   void calculateBalance() {
-    double total = 0;
-    for (var transaction in transactions) {
-      if (transaction.isHidden) continue;
-      
-      if (transaction.type == TransactionType.income) {
-        total += transaction.amount;
-      } else {
-        total -= transaction.amount;
-      }
-    }
-    balance.value = total;
+    balance.value = _financialContextService.currentBalance.value;
   }
 
   Future<void> addTransaction(LocalTransaction transaction) async {
     final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    await transactionBox.add(transaction);
+    await transactionBox.put(transaction.id, transaction); // Use put with stable id to avoid duplicate entries
+    _financialEventsService.emitTransactionAdded(transaction);
   }
 
   Future<void> deleteTransaction(LocalTransaction transaction) async {
     // Soft delete: Mark as hidden but keep in database for calculations
     transaction.isHidden = true;
     await transaction.save();
-    // Refresh list to hide it from UI
+    // Refresh list to hide it from UI (filter out hidden transactions)
     final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    transactions.assignAll(transactionBox.values.toList());
+    transactions.assignAll(transactionBox.values.where((t) => !t.isHidden).toList());
+    _financialEventsService.emitTransactionDeleted(transaction.id);
   }
 
-  void generateRecurringTransactions() {
-    final recurringBox = Hive.box<RecurringTransaction>(
-      'recurringTransactionBox',
-    );
-    final today = DateTime.now();
+  Future<void> generateRecurringTransactions() async {
+    try {
+      final recurringBox = Hive.box<RecurringTransaction>(
+        'recurringTransactionBox',
+      );
+      final today = DateTime.now();
+      int generatedCount = 0;
 
-    for (var recurring in recurringBox.values) {
-      DateTime lastGenerated = recurring.lastGeneratedDate;
-      while (lastGenerated.isBefore(today)) {
-        lastGenerated = lastGenerated.add(const Duration(days: 1));
-        bool shouldGenerate = false;
-        switch (recurring.frequency) {
-          case Frequency.daily:
-            shouldGenerate = true;
-            break;
-          case Frequency.weekly:
-            if (recurring.daysOfWeek.contains(lastGenerated.weekday)) {
-              shouldGenerate = true;
-            }
-            break;
-          case Frequency.monthly:
-            if (lastGenerated.day == recurring.dayOfMonth) {
-              shouldGenerate = true;
-            }
-            break;
-        }
+      _logger.i('Starting recurring transaction generation for ${recurringBox.length} items');
 
-        if (shouldGenerate) {
-          addTransaction(
-            LocalTransaction(
-              amount: recurring.amount,
-              description: recurring.description,
-              date: lastGenerated,
-              type: TransactionType.expense, // Assuming recurring are expenses
-              isRecurring: true,
-              category: recurring.category, // Pass category from recurring
-              categoryId: recurring.categoryId,
-            ),
+      for (var recurring in recurringBox.values) {
+        try {
+          // NEW: Validate recurring transaction
+          if (recurring.categoryId?.isEmpty ?? true) {
+            _logger.w('Recurring transaction has no category: ${recurring.id}');
+            continue;
+          }
+
+          // EFFICIENT: Calculate due dates instead of looping days
+          final dueDates = _calculateDueDates(
+            recurring,
+            recurring.lastGeneratedDate ?? DateTime(2020, 1, 1),
+            today,
           );
+
+          _logger.i(
+            'Recurring "${recurring.description}": '
+            'Found ${dueDates.length} due dates'
+          );
+
+          // NEW: Create a set of existing recurring transaction identifiers for O(1) lookups
+          final Set<String> existingRecurringTransactions = _financialContextService.allTransactions
+              .where((tx) => tx.linkedRecurringId != null)
+              .map((tx) => '${tx.linkedRecurringId}-${tx.date.year}-${tx.date.month}-${tx.date.day}')
+              .toSet();
+
+          // NEW: Batch create transactions with duplicate prevention
+          for (var dueDate in dueDates) {
+            // NEW: Prevent duplicates
+            if (_transactionExists(recurring, dueDate, existingRecurringTransactions)) {
+              _logger.i(
+                'Skipping duplicate: ${recurring.description} on ${dueDate.toIso8601String()}'
+              );
+              continue;
+            }
+
+            try {
+              // Create transaction
+              final transaction = LocalTransaction(
+                id: const Uuid().v4(),
+                amount: recurring.amount,
+                description: recurring.description,
+                date: dueDate,
+                type: recurring.type,
+                categoryId: recurring.categoryId,
+                isRecurring: true,
+                linkedRecurringId: recurring.id,
+              );
+
+              // Add to storage
+              final txBox = Hive.box<LocalTransaction>('transactionBox');
+              await txBox.add(transaction);
+
+              generatedCount++;
+
+              _logger.i(
+                'Generated: ${recurring.description} ($dueDate) - Amount: ${recurring.amount}'
+              );
+            } catch (e, st) {
+              _logger.e(
+                'Failed to generate transaction for ${recurring.description}',
+                stackTrace: st,
+              );
+              // Continue to next date instead of breaking
+            }
+          }
+
+          // NEW: Only update after all transactions created successfully
+          recurring.lastGeneratedDate = today;
+          await recurring.save();
+
+          _logger.i('Updated lastGeneratedDate for ${recurring.description}');
+        } catch (e, st) {
+          _logger.e(
+            'Error processing recurring transaction ${recurring.id}',
+            stackTrace: st,
+          );
+          // Continue to next recurring instead of breaking
         }
       }
-      recurring.lastGeneratedDate = today;
-      recurring.save();
+
+      _logger.i('Recurring transaction generation complete: Generated $generatedCount transactions');
+
+      // NEW: Trigger balance recalculation
+      await _financialContextService.calculateBalance();
+
+    } catch (e, st) {
+      _logger.e(
+        'Recurring transaction generation failed',
+        stackTrace: st,
+      );
+    }
+  }
+
+  /// Efficiently calculates all due dates between start and end
+  /// Avoids day-by-day iteration for better performance
+  List<DateTime> _calculateDueDates(
+    RecurringTransaction recurring,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    final dueDates = <DateTime>[];
+
+    switch (recurring.frequency) {
+      case Frequency.daily:
+        // Jump to next day, not day-by-day in loop
+        var current = DateTime(startDate.year, startDate.month, startDate.day);
+        current = current.add(Duration(days: 1));
+
+        while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
+          dueDates.add(current);
+          current = current.add(Duration(days: 1));
+        }
+        break;
+
+      case Frequency.weekly:
+        // Validate daysOfWeek
+        if (recurring.daysOfWeek.isEmpty) {
+          _logger.w('Weekly recurring has no days selected: ${recurring.id}');
+          return dueDates;
+        }
+
+        var current = startDate;
+        while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
+          // Check if current day matches any target day
+          if (recurring.daysOfWeek.contains(current.weekday)) {
+            dueDates.add(current);
+          }
+          current = current.add(Duration(days: 1));
+        }
+        break;
+
+      case Frequency.monthly:
+        // Efficiently jump to next month
+        var current = DateTime(startDate.year, startDate.month, 1);
+
+        while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
+          // Handle month-end edge case
+          // E.g., Jan 31 job should work in Feb (which has 28/29 days)
+          final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
+          final targetDay = min(recurring.dayOfMonth, daysInMonth);
+
+          final dueDate = DateTime(current.year, current.month, targetDay);
+
+          if ((dueDate.isAfter(startDate) || dueDate.isAtSameMomentAs(startDate)) &&
+              (dueDate.isBefore(endDate) || dueDate.isAtSameMomentAs(endDate))) {
+            dueDates.add(dueDate);
+          }
+
+          // Move to next month
+          if (current.month == 12) {
+            current = DateTime(current.year + 1, 1, 1);
+          } else {
+            current = DateTime(current.year, current.month + 1, 1);
+          }
+        }
+        break;
+    }
+
+    return dueDates;
+  }
+
+  /// Check if transaction already exists for this recurring
+  bool _transactionExists(
+    RecurringTransaction recurring,
+    DateTime dueDate,
+    Set<String> existingRecurringTransactions, // Pass the pre-computed set
+  ) {
+    final recurringTransactionIdentifier = '${recurring.id}-${dueDate.year}-${dueDate.month}-${dueDate.day}';
+    return existingRecurringTransactions.contains(recurringTransactionIdentifier);
+  }
+
+  /// Archive old transactions older than 1 year
+  /// This keeps the database performant while maintaining historical data
+  Future<void> archiveOldTransactions() async {
+    try {
+      final now = DateTime.now();
+      final oneYearAgo = DateTime(now.year - 1, now.month, now.day);
+      final transactionBox = Hive.box<LocalTransaction>('transactionBox');
+
+      int archivedCount = 0;
+
+      // Create a copy of keys to avoid concurrent modification
+      final keys = transactionBox.keys.toList();
+
+      for (var key in keys) {
+        final transaction = transactionBox.get(key);
+        if (transaction != null && transaction.date.isBefore(oneYearAgo)) {
+          // Mark as archived instead of deleting for historical data
+          transaction.isHidden = true;
+          await transaction.save();
+          archivedCount++;
+        }
+      }
+
+      if (archivedCount > 0) {
+        _logger.i('Archived $archivedCount old transactions');
+        // Refresh the transaction list
+        _onTransactionsChanged();
+      }
+    } catch (e, st) {
+      _logger.e('Failed to archive old transactions', stackTrace: st);
     }
   }
 

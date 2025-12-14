@@ -7,13 +7,18 @@ import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
+import 'package:koaa/app/core/design_system.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 void showAddRecurringTransactionDialog(BuildContext context, {RecurringTransaction? transaction}) {
-  showModalBottomSheet(
-    context: context,
+  Get.bottomSheet(
+    KoalaBottomSheet(
+      title: transaction != null ? 'Modifier la récurrence' : 'Nouvelle récurrence',
+      icon: CupertinoIcons.repeat,
+      child: _AddRecurringTransactionSheet(transaction: transaction),
+    ),
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => _AddRecurringTransactionSheet(transaction: transaction),
   );
 }
 
@@ -138,7 +143,7 @@ class _AddRecurringTransactionSheetState
       }
 
       if (mounted) {
-        Navigator.pop(context);
+        NavigationHelper.safeBack();
         HapticFeedback.mediumImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -165,7 +170,7 @@ class _AddRecurringTransactionSheetState
         type: _selectedType,
         onSelect: (category) {
           setState(() => _selectedCategory = category);
-          Navigator.pop(context);
+          NavigationHelper.safeBack();
         },
       ),
     );
@@ -177,191 +182,159 @@ class _AddRecurringTransactionSheetState
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isEditing = widget.transaction != null;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        children: [
-          // Handle
-          Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.75, // Explicit height constraint
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            24.w,
+            0,
+            24.w,
+            keyboardHeight + 24.h,
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children:
+                [     
+                      // Type Selector (Income/Expense)
+                      Container(
+                        padding: EdgeInsets.all(4.w),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildTypeOption(
+                              'Dépense', 
+                              TransactionType.expense, 
+                              Colors.orange
+                            ),
+                            _buildTypeOption(
+                              'Revenu', 
+                              TransactionType.income, 
+                              Colors.green
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
 
-          // Header
-          Padding(
-            padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0.h),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    isEditing ? 'Modifier la récurrence' : 'Nouvelle récurrence',
-                    style: theme.textTheme.titleLarge,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.pop(context);
-                  },
-                  child: Icon(
-                    CupertinoIcons.xmark,
-                    color: Colors.grey.shade600,
-                    size: 24.sp,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  24.w,
-                  24.h,
-                  24.w,
-                  keyboardHeight + 24.h,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      [     
-                            // Type Selector (Income/Expense)
-                            Container(
-                              padding: EdgeInsets.all(4.w),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(12.r),
+                      // Amount Field
+                      KoalaTextField(
+                        controller: _amountController,
+                        label: 'Montant',
+                        icon: CupertinoIcons.money_dollar,
+                        keyboardType: TextInputType.number,
+                        isAmount: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Veuillez entrer un montant';
+                          }
+                          final cleanAmount = value.replaceAll(RegExp(r'[^\d]'), '');
+                          final amount = double.tryParse(cleanAmount);
+                          if (amount == null || amount <= 0) {
+                            return 'Le montant doit être supérieur à 0';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 16.h),
+                      
+                      // Category Selector
+                      GestureDetector(
+                        onTap: _showCategoryPicker,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 16.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.brightness == Brightness.dark ? const Color(0xFF2C2C2E) : Colors.white,
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(
+                                color: theme.brightness == Brightness.dark ? Colors.white10 : Colors.grey.shade200
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
-                              child: Row(
-                                children: [
-                                  _buildTypeOption(
-                                    'Dépense', 
-                                    TransactionType.expense, 
-                                    Colors.orange
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                _selectedCategory?.icon ?? '📦',
+                                style: TextStyle(fontSize: 24.sp),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Text(
+                                  _selectedCategory?.displayName ??
+                                      'Sélectionner une catégorie',
+                                  style: TextStyle(
+                                    fontSize: 17.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: _selectedCategory != null
+                                        ? (theme.brightness == Brightness.dark ? Colors.white : Colors.black)
+                                        : Colors.grey.shade500,
                                   ),
-                                  _buildTypeOption(
-                                    'Revenu', 
-                                    TransactionType.income, 
-                                    Colors.green
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 24.h),
-
-                            // Amount Field
-                            _buildTextFormField(
-                              controller: _amountController,
-                              label: 'Montant',
-                              icon: CupertinoIcons.money_dollar,
-                              keyboardType: TextInputType.number,
-                              isAmount: true,
-                              validator: (value) {
-                                if (value == null ||
-                                    value.isEmpty) {
-                                  return 'Veuillez entrer un montant';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16.h),
-                            
-                            // Category Selector
-                            GestureDetector(
-                              onTap: _showCategoryPicker,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16.w,
-                                  vertical: 16.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  border: Border.all(color: Colors.grey.shade200),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      _selectedCategory?.icon ?? '📦',
-                                      style: TextStyle(fontSize: 24.sp),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Expanded(
-                                      child: Text(
-                                        _selectedCategory?.displayName ??
-                                            'Sélectionner une catégorie',
-                                        style: TextStyle(
-                                          fontSize: 17.sp,
-                                          fontWeight: FontWeight.w500,
-                                          color: _selectedCategory != null
-                                              ? Colors.black
-                                              : Colors.grey.shade500,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      CupertinoIcons.chevron_right,
-                                      color: Colors.grey.shade400,
-                                      size: 20.sp,
-                                    ),
-                                  ],
                                 ),
                               ),
-                            ),
-                            SizedBox(height: 16.h),
+                              Icon(
+                                CupertinoIcons.chevron_right,
+                                color: Colors.grey.shade400,
+                                size: 20.sp,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
 
-                            // Description Field
-                            _buildTextFormField(
-                              controller: _descriptionController,
-                              label: 'Description',
-                              icon: CupertinoIcons.text_bubble,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Veuillez entrer une description';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 24.h),
-                            
-                            Text(
-                              'Fréquence',
-                              style: theme.textTheme.titleMedium,
-                            ),
-                            SizedBox(height: 12.h),
-                            _buildFrequencySelector(),
-                            if (_frequency == Frequency.weekly)
-                              _buildWeeklyDaySelector(),
-                            if (_frequency == Frequency.monthly)
-                              _buildMonthlyDaySelector(),
-                            SizedBox(height: 48.h),
-                            _buildSaveButton(isEditing),
-                          ]
-                          .animate(interval: 50.ms)
-                          .slideY(
-                            begin: 0.2,
-                            duration: 300.ms,
-                            curve: Curves.easeOutQuart,
-                          )
-                          .fadeIn(),
-                ),
-              ),
-            ),
+                      // Description Field
+                      KoalaTextField(
+                        controller: _descriptionController,
+                        label: 'Description',
+                        icon: CupertinoIcons.text_bubble,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Veuillez entrer une description';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 24.h),
+                      
+                      Text(
+                        'Fréquence',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildFrequencySelector(),
+                      if (_frequency == Frequency.weekly)
+                        _buildWeeklyDaySelector(),
+                      if (_frequency == Frequency.monthly)
+                        _buildMonthlyDaySelector(),
+                      SizedBox(height: 48.h),
+                      
+                      KoalaButton(
+                        text: isEditing ? 'Modifier' : 'Enregistrer',
+                        onPressed: _loading ? () {} : () async {
+                           setState(() => _buttonPressed = true);
+                           await Future.delayed(const Duration(milliseconds: 100));
+                           setState(() => _buttonPressed = false);
+                           _addTransaction();
+                        },
+                        isLoading: _loading,
+                        backgroundColor: Colors.black,
+                      ),
+                    ], // End of Column children
           ),
-        ],
+        ),
       ),
     );
   }
@@ -401,52 +374,6 @@ class _AddRecurringTransactionSheetState
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTextFormField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    bool isAmount = false,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        validator: validator,
-        style: TextStyle(
-          fontSize: 17.sp,
-          color: Colors.black,
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: InputDecoration(
-          hintText: label,
-          hintStyle: TextStyle(color: Colors.grey.shade500),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 16.h),
-          prefixIcon: Icon(icon, color: Colors.grey.shade500, size: 20.sp),
-          suffixText: isAmount ? 'FCFA' : null,
-        ),
-        onChanged: isAmount ? (value) {
-          final formatted = _formatAmount(value);
-          if (formatted != value) {
-            controller.value = TextEditingValue(
-              text: formatted,
-              selection: TextSelection.collapsed(
-                offset: formatted.length,
-              ),
-            );
-          }
-        } : null,
       ),
     );
   }
@@ -596,63 +523,6 @@ class _AddRecurringTransactionSheetState
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSaveButton(bool isEditing) {
-    return AnimatedScale(
-      scale: _buttonPressed ? 0.95 : 1.0,
-      duration: const Duration(milliseconds: 100),
-      child: AnimatedOpacity(
-        opacity: _loading ? 0.7 : 1.0,
-        duration: const Duration(milliseconds: 200),
-        child: SizedBox(
-          width: double.infinity,
-          height: 56.h,
-          child: CupertinoButton(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(16.r),
-            onPressed: _loading
-                ? null
-                : () async {
-                    setState(() => _buttonPressed = true);
-                    await Future.delayed(const Duration(milliseconds: 100));
-                    setState(() => _buttonPressed = false);
-                    _addTransaction();
-                  },
-            child: _loading
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 20.w,
-                        height: 20.h,
-                        child: const CupertinoActivityIndicator(
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Text(
-                        'Enregistrement...',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ),
-                    ],
-                  )
-                : Text(
-                    isEditing ? 'Modifier' : 'Enregistrer',
-                    style: TextStyle(
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-          ),
         ),
       ),
     );

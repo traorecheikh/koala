@@ -17,41 +17,43 @@ class RecurringTransactionAdapter extends TypeAdapter<RecurringTransaction> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return RecurringTransaction(
-      amount: (fields[0] as num).toDouble(),
-      description: fields[1] as String,
-      frequency: fields[2] as Frequency,
-      daysOfWeek: fields[3] == null
-          ? const []
-          : (fields[3] as List).cast<int>(),
-      dayOfMonth: fields[4] == null ? 1 : (fields[4] as num).toInt(),
-      lastGeneratedDate: fields[5] as DateTime,
-      category: fields[6] as TransactionCategory,
-      type: fields[7] as TransactionType,
-      categoryId: fields[8] as String?,
+      id: fields[0] as String?,
+      amount: (fields[1] as num).toDouble(),
+      description: fields[2] as String,
+      frequency: fields[3] as Frequency,
+      daysOfWeek:
+          fields[4] == null ? const [] : (fields[4] as List).cast<int>(),
+      dayOfMonth: fields[5] == null ? 1 : (fields[5] as num).toInt(),
+      lastGeneratedDate: fields[6] as DateTime,
+      category: fields[7] as TransactionCategory,
+      type: fields[8] as TransactionType,
+      categoryId: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, RecurringTransaction obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
-      ..write(obj.amount)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.description)
+      ..write(obj.amount)
       ..writeByte(2)
-      ..write(obj.frequency)
+      ..write(obj.description)
       ..writeByte(3)
-      ..write(obj.daysOfWeek)
+      ..write(obj.frequency)
       ..writeByte(4)
-      ..write(obj.dayOfMonth)
+      ..write(obj.daysOfWeek)
       ..writeByte(5)
-      ..write(obj.lastGeneratedDate)
+      ..write(obj.dayOfMonth)
       ..writeByte(6)
-      ..write(obj.category)
+      ..write(obj.lastGeneratedDate)
       ..writeByte(7)
-      ..write(obj.type)
+      ..write(obj.category)
       ..writeByte(8)
+      ..write(obj.type)
+      ..writeByte(9)
       ..write(obj.categoryId);
   }
 

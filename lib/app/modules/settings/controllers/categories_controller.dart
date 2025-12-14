@@ -6,14 +6,23 @@ import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:uuid/uuid.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'dart:async'; // Added import for StreamSubscription
 
 class CategoriesController extends GetxController {
   final categories = <Category>[].obs;
+  StreamSubscription? _categoryBoxSubscription; // Store the subscription
 
   @override
   void onInit() {
     super.onInit();
     _initializeCategories();
+  }
+
+  @override
+  void onClose() {
+    _categoryBoxSubscription?.cancel(); // Cancel the subscription
+    super.onClose();
   }
 
   Future<void> _initializeCategories() async {
@@ -28,7 +37,7 @@ class CategoriesController extends GetxController {
     categories.assignAll(box.values.toList());
     
     // Listen to changes
-    box.watch().listen((_) {
+    _categoryBoxSubscription = box.watch().listen((_) {
       categories.assignAll(box.values.toList());
     });
   }
@@ -91,20 +100,50 @@ class CategoriesController extends GetxController {
     required int colorValue,
     required TransactionType type,
   }) async {
-    final box = Hive.box<Category>('categoryBox');
-    final category = Category(
-      id: const Uuid().v4(),
-      name: name,
-      icon: icon,
-      colorValue: colorValue,
-      type: type,
-      isDefault: false,
-    );
-    await box.add(category);
+    try {
+      final box = Hive.box<Category>('categoryBox');
+      final category = Category(
+        id: const Uuid().v4(),
+        name: name,
+        icon: icon,
+        colorValue: colorValue,
+        type: type,
+        isDefault: false,
+      );
+      await box.add(category);
+      Get.snackbar(
+        'Succès',
+        'Catégorie ajoutée avec succès',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Erreur',
+        'Impossible d\'ajouter la catégorie: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   Future<void> updateCategory(Category category) async {
-    await category.save();
+    try {
+      await category.save();
+      Get.snackbar(
+        'Succès',
+        'Catégorie mise à jour avec succès',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Erreur',
+        'Impossible de mettre à jour la catégorie: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   Future<void> deleteCategory(Category category) async {
@@ -117,7 +156,22 @@ class CategoriesController extends GetxController {
       );
       return;
     }
-    await category.delete();
+    try {
+      await category.delete();
+      Get.snackbar(
+        'Succès',
+        'Catégorie supprimée avec succès',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Erreur',
+        'Impossible de supprimer la catégorie: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   void showAddCategoryDialog(BuildContext context) {
@@ -172,7 +226,7 @@ class CategoriesController extends GetxController {
                       colorValue: selectedColor.value,
                       type: selectedType,
                     );
-                    Get.back();
+                    NavigationHelper.safeBack();
                   }
                 },
               ),

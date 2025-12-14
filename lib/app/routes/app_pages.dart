@@ -13,6 +13,8 @@ import 'package:koaa/app/modules/debt/bindings/debt_binding.dart';
 import 'package:koaa/app/modules/debt/views/debt_view.dart';
 import 'package:koaa/app/modules/simulator/bindings/simulator_binding.dart';
 import 'package:koaa/app/modules/simulator/views/simulator_view.dart';
+import 'package:koaa/app/modules/goals/views/goals_view.dart';
+import 'package:koaa/app/modules/goals/bindings/goals_binding.dart';
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -36,7 +38,7 @@ class AppPages {
     GetPage(
       name: _Paths.settings,
       page: () => const SettingsView(),
-      binding: SettingsBinding(),
+      // binding: SettingsBinding(), // SettingsController is now global
       transition: Transition.cupertino,
     ),
     GetPage(
@@ -84,6 +86,12 @@ class AppPages {
       name: _Paths.simulator,
       page: () => const SimulatorView(),
       binding: SimulatorBinding(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: _Paths.goals,
+      page: () => const GoalsView(),
+      binding: GoalsBinding(),
       transition: Transition.cupertino,
     ),
   ];

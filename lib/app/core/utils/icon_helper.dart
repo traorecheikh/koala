@@ -11,6 +11,8 @@ class IconHelper {
     'subscriptions', 'tech', 'transport', 'travel', 'utilities', 'gift',
   };
 
+  static List<String> get allKeys => supportedPngs.toList();
+
   static bool isEmoji(String text) {
     final RegExp regex = RegExp(
         r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])');
@@ -21,6 +23,32 @@ class IconHelper {
   // We keep a minimal fallback just in case.
   static IconData getFallbackIcon(String key) {
     return CupertinoIcons.square_grid_2x2;
+  }
+
+  static const List<IconData> goalIcons = [
+    Icons.star,
+    Icons.home,
+    Icons.directions_car,
+    Icons.flight,
+    Icons.school,
+    Icons.computer,
+    Icons.fitness_center,
+    Icons.medical_services,
+    Icons.pets,
+    Icons.shopping_bag,
+    Icons.savings,
+    Icons.attach_money,
+    Icons.trending_up,
+    Icons.build,
+    Icons.celebration,
+  ];
+
+  /// Get icon by index safely with fallback
+  static IconData getGoalIconByIndex(int? index) {
+    if (index == null || index < 0 || index >= goalIcons.length) {
+      return Icons.star; // Default to first icon
+    }
+    return goalIcons[index];
   }
 }
 

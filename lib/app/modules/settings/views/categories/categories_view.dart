@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/modules/settings/widgets/category_tile.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class CategoriesView extends GetView<CategoriesController> {
   const CategoriesView({super.key});
@@ -21,7 +22,7 @@ class CategoriesView extends GetView<CategoriesController> {
             CupertinoIcons.back,
             color: theme.textTheme.bodyLarge?.color,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => NavigationHelper.safeBack(),
         ),
         title: Text(
           'Catégories',

@@ -2,6 +2,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/ml/financial_pattern.dart';
 import 'package:koaa/app/data/models/ml/ml_model_state.dart';
 import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
+import 'package:koaa/app/services/encryption_service.dart'; // Import encryption service
 
 class MLModelStore {
   static const String _modelStateBoxName = 'ml_model_states';
@@ -12,10 +13,10 @@ class MLModelStore {
   Box<UserFinancialProfile>? _userProfileBox;
   Box<FinancialPattern>? _patternsBox;
 
-  Future<void> init() async {
-    _modelStateBox = await Hive.openBox<MLModelState>(_modelStateBoxName);
-    _userProfileBox = await Hive.openBox<UserFinancialProfile>(_userProfileBoxName);
-    _patternsBox = await Hive.openBox<FinancialPattern>(_patternsBoxName);
+  Future<void> init(HiveAesCipher? cipher) async {
+    _modelStateBox = await Hive.openBox<MLModelState>(_modelStateBoxName, encryptionCipher: cipher);
+    _userProfileBox = await Hive.openBox<UserFinancialProfile>(_userProfileBoxName, encryptionCipher: cipher);
+    _patternsBox = await Hive.openBox<FinancialPattern>(_patternsBoxName, encryptionCipher: cipher);
   }
 
   // --- Model State ---
@@ -53,5 +54,11 @@ class MLModelStore {
 
   Future<void> clearPatterns() async {
     await _patternsBox?.clear();
+  }
+
+  Future<void> close() async {
+    await _modelStateBox?.close();
+    await _userProfileBox?.close();
+    await _patternsBox?.close();
   }
 }

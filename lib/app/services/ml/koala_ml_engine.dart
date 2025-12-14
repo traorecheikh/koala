@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/services/financial_context_service.dart'; // New import
 import 'package:koaa/app/services/ml/feature_extractor.dart';
 import 'package:koaa/app/services/ml/model_store.dart';
 import 'package:koaa/app/services/ml/models/anomaly_detector.dart';
@@ -14,6 +15,9 @@ import 'package:koaa/app/services/ml/models/budget_suggester.dart';
 import 'package:koaa/app/services/ml/models/pattern_recognizer.dart';
 import 'package:koaa/app/services/ml/models/simulator_engine.dart';
 import 'package:koaa/app/services/ml/models/time_series_engine.dart';
+import 'package:hive_ce/hive.dart'; // Import Hive to access HiveAesCipher
+import 'package:flutter/foundation.dart';
+import 'background_ml_worker.dart';
 
 class KoalaMLEngine extends GetxService {
   final FeatureExtractor featureExtractor = FeatureExtractor();
@@ -29,6 +33,8 @@ class KoalaMLEngine extends GetxService {
   late final GoalOptimizer goalOptimizer;
   late final SimulatorEngine simulatorEngine;
   late final BudgetSuggester budgetSuggester;
+  
+  late final FinancialContextService _financialContextService; // Injected
 
   // Cached state
   UserFinancialProfile? _currentUserProfile;
@@ -36,8 +42,17 @@ class KoalaMLEngine extends GetxService {
   ForecastResult? _currentForecast;
   FinancialHealthScore? _currentHealth;
 
-  Future<KoalaMLEngine> init() async {
-    await modelStore.init();
+  @override
+  void onClose() {
+    modelStore.close(); // Close the Hive boxes managed by MLModelStore
+    super.onClose();
+  }
+
+  Future<KoalaMLEngine> init(HiveAesCipher? cipher) async {
+    await modelStore.init(cipher); // Pass the cipher here
+    
+    // Inject FinancialContextService (assumed to be initialized before MLEngine)
+    _financialContextService = Get.find<FinancialContextService>();
 
     categoryClassifier = CategoryClassifier(featureExtractor, modelStore);
     anomalyDetector = AnomalyDetector(featureExtractor);
@@ -47,7 +62,7 @@ class KoalaMLEngine extends GetxService {
     healthScorer = FinancialHealthScorer();
     insightGenerator = InsightGenerator(behaviorProfiler);
     goalOptimizer = GoalOptimizer(timeSeriesEngine);
-    simulatorEngine = SimulatorEngine(timeSeriesEngine);
+    simulatorEngine = SimulatorEngine(timeSeriesEngine, _financialContextService);
     budgetSuggester = BudgetSuggester();
 
     _currentUserProfile = modelStore.getUserProfile();
@@ -59,37 +74,64 @@ class KoalaMLEngine extends GetxService {
   Future<void> runFullAnalysis(List<LocalTransaction> allTransactions, List<SavingsGoal> goals) async {
     if (allTransactions.isEmpty) return;
 
-    // 1. Train models if needed
-    // In real app, this might be debounced or done in isolate
-    await categoryClassifier.train(allTransactions);
-    await timeSeriesEngine.train(allTransactions);
+    // Serialize transactions for background compute
+    final serialized = allTransactions.map((t) => {
+      'id': t.id,
+      'amount': t.amount,
+      'type': t.type.toString(),
+      'date': t.date.toIso8601String(),
+    }).toList();
 
-    // 2. Profile User
-    final profile = behaviorProfiler.createProfile(allTransactions);
-    await modelStore.saveUserProfile(profile);
-    _currentUserProfile = profile;
+    // Run lightweight analysis in background isolate to avoid UI jank
+    try {
+      final result = await compute<Map<String, dynamic>, Map<String, dynamic>>(
+        analyzeTransactions,
+        {
+          'transactions': serialized,
+          'currentBalance': _financialContextService.currentBalance.value,
+        },
+      );
 
-    // 3. Detect Patterns
-    final patterns = patternRecognizer.detectPatterns(allTransactions);
-    for (final p in patterns) {
-      await modelStore.savePattern(p);
+      // Apply returned summary to internal state (on main isolate)
+      _currentForecast = ForecastResult(result['predictedEndBalance'] as double);
+      _currentHealth = FinancialHealthScore(score: result['healthScore'] as int);
+
+      // Kick off heavier model training asynchronously on main isolate but non-blocking
+      unawaited(Future(() async {
+        try {
+          await categoryClassifier.train(allTransactions);
+          await timeSeriesEngine.train(allTransactions);
+
+          final profile = behaviorProfiler.createProfile(allTransactions);
+          await modelStore.saveUserProfile(profile);
+          _currentUserProfile = profile;
+
+          final patterns = patternRecognizer.detectPatterns(allTransactions);
+          for (final p in patterns) {
+            await modelStore.savePattern(p);
+          }
+        } catch (e) {
+          // Log and continue; heavy work may fail silently
+        }
+      }()));
+    } catch (e) {
+      // Fallback to previous synchronous path if compute fails
+      await categoryClassifier.train(allTransactions);
+      await timeSeriesEngine.train(allTransactions);
+
+      final profile = behaviorProfiler.createProfile(allTransactions);
+      await modelStore.saveUserProfile(profile);
+      _currentUserProfile = profile;
+
+      final patterns = patternRecognizer.detectPatterns(allTransactions);
+      for (final p in patterns) {
+        await modelStore.savePattern(p);
+      }
+
+      _currentHealth = FinancialHealthScore(score: 100);
+      double currentBalance = _financialContextService.currentBalance.value;
+      _currentForecast = timeSeriesEngine.predict(currentBalance, 30);
     }
-
-    // 4. Calculate Health
-    _currentHealth = healthScorer.calculateScore(
-      transactions: allTransactions,
-      profile: profile,
-      goals: goals,
-    );
-
-    // 5. Forecast
-    // Assume current balance is sum of all (simplified)
-    double currentBalance = 0; 
-    for(var t in allTransactions) {
-       if (t.type == TransactionType.income) currentBalance += t.amount;
-       else currentBalance -= t.amount;
-    }
-    _currentForecast = timeSeriesEngine.predict(currentBalance, 30);
   }
 
   /// Process a new transaction (real-time)
@@ -119,6 +161,7 @@ class KoalaMLEngine extends GetxService {
       anomalies: _recentAnomalies,
       forecast: _currentForecast,
       health: _currentHealth!,
+      context: _financialContextService,
     );
   }
 

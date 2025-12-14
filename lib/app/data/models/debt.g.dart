@@ -17,23 +17,23 @@ class DebtAdapter extends TypeAdapter<Debt> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Debt(
-      id: fields[0] as String,
+      id: fields[0] as String?,
       personName: fields[1] as String,
       originalAmount: (fields[2] as num).toDouble(),
-      remainingAmount: (fields[3] as num).toDouble(),
+      remainingAmount: (fields[3] as num?)?.toDouble(),
       type: fields[4] as DebtType,
       dueDate: fields[5] as DateTime?,
-      createdAt: fields[6] as DateTime,
-      transactionIds: fields[7] == null
-          ? const []
-          : (fields[7] as List).cast<String>(),
+      createdAt: fields[6] as DateTime?,
+      transactionIds:
+          fields[7] == null ? const [] : (fields[7] as List).cast<String>(),
+      minPayment: fields[8] == null ? 0.0 : (fields[8] as num).toDouble(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Debt obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -49,7 +49,9 @@ class DebtAdapter extends TypeAdapter<Debt> {
       ..writeByte(6)
       ..write(obj.createdAt)
       ..writeByte(7)
-      ..write(obj.transactionIds);
+      ..write(obj.transactionIds)
+      ..writeByte(8)
+      ..write(obj.minPayment);
   }
 
   @override

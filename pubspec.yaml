@@ -2,10 +2,10 @@ name: koaa
 description: "A new Flutter project."
 
 
-version: 1.0.3
+version: 1.0.4
 
 environment:
-  sdk: ^3.9.2
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -21,12 +21,13 @@ dependencies:
   countup: ^0.1.4
   intl: ^0.20.2
   flutter_animate: ^4.5.2
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^10.0.0
   json_annotation: ^4.9.0
   hive_ce: ^2.14.0
   mobile_scanner: ^7.1.2
   encrypt: ^5.0.3
-  pinput: ^5.0.2
+  crypto: ^3.0.6
+  pinput: ^6.0.1
   intl_phone_number_input: ^0.7.5
   confetti: ^0.8.0
   vibration: ^3.1.4
@@ -42,11 +43,15 @@ dependencies:
   pretty_dio_logger: ^1.4.0
   dio_cache_interceptor: ^4.0.5
   flutter_app_info: ^3.0.3
+  package_info_plus: ^8.1.4
   uuid: ^4.5.1
   ml_dataframe: ^1.6.0
   lottie: ^3.3.2
   flutter_local_notifications: ^19.5.0
   workmanager: ^0.9.0+3
+  open_file: ^3.3.2
+  restart_app: ^1.2.1
+  shorebird_code_push: ^2.0.0
 
 
 dev_dependencies:
@@ -57,9 +62,12 @@ dev_dependencies:
   json_serializable: ^6.11.1
   hive_ce_generator: ^1.9.5
   flutter_launcher_icons: "^0.14.4"
+  mocktail: ^1.0.0
+  mockito: ^5.4.0
 
 flutter:
   uses-material-design: true
   assets:
     - assets/icons/
     - assets/
+    - shorebird.yaml

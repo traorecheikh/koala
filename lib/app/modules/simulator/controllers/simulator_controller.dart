@@ -3,47 +3,69 @@ import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
+import 'package:koaa/app/services/financial_context_service.dart'; // New Import
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/simulator_engine.dart';
 
 class SimulatorController extends GetxController {
   final amountController = TextEditingController();
-  final result = Rxn<SimulationResult>();
+  final result = Rxn<SimulationReport>();
   final isLoading = false.obs;
+  final selectedScenario = SimulationScenario().obs; // Default scenario
+  final isAmountValid = false.obs;
+
+  late FinancialContextService _financialContextService; // Injected
+
+  @override
+  void onInit() {
+    super.onInit();
+    _financialContextService = Get.find<FinancialContextService>();
+    amountController.addListener(() {
+      isAmountValid.value = amountController.text.isNotEmpty;
+    });
+  }
+
+  @override
+  void onClose() {
+    amountController.dispose();
+    super.onClose();
+  }
+
+  void setSelectedScenario(SimulationScenario scenario) {
+    selectedScenario.value = scenario;
+  }
 
   void simulate() async {
     final amount = double.tryParse(amountController.text);
-    if (amount == null || amount <= 0) return;
+    if (amount == null || amount <= 0) {
+      Get.snackbar('Erreur', 'Veuillez entrer un montant valide pour la simulation.');
+      return;
+    }
 
     isLoading.value = true;
-    
-    // Simulate network/calc delay for effect
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 500)); // Small delay for UX
 
     try {
       final engine = Get.find<KoalaMLEngine>();
-      final txBox = Hive.box<LocalTransaction>('transactionBox');
-      final recurringBox = Hive.box<RecurringTransaction>('recurringTransactionBox');
       
-      // Calculate current balance (simplified)
-      double balance = 0;
-      for (var t in txBox.values) {
-        if (!t.isHidden) {
-          if (t.type == TransactionType.income) balance += t.amount;
-          else balance -= t.amount;
-        }
-      }
-
-      final simulation = engine.simulatorEngine.simulatePurchase(
-        currentBalance: balance,
+      // Create a scenario based on the purchase amount
+      final scenario = selectedScenario.value.copyWith(
         purchaseAmount: amount,
-        recurringBills: recurringBox.values.toList(),
-        recentHistory: txBox.values.toList(),
+        // Other scenario parameters can be added here from UI inputs
+        // For example:
+        // delayDuration: Duration(days: 30),
+        // debtIdToAdjust: 'someDebtId',
+        // extraDebtPayment: 100.0,
       );
 
-      result.value = simulation;
+      final simulationReport = engine.simulatorEngine.simulateWithContext(
+        daysToSimulate: 90, // Simulate for 90 days as per plan
+        scenario: scenario,
+      );
+
+      result.value = simulationReport;
     } catch (e) {
-      Get.snackbar('Erreur', 'Impossible de lancer la simulation');
+      Get.snackbar('Erreur', 'Impossible de lancer la simulation: $e');
     } finally {
       isLoading.value = false;
     }

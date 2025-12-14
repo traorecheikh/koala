@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/modules/simulator/controllers/simulator_controller.dart';
 import 'package:koaa/app/services/ml/models/simulator_engine.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class SimulatorView extends GetView<SimulatorController> {
   const SimulatorView({super.key});
@@ -23,7 +24,7 @@ class SimulatorView extends GetView<SimulatorController> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(CupertinoIcons.back, color: theme.iconTheme.color),
-          onPressed: () => Get.back(),
+          onPressed: () => NavigationHelper.safeBack(),
         ),
         title: Text(
           'Simulateur',
@@ -55,30 +56,36 @@ class SimulatorView extends GetView<SimulatorController> {
               SizedBox(height: 40.h),
               
               // Action Button
-              SizedBox(
-                width: double.infinity,
-                height: 56.h,
-                child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    controller.simulate();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
+              Obx(() {
+                final isValid = controller.isAmountValid.value;
+
+                return SizedBox(
+                  width: double.infinity,
+                  height: 56.h,
+                  child: ElevatedButton(
+                    onPressed: isValid && !controller.isLoading.value
+                        ? () {
+                            HapticFeedback.mediumImpact();
+                            controller.simulate();
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isValid ? theme.primaryColor : Colors.grey.shade400,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
                     ),
+                    child: controller.isLoading.value
+                        ? const CupertinoActivityIndicator(color: Colors.white)
+                        : Text(
+                            'Analyser l\'impact',
+                            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                          ),
                   ),
-                  child: Obx(() => controller.isLoading.value
-                      ? const CupertinoActivityIndicator(color: Colors.white)
-                      : Text(
-                          'Analyser l\'impact',
-                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                        )),
-                ),
-              ),
+                );
+              }),
 
               SizedBox(height: 40.h),
 
@@ -137,16 +144,20 @@ class _AmountInput extends StatelessWidget {
 }
 
 class _SimulationResultView extends StatelessWidget {
-  final SimulationResult result;
+  final SimulationReport result;
 
   const _SimulationResultView({required this.result});
+
+  String _formatAmount(double amount) {
+    return NumberFormat('#,###', 'fr_FR').format(amount.round());
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isSafe = result.isSafe;
-    final color = isSafe ? Colors.green : Colors.red;
+    final isSolvent = result.isSolvent;
+    final color = isSolvent ? Colors.green : Colors.red;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +179,7 @@ class _SimulationResultView extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isSafe ? CupertinoIcons.checkmark_alt : CupertinoIcons.exclamationmark,
+                  isSolvent ? CupertinoIcons.checkmark_alt : CupertinoIcons.exclamationmark,
                   color: color,
                   size: 24.sp,
                 ),
@@ -179,7 +190,7 @@ class _SimulationResultView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isSafe ? 'Achat Sécurisé' : 'Risque Financier',
+                      isSolvent ? 'Simulation Positive' : 'Risque Financier',
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
@@ -188,7 +199,7 @@ class _SimulationResultView extends StatelessWidget {
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      result.explanation.mainImpact,
+                      result.summary,
                       style: TextStyle(
                         fontSize: 13.sp,
                         color: isDark ? Colors.white70 : Colors.black87,
@@ -204,7 +215,7 @@ class _SimulationResultView extends StatelessWidget {
         SizedBox(height: 24.h),
 
         Text(
-          'Analyse Détaillée',
+          'Aperçu de la simulation',
           style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ).animate().fadeIn(delay: 100.ms),
         
@@ -215,9 +226,9 @@ class _SimulationResultView extends StatelessWidget {
           children: [
             Expanded(
               child: _MetricCard(
-                label: 'Solde min. prévu',
-                value: NumberFormat.compact().format(result.lowestBalance),
-                icon: CupertinoIcons.graph_square_fill,
+                label: 'Solde Initial',
+                value: 'FCFA ${_formatAmount(result.initialBalance)}',
+                icon: CupertinoIcons.money_dollar_circle_fill,
                 color: Colors.blue,
                 delay: 200,
               ),
@@ -225,47 +236,152 @@ class _SimulationResultView extends StatelessWidget {
             SizedBox(width: 12.w),
             Expanded(
               child: _MetricCard(
-                label: 'Dépenses / jour',
-                value: NumberFormat.compact().format(result.dailyBurnRate),
-                icon: CupertinoIcons.flame_fill,
-                color: Colors.orange,
+                label: 'Solde Final',
+                value: 'FCFA ${_formatAmount(result.finalBalance)}',
+                icon: CupertinoIcons.graph_square_fill,
+                color: Colors.purple,
                 delay: 300,
               ),
             ),
           ],
         ),
-        
-        if (result.upcomingBills.isNotEmpty) ...[
-          SizedBox(height: 12.h),
-          _MetricCard(
-            label: 'Factures à venir (30j)',
-            value: '${result.upcomingBills.length} factures',
-            icon: CupertinoIcons.calendar_today,
-            color: Colors.purple,
-            delay: 400,
-            fullWidth: true,
-          ),
+        SizedBox(height: 12.h),
+        Row(
+          children: [
+            Expanded(
+              child: _MetricCard(
+                label: 'Solde Min. Atteint',
+                value: 'FCFA ${_formatAmount(result.lowestBalance)}',
+                icon: CupertinoIcons.arrow_down_circle_fill, // Fixed icon
+                color: isSolvent ? Colors.green : Colors.red,
+                delay: 400,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: _MetricCard(
+                label: '1ère Date Négative',
+                value: result.firstNegativeBalanceDate != null
+                    ? DateFormat('dd MMM yyyy').format(result.firstNegativeBalanceDate!)
+                    : 'N/A',
+                icon: CupertinoIcons.calendar_badge_minus,
+                color: Colors.redAccent,
+                delay: 500,
+              ),
+            ),
+          ],
+        ),
+
+        if (result.cashFlowTimeline.isNotEmpty) ...[
+          SizedBox(height: 24.h),
+          Text(
+            'Événements Clés',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ).animate().fadeIn(delay: 600.ms),
+          SizedBox(height: 16.h),
+          _CashFlowTimelineWidget(timeline: result.cashFlowTimeline),
         ],
 
-        SizedBox(height: 24.h),
-
-        // Explanation Text
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Text(
-            result.explanation.details,
+        if (result.budgetImpact.isNotEmpty || result.goalProgressImpact.isNotEmpty) ...[
+          SizedBox(height: 24.h),
+          Text(
+            'Impacts Détaillés',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ).animate().fadeIn(delay: 700.ms),
+          SizedBox(height: 16.h),
+          // TODO: Implement dedicated widgets for budget and goal impacts
+          Text(
+            'Impact sur les budgets et objectifs (à implémenter)',
             style: TextStyle(
               fontSize: 14.sp,
-              height: 1.5,
               color: isDark ? Colors.white70 : Colors.grey.shade700,
             ),
           ),
-        ).animate().fadeIn(delay: 500.ms),
+        ],
+        SizedBox(height: 40.h),
       ],
+    );
+  }
+}
+
+class _CashFlowTimelineWidget extends StatelessWidget {
+  final List<CashFlowEvent> timeline;
+
+  const _CashFlowTimelineWidget({required this.timeline});
+
+  String _formatAmount(double amount) {
+    return NumberFormat('#,###', 'fr_FR').format(amount.round());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100,
+        ),
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: timeline.length,
+        itemBuilder: (context, index) {
+          final event = timeline[index];
+          return Padding(
+            padding: EdgeInsets.only(bottom: 8.h),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('dd MMM').format(event.date),
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Text(
+                        event.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  '${event.amount > 0 ? '+' : '-'} FCFA ${_formatAmount(event.amount.abs())}',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: event.amount > 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

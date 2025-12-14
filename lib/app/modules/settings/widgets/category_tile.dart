@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class CategoryTile extends StatelessWidget {
   final Category category;
@@ -46,14 +47,14 @@ class CategoryTile extends StatelessWidget {
         actions: [
           CupertinoDialogAction(
             child: const Text('Annuler'),
-            onPressed: () => Get.back(),
+            onPressed: () => NavigationHelper.safeBack(),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
             child: const Text('Supprimer'),
             onPressed: () {
               controller.deleteCategory(category);
-              Get.back();
+              NavigationHelper.safeBack();
             },
           ),
         ],

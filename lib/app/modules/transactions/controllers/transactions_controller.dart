@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:hive_ce/hive.dart';
+import 'dart:async'; // Added import for StreamSubscription
 
 enum FilterType { all, income, expense }
 enum SortOption { dateNewest, dateOldest, amountHighest, amountLowest, description }
@@ -20,6 +21,8 @@ class TransactionsController extends GetxController {
   final currentSort = SortOption.dateNewest.obs;
   final dateRange = Rxn<DateTimeRange>();
 
+  StreamSubscription? _transactionBoxSubscription; // Store the subscription
+
   @override
   void onInit() {
     super.onInit();
@@ -29,15 +32,16 @@ class TransactionsController extends GetxController {
     searchController.addListener(_filterAndSort);
     scrollController.addListener(_onScroll);
     
-    // Watch Hive box for changes
+    // Watch Hive box for changes and store the subscription
     final box = Hive.box<LocalTransaction>('transactionBox');
-    box.watch().listen((_) => _loadTransactions());
+    _transactionBoxSubscription = box.watch().listen((_) => _loadTransactions());
   }
 
   @override
   void onClose() {
     searchController.dispose();
     scrollController.dispose();
+    _transactionBoxSubscription?.cancel(); // Cancel the subscription
     super.onClose();
   }
 

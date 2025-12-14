@@ -65,6 +65,17 @@ class PatternRecognizer {
               'avgDay': group.first.date.day.toString(),
             },
           ));
+        } else if ((avgInterval - 7).abs() < 2) {
+           patterns.add(FinancialPattern(
+            patternType: PatternType.recurringExpense.name,
+            description: 'Paiement hebdomadaire probable: ${group.first.description}',
+            confidence: 0.7,
+            parameters: {
+              'amount': group.first.amount.toString(),
+              'interval': 'weekly',
+              'avgDay': group.first.date.weekday.toString(), // Store weekday (1-7)
+            },
+          ));
         }
       }
     });

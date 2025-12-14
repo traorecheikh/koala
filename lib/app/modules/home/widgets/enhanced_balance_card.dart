@@ -405,6 +405,9 @@ class _MiniChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return Container(height: 40.h);
+    }
     final maxValue = data.reduce(math.max);
 
     return Container(

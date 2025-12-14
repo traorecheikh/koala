@@ -7,8 +7,10 @@ import 'package:intl/intl.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/category.dart';
-import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/budget/controllers/budget_controller.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/data/models/local_transaction.dart'; // Added for TransactionType
+import 'package:koaa/app/routes/app_pages.dart'; // Added for Routes
 
 class BudgetView extends GetView<BudgetController> {
   const BudgetView({super.key});
@@ -35,22 +37,27 @@ class BudgetView extends GetView<BudgetController> {
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               sliver: SliverToBoxAdapter(
                 child: Obx(() {
-                  if (controller.budgets.isEmpty) return const SizedBox.shrink();
-                  
+                  // FIX: Create immutable snapshot to prevent concurrent modification
+                  final budgetsList = controller.budgets.toList();
+                  if (budgetsList.isEmpty) return const SizedBox.shrink();
+
                   double totalBudget = 0;
                   double totalSpent = 0;
-                  for (var b in controller.budgets) {
+                  // Iterate over snapshot, not reactive list
+                  for (var b in budgetsList) {
                     totalBudget += b.amount;
                     totalSpent += controller.getSpentAmount(b.categoryId);
                   }
-                  
+
                   return _GlobalBudgetCard(totalBudget: totalBudget, totalSpent: totalSpent);
                 }),
               ),
             ),
 
             Obx(() {
-              if (controller.budgets.isEmpty) {
+              // FIX: Create immutable snapshot to prevent concurrent modification
+              final budgetsList = controller.budgets.toList();
+              if (budgetsList.isEmpty) {
                 return SliverFillRemaining(
                   child: Center(
                     child: Column(
@@ -77,11 +84,12 @@ class BudgetView extends GetView<BudgetController> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final budget = controller.budgets[index];
+                      // Use snapshot instead of reactive list
+                      final budget = budgetsList[index];
                       final category = controller.getCategory(budget.categoryId);
                       return _BudgetCard(budget: budget, category: category);
                     },
-                    childCount: controller.budgets.length,
+                    childCount: budgetsList.length,
                   ),
                 ),
               );
@@ -224,7 +232,7 @@ class BudgetView extends GetView<BudgetController> {
                         selectedCategory.value!.id,
                         double.parse(amountController.text),
                       );
-                      Get.back();
+                      NavigationHelper.safeBack();
                     }
                   },
                   child: const Text('Sauvegarder'),
@@ -243,22 +251,47 @@ class _GlobalBudgetCard extends StatelessWidget {
   final double totalBudget;
   final double totalSpent;
 
-  const _GlobalBudgetCard({required this.totalBudget, required this.totalSpent});
+  const _GlobalBudgetCard({
+    required this.totalBudget,
+    required this.totalSpent,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final percent = (totalSpent / (totalBudget > 0 ? totalBudget : 1)).clamp(0.0, 1.0);
+
+    // Logic using passed parameters - handle zero budget specially
+    final percent = totalBudget > 0 ? (totalSpent / totalBudget).clamp(0.0, 1.0) : 0.0;
     final remaining = totalBudget - totalSpent;
+
+    Color gradientStartColor = isDark ? const Color(0xFF1A1B1E) : const Color(0xFF6C5CE7);
+    Color gradientEndColor = isDark ? const Color(0xFF2C3E50) : const Color(0xFFA29BFE);
+    Color progressColor = Colors.white;
+    String statusMessage = totalBudget == 0 ? 'Aucun budget' : 'Budget mensuel';
+
+    if (totalBudget == 0) {
+      // No budget set - neutral state
+      gradientStartColor = isDark ? const Color(0xFF1A1B1E) : Colors.grey.shade600;
+      gradientEndColor = isDark ? const Color(0xFF2C3E50) : Colors.grey.shade400;
+      progressColor = Colors.grey;
+    } else if (percent >= 1.0) {
+      gradientStartColor = Colors.red.shade700;
+      gradientEndColor = Colors.red.shade400;
+      progressColor = Colors.redAccent;
+      statusMessage = 'Dépassement Budgétaire';
+    } else if (percent >= 0.8) {
+      gradientStartColor = Colors.orange.shade700;
+      gradientEndColor = Colors.orange.shade400;
+      progressColor = Colors.orangeAccent;
+      statusMessage = 'Proche de la limite';
+    }
 
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDark 
-              ? [const Color(0xFF1A1B1E), const Color(0xFF2C3E50)] 
-              : [const Color(0xFF6C5CE7), const Color(0xFFA29BFE)],
+          colors: [gradientStartColor, gradientEndColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -287,7 +320,7 @@ class _GlobalBudgetCard extends StatelessWidget {
                       strokeWidth: 8.w,
                       backgroundColor: Colors.white24,
                       valueColor: AlwaysStoppedAnimation(
-                        percent > 1.0 ? Colors.redAccent : Colors.white,
+                        progressColor,
                       ),
                       strokeCap: StrokeCap.round,
                     ),
@@ -312,12 +345,12 @@ class _GlobalBudgetCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Budget Global',
+                  statusMessage,
                   style: TextStyle(color: Colors.white70, fontSize: 14.sp),
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  remaining >= 0 
+                  remaining >= 0
                       ? 'Reste: ${NumberFormat.compact().format(remaining)} F'
                       : 'Dépassement: ${NumberFormat.compact().format(remaining.abs())} F',
                   style: TextStyle(
@@ -354,8 +387,8 @@ class _Header extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: Icon(CupertinoIcons.back, size: 28, color: theme.textTheme.bodyLarge?.color),
-            onPressed: () => Get.back(),
+            icon: Icon(CupertinoIcons.back, size: 28, color: theme.iconTheme.color),
+            onPressed: () => NavigationHelper.safeBack(),
             padding: EdgeInsets.zero,
           ).animate().fadeIn().slideX(begin: -0.1),
           Text(
@@ -382,30 +415,65 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _BudgetCard extends StatelessWidget { // Changed to StatelessWidget
+class _BudgetCard extends StatelessWidget {
   final Budget budget;
-  final Category? category; // Pass category directly
+  final Category? category;
 
   const _BudgetCard({required this.budget, this.category});
+
+  String _formatAmount(double amount) {
+    return NumberFormat('#,###', 'fr_FR').format(amount.round());
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
-    // final category = controller.getCategory(budget.categoryId); // No longer needed
-    final spent = Get.find<BudgetController>().getSpentAmount(budget.categoryId); // Access controller method
-    final percent = (spent / budget.amount).clamp(0.0, 1.0);
+    final budgetController = Get.find<BudgetController>();
+
+    final spent = budgetController.getSpentAmount(budget.categoryId);
+    // FIX: Handle division by zero - if budget is 0, percent should be 0
+    final percent = budget.amount > 0 ? (spent / budget.amount).clamp(0.0, 1.0) : 0.0;
     final remaining = budget.amount - spent;
 
-    // Logic: Status Colors
+    // Get budget status and trend with null safety
+    final budgetStatus = budgetController.getBudgetStatus(budget.categoryId, budget.year, budget.month);
+    final budgetTrend = budgetController.getBudgetTrend(budget.categoryId);
+
     Color statusColor;
-    if (percent >= 1.0) {
-      statusColor = Colors.red;
-    } else if (percent > 0.8) {
-      statusColor = Colors.orange;
-    } else {
-      statusColor = Colors.green;
+    String statusText;
+    switch (budgetStatus) {
+      case BudgetStatus.safe:
+        statusColor = Colors.green;
+        statusText = 'En sécurité';
+        break;
+      case BudgetStatus.warning:
+        statusColor = Colors.orange;
+        statusText = 'Attention';
+        break;
+      case BudgetStatus.exceeded:
+      case BudgetStatus.critical: // Assuming critical is similar to exceeded for display
+        statusColor = Colors.red;
+        statusText = 'Dépassement';
+        break;
+    }
+
+    String trendText;
+    IconData trendIcon;
+    switch (budgetTrend) {
+      case Trend.improving:
+        trendText = 'Amélioration';
+        trendIcon = CupertinoIcons.arrow_up;
+        break;
+      case Trend.worsening:
+        trendText = 'Détérioration';
+        trendIcon = CupertinoIcons.arrow_down;
+        break;
+      case Trend.stable:
+      default:
+        trendText = 'Stable';
+        trendIcon = CupertinoIcons.minus;
+        break;
     }
 
     final categoryColor = Color(category?.colorValue ?? Colors.grey.value);
@@ -464,13 +532,27 @@ class _BudgetCard extends StatelessWidget { // Changed to StatelessWidget
                             ),
                           ),
                           SizedBox(height: 4.h),
-                          Text(
-                            '${(percent * 100).toStringAsFixed(0)}% utilisé',
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13.sp,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                statusText,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.sp,
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Icon(trendIcon, size: 13.sp, color: statusColor),
+                              Text(
+                                trendText,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.sp,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -480,8 +562,8 @@ class _BudgetCard extends StatelessWidget { // Changed to StatelessWidget
                       children: [
                         Text(
                           remaining >= 0
-                              ? 'Reste: ${NumberFormat.compact().format(remaining)} F'
-                              : 'Dépassement',
+                              ? 'Reste: ${_formatAmount(remaining)} F'
+                              : 'Dépassement: ${_formatAmount(remaining.abs())} F',
                           style: TextStyle(
                             color: statusColor,
                             fontWeight: FontWeight.bold,
@@ -490,7 +572,7 @@ class _BudgetCard extends StatelessWidget { // Changed to StatelessWidget
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0).format(budget.amount),
+                          'sur ${_formatAmount(budget.amount)} F prévus',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: Colors.grey,
                             fontSize: 12.sp,
@@ -501,7 +583,7 @@ class _BudgetCard extends StatelessWidget { // Changed to StatelessWidget
                   ],
                 ),
                 SizedBox(height: 16.h),
-                // Progress Bar (simple, elegant)
+                // Progress Bar
                 Container(
                   height: 8.h,
                   decoration: BoxDecoration(
@@ -519,6 +601,30 @@ class _BudgetCard extends StatelessWidget { // Changed to StatelessWidget
                     ),
                   ),
                 ),
+                if (budgetStatus == BudgetStatus.exceeded || budgetStatus == BudgetStatus.critical)
+                  Padding(
+                    padding: EdgeInsets.only(top: 12.h),
+                    child: InkWell(
+                      onTap: () {
+                        // In a real app, pass categoryId to pre-fill the goal
+                        Get.toNamed(Routes.goals); 
+                      },
+                      child: Row(
+                        children: [
+                          Icon(CupertinoIcons.arrow_right_circle_fill, size: 16.sp, color: statusColor),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Créer un objectif de réduction',
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

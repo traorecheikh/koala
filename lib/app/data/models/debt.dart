@@ -1,4 +1,5 @@
 import 'package:hive_ce/hive.dart';
+import 'package:uuid/uuid.dart';
 
 part 'debt.g.dart';
 
@@ -13,7 +14,7 @@ enum DebtType {
 @HiveType(typeId: 42)
 class Debt extends HiveObject {
   @HiveField(0)
-  String id;
+  final String id;
 
   @HiveField(1)
   String personName;
@@ -36,14 +37,62 @@ class Debt extends HiveObject {
   @HiveField(7)
   List<String> transactionIds; // IDs of repayment transactions
 
+  @HiveField(8)
+  double minPayment; // Renamed from monthlyPayment to minPayment
+
   Debt({
-    required this.id,
+    String? id,
     required this.personName,
     required this.originalAmount,
-    required this.remainingAmount,
+    double? remainingAmount,
     required this.type,
     this.dueDate,
-    required this.createdAt,
+    DateTime? createdAt,
     this.transactionIds = const [],
-  });
+    this.minPayment = 0.0,
+  })  : id = id ?? const Uuid().v4(),
+        createdAt = createdAt ?? DateTime.now(),
+        remainingAmount = remainingAmount ?? originalAmount;
+
+  bool get isPaidOff => remainingAmount <= 0;
+
+  double get paidAmount => originalAmount - remainingAmount;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'personName': personName,
+      'originalAmount': originalAmount,
+      'remainingAmount': remainingAmount,
+      'type': type.toString().split('.').last,
+      'dueDate': dueDate?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'transactionIds': transactionIds,
+      'minPayment': minPayment,
+    };
+  }
+
+  Debt copyWith({
+    String? id,
+    String? personName,
+    double? originalAmount,
+    double? remainingAmount,
+    DebtType? type,
+    DateTime? dueDate,
+    DateTime? createdAt,
+    List<String>? transactionIds,
+    double? minPayment,
+  }) {
+    return Debt(
+      id: id ?? this.id,
+      personName: personName ?? this.personName,
+      originalAmount: originalAmount ?? this.originalAmount,
+      remainingAmount: remainingAmount ?? this.remainingAmount,
+      type: type ?? this.type,
+      dueDate: dueDate ?? this.dueDate,
+      createdAt: createdAt ?? this.createdAt,
+      transactionIds: transactionIds ?? this.transactionIds,
+      minPayment: minPayment ?? this.minPayment,
+    );
+  }
 }

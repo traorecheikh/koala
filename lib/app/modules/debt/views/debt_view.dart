@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/data/models/debt.dart';
 import 'package:koaa/app/modules/debt/controllers/debt_controller.dart';
+import 'package:koaa/app/core/design_system.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class DebtView extends GetView<DebtController> {
   const DebtView({super.key});
@@ -32,6 +34,7 @@ class DebtView extends GetView<DebtController> {
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               sliver: SliverToBoxAdapter(
                 child: Obx(() {
+                  final debtImpact = controller.getDebtImpact();
                   final totalLent = controller.debts
                       .where((d) => d.type == DebtType.lent)
                       .fold(0.0, (sum, d) => sum + d.remainingAmount);
@@ -42,6 +45,7 @@ class DebtView extends GetView<DebtController> {
                   return _DebtSummaryCard(
                     totalLent: totalLent,
                     totalBorrowed: totalBorrowed,
+                    totalMonthlyPayments: debtImpact['totalMonthlyDebtPayments'] ?? 0.0,
                   );
                 }),
               ),
@@ -59,6 +63,8 @@ class DebtView extends GetView<DebtController> {
 
             Obx(() {
               final isLentTab = controller.selectedTab.value == 0;
+              final isLent = isLentTab; // Define isLent here
+
               final debts = controller.debts
                   .where((d) => d.type == (isLentTab ? DebtType.lent : DebtType.borrowed))
                   .toList();
@@ -66,22 +72,14 @@ class DebtView extends GetView<DebtController> {
               if (debts.isEmpty) {
                 return SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isLentTab ? CupertinoIcons.hand_thumbsup_fill : CupertinoIcons.hand_thumbsdown_fill,
-                          size: 48.sp,
-                          color: Colors.grey.withOpacity(0.3),
-                        ),
-                        SizedBox(height: 16.h),
-                        Text(
-                          isLentTab ? 'Personne ne vous doit d\'argent' : 'Vous n\'avez aucune dette',
-                          style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey),
-                        ),
-                      ],
-                    ),
+                  child: KoalaEmptyState(
+                    icon: isLent ? CupertinoIcons.hand_thumbsup_fill : CupertinoIcons.hand_thumbsdown_fill,
+                    title: isLent ? 'Aucun prêt' : 'Aucune dette',
+                    message: isLent 
+                        ? 'Vous n\'avez prêté d\'argent à personne pour le moment.'
+                        : 'Vous n\'avez aucune dette en cours. Bravo !',
+                    buttonText: isLent ? 'Ajouter un prêt' : 'Ajouter une dette',
+                    onButtonPressed: () => _showAddDebtSheet(context),
                   ),
                 );
               }
@@ -104,15 +102,143 @@ class DebtView extends GetView<DebtController> {
   }
 
   void _showAddDebtSheet(BuildContext context) {
-    // Keep logic for adding debt
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+    final minPaymentController = TextEditingController();
+    final dueDate = DateTime.now().add(const Duration(days: 30)).obs;
+    final selectedType = (controller.selectedTab.value == 0 ? DebtType.lent : DebtType.borrowed).obs;
+
+    Get.bottomSheet(
+      KoalaBottomSheet(
+        title: 'Ajouter une dette/prêt',
+        icon: CupertinoIcons.money_dollar_circle_fill,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildTypeOption(context, 'Prêt (On me doit)', DebtType.lent, Colors.green, selectedType),
+                      _buildTypeOption(context, 'Dette (Je dois)', DebtType.borrowed, Colors.red, selectedType),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                KoalaTextField(
+                  controller: nameController,
+                  label: 'Personne',
+                  icon: CupertinoIcons.person_fill,
+                ),
+                SizedBox(height: 16.h),
+                KoalaTextField(
+                  controller: amountController,
+                  label: 'Montant',
+                  icon: CupertinoIcons.money_dollar,
+                  keyboardType: TextInputType.number,
+                  isAmount: true,
+                ),
+                SizedBox(height: 16.h),
+                KoalaTextField(
+                  controller: minPaymentController,
+                  label: 'Paiement mensuel min.',
+                  icon: CupertinoIcons.calendar_badge_minus,
+                  keyboardType: TextInputType.number,
+                  isAmount: true,
+                ),
+                SizedBox(height: 24.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: KoalaButton(
+                        text: 'Annuler',
+                        backgroundColor: Colors.grey.withOpacity(0.1),
+                        textColor: Colors.grey,
+                        onPressed: () => NavigationHelper.safeBack(),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: KoalaButton(
+                        text: 'Ajouter',
+                        onPressed: () {
+                           if (nameController.text.isEmpty || amountController.text.isEmpty) {
+                             Get.snackbar('Erreur', 'Veuillez remplir tous les champs obligatoires');
+                             return;
+                           }
+                           
+                           controller.addDebt(
+                             personName: nameController.text,
+                             amount: double.tryParse(amountController.text) ?? 0,
+                             type: selectedType.value,
+                             dueDate: dueDate.value,
+                             minPayment: double.tryParse(minPaymentController.text) ?? 0,
+                           );
+                           NavigationHelper.safeBack();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 24.h),
+              ],
+            ),
+          ),
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _buildTypeOption(BuildContext context, String label, DebtType type, Color color, Rx<DebtType> selectedType) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => selectedType.value = type,
+        child: Obx(() {
+          final isSelected = selectedType.value == type;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(vertical: 10.h),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(10.r),
+              boxShadow: isSelected ? [
+                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))
+              ] : null,
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? color : Colors.grey.shade600,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
   }
 }
 
 class _DebtSummaryCard extends StatelessWidget {
   final double totalLent;
   final double totalBorrowed;
+  final double totalMonthlyPayments; // New parameter
 
-  const _DebtSummaryCard({required this.totalLent, required this.totalBorrowed});
+  const _DebtSummaryCard({
+    required this.totalLent,
+    required this.totalBorrowed,
+    required this.totalMonthlyPayments,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +280,16 @@ class _DebtSummaryCard extends StatelessWidget {
               fontSize: 32.sp,
               fontWeight: FontWeight.bold,
               letterSpacing: -1,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          // Display total monthly payments
+          Text(
+            'Paiements Mensuels Totaux: ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(totalMonthlyPayments)}',
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.grey.shade600,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
             ),
           ),
           SizedBox(height: 24.h),
@@ -319,7 +455,7 @@ class _Header extends StatelessWidget {
         children: [
           IconButton(
             icon: Icon(CupertinoIcons.back, size: 28, color: theme.textTheme.bodyLarge?.color),
-            onPressed: () => Get.back(),
+            onPressed: () => NavigationHelper.safeBack(),
             padding: EdgeInsets.zero,
           ).animate().fadeIn().slideX(begin: -0.1),
           Text(
@@ -424,15 +560,27 @@ class _DebtCard extends StatelessWidget {
             fontSize: 16.sp,
           ),
         ),
-        subtitle: debt.dueDate != null
-            ? Padding(
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (debt.dueDate != null)
+              Padding(
                 padding: EdgeInsets.only(top: 4.h),
                 child: Text(
-                  'Échéance: ${DateFormat('dd MMM').format(debt.dueDate!)}',
+                  'Échéance: ${DateFormat('dd MMM').format(debt.dueDate ?? DateTime.now())}',
                   style: theme.textTheme.bodySmall?.copyWith(fontSize: 12.sp),
                 ),
-              )
-            : null,
+              ),
+            if (debt.minPayment > 0)
+              Padding(
+                padding: EdgeInsets.only(top: 2.h),
+                child: Text(
+                  'Mensualité: ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0).format(debt.minPayment)}',
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 12.sp),
+                ),
+              ),
+          ],
+        ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,

@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/transactions/controllers/transactions_controller.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class TransactionsView extends GetView<TransactionsController> {
   const TransactionsView({super.key});
@@ -123,7 +124,7 @@ class _Header extends StatelessWidget {
             icon: const Icon(CupertinoIcons.back, size: 28),
             onPressed: () {
               HapticFeedback.lightImpact();
-              Get.back();
+              NavigationHelper.safeBack();
             },
             splashRadius: 24,
           ),
@@ -604,7 +605,7 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
                 icon: const Icon(CupertinoIcons.xmark_circle_fill),
                 onPressed: () {
                   HapticFeedback.lightImpact();
-                  Get.back();
+                  NavigationHelper.safeBack();
                 },
               ),
             ],
@@ -671,7 +672,7 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
                   onPressed: () {
                     HapticFeedback.mediumImpact();
                     controller.clearFilters();
-                    Get.back();
+                    NavigationHelper.safeBack();
                   },
                   child: const Text('Clear All'),
                 ),
@@ -681,7 +682,7 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
                 child: ElevatedButton(
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    Get.back();
+                    NavigationHelper.safeBack();
                   },
                   child: const Text('Apply'),
                 ),

@@ -11,6 +11,7 @@ import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 import 'package:uuid/uuid.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 void showUserSetupDialog(BuildContext context) {
   showModalBottomSheet(
@@ -146,7 +147,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   }
 
   void _skipSetup() {
-    Navigator.pop(context);
+    NavigationHelper.safeBack();
   }
 
   Future<void> _submit() async {
@@ -178,7 +179,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     homeController.user.value = newUser;
 
     if (mounted) {
-      Navigator.pop(context);
+      NavigationHelper.safeBack();
       HapticFeedback.mediumImpact();
     }
   }

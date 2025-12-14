@@ -361,86 +361,93 @@ class _AlertCard extends StatelessWidget {
         border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade100),
       ),
       clipBehavior: Clip.hardEdge,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: alertColor, width: 6.w)),
+        ),
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 6.w,
-              color: alertColor,
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(8.w),
-                          decoration: BoxDecoration(
-                            color: alertColor.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(alert.icon, size: 16.sp, color: alertColor),
-                        ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          child: Text(
-                            alert.title,
-                            style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      alert.message,
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        color: isDark ? Colors.white70 : Colors.black54,
-                        height: 1.4,
-                      ),
-                    ),
-                    if (alert.actionSuggestion.isNotEmpty) ...[
-                      SizedBox(height: 12.h),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              CupertinoIcons.lightbulb,
-                              size: 14.sp,
-                              color: alertColor,
-                            ),
-                            SizedBox(width: 8.w),
-                            Expanded(
-                              child: Text(
-                                alert.actionSuggestion,
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: isDark ? Colors.white70 : Colors.black87,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: alertColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(alert.icon, size: 16.sp, color: alertColor),
                 ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Text(
+                    alert.title,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                InkWell(
+                  onTap: () => Get.find<IntelligenceService>().dismissAlert(alert.id),
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: Padding(
+                    padding: EdgeInsets.all(4.w),
+                    child: Icon(CupertinoIcons.xmark, size: 18.sp, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              alert.message,
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: isDark ? Colors.white70 : Colors.black54,
+                height: 1.4,
               ),
             ),
+            if (alert.actionSuggestion.isNotEmpty) ...[
+              SizedBox(height: 12.h),
+              GestureDetector(
+                onTap: () {
+                  // TODO: Implement specific fix actions
+                  Get.snackbar('Action', 'Applying fix: ${alert.actionSuggestion}');
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: alertColor.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.lightbulb,
+                        size: 14.sp,
+                        color: alertColor,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          alert.actionSuggestion,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Icon(CupertinoIcons.chevron_right, size: 14.sp, color: Colors.grey),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

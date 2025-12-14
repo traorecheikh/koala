@@ -11,6 +11,9 @@ import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
+import 'package:koaa/app/modules/settings/controllers/settings_controller.dart';
+import 'package:koaa/app/services/financial_context_service.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 void showAddTransactionDialog(BuildContext context, TransactionType type) {
   showModalBottomSheet(
@@ -38,6 +41,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   bool _loading = false;
   String? _error;
   bool _buttonPressed = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -69,7 +73,18 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     return formattedValue.replaceAll(' ', '');
   }
 
+  /// Validates that the selected category matches the transaction type
+  bool _validateCategoryType() {
+    if (_selectedCategory == null) return false;
+    return _selectedCategory!.type == widget.type;
+  }
+
   Future<void> _addTransaction() async {
+    // Prevent double submission
+    if (_isSubmitting || _loading) {
+      return;
+    }
+
     final numericAmount = _getNumericValue(_amountController.text.trim());
 
     if (numericAmount.isEmpty ||
@@ -86,44 +101,131 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       return;
     }
 
+    // Mark as submitting
+    setState(() {
+      _isSubmitting = true;
+      _loading = true;
+    });
+
+    // Validate category type matches transaction type
+    if (!_validateCategoryType()) {
+      HapticFeedback.lightImpact();
+      setState(() => _error = 'La catégorie ne correspond pas au type');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.type == TransactionType.income
+                ? 'Veuillez sélectionner une catégorie de revenu'
+                : 'Veuillez sélectionner une catégorie de dépense',
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    final amount = double.parse(numericAmount);
+    final homeController = Get.find<HomeController>();
+
+    // Check if this transaction will exceed the budget
+    if (widget.type == TransactionType.expense) {
+      final financialContext = Get.find<FinancialContextService>();
+      final categoryBudgets = financialContext.allBudgets
+          .where((b) => b.categoryId == _selectedCategory!.id)
+          .toList();
+
+      if (categoryBudgets.isNotEmpty && mounted) {
+        final budget = categoryBudgets.first;
+        final currentSpent = financialContext.getSpentAmountForCategory(
+          _selectedCategory!.id,
+          DateTime.now().year,
+          DateTime.now().month,
+        );
+        final newTotal = currentSpent + amount;
+
+        if (newTotal > budget.amount) {
+          final overage = newTotal - budget.amount;
+          final proceed = await _showBudgetWarningDialog(
+            categoryName: _selectedCategory!.name,
+            budgetAmount: budget.amount,
+            currentSpent: currentSpent,
+            transactionAmount: amount,
+            overage: overage,
+          );
+
+          if (!proceed) {
+            if (mounted) {
+              setState(() {
+                _loading = false;
+                _isSubmitting = false;
+              });
+            }
+            return;
+          }
+        }
+      }
+    }
+
     HapticFeedback.heavyImpact();
     setState(() {
-      _loading = true;
       _error = null;
     });
 
-    final homeController = Get.find<HomeController>();
     final transaction = LocalTransaction(
-      amount: double.parse(numericAmount),
+      amount: amount,
       description: _descriptionController.text.trim().isEmpty
           ? _selectedCategory!.name
           : _descriptionController.text.trim(),
       date: DateTime.now(),
       type: widget.type,
       categoryId: _selectedCategory!.id,
-      category: null, 
+      category: null,
     );
 
-    homeController.addTransaction(transaction);
+    try {
+      homeController.addTransaction(transaction);
 
-    if (mounted) {
-      Navigator.pop(context);
-      HapticFeedback.mediumImpact();
+      if (mounted) {
+        // Delay pop to allow UI to settle
+        await Future.delayed(const Duration(milliseconds: 100));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.type == TransactionType.income
-                ? 'Revenu ajouté avec succès'
-                : 'Dépense ajoutée avec succès',
-          ),
-          backgroundColor: widget.type == TransactionType.income
-              ? Colors.green
-              : Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+        if (mounted) {
+          NavigationHelper.safeBack();
+          HapticFeedback.mediumImpact();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                widget.type == TransactionType.income
+                    ? 'Revenu ajouté avec succès'
+                    : 'Dépense ajoutée avec succès',
+              ),
+              backgroundColor: widget.type == TransactionType.income
+                  ? Colors.green
+                  : Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _isSubmitting = false;
+          _error = 'Erreur: ${e.toString()}';
+        });
+        HapticFeedback.heavyImpact();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -136,10 +238,60 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
         type: widget.type,
         onSelect: (category) {
           setState(() => _selectedCategory = category);
-          Navigator.pop(context);
+          NavigationHelper.safeBack();
         },
       ),
     );
+  }
+
+  Future<bool> _showBudgetWarningDialog({
+    required String categoryName,
+    required double budgetAmount,
+    required double currentSpent,
+    required double transactionAmount,
+    required double overage,
+  }) async {
+    final theme = Theme.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Budget Warning'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Adding this transaction will exceed your $categoryName budget.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            SizedBox(height: 16),
+            _BudgetWarningRow(label: 'Budget:', value: '${budgetAmount.toStringAsFixed(2)} F'),
+            _BudgetWarningRow(label: 'Already spent:', value: '${currentSpent.toStringAsFixed(2)} F'),
+            _BudgetWarningRow(label: 'This transaction:', value: '${transactionAmount.toStringAsFixed(2)} F'),
+            Divider(height: 16),
+            _BudgetWarningRow(
+              label: 'Will exceed by:',
+              value: '${overage.toStringAsFixed(2)} F',
+              isWarning: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => NavigationHelper.safeBack(result: false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => NavigationHelper.safeBack(result: true),
+            child: const Text(
+              'Add Anyway',
+              style: TextStyle(color: Colors.orange),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   @override
@@ -205,7 +357,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                   padding: EdgeInsets.zero,
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    Navigator.pop(context);
+                    NavigationHelper.safeBack();
                   },
                   child: Icon(
                     CupertinoIcons.xmark,
@@ -407,14 +559,23 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     AnimatedOpacity(
                       opacity: 1.0,
                       duration: const Duration(milliseconds: 300),
-                      child: Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ).animate().shake(duration: 300.ms),
+                      child: Obx(() {
+                        final settingsController = Get.find<SettingsController>();
+                        final errorWidget = Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+
+                        // Only apply shake animation if reduce motion is not enabled
+                        if (settingsController.reduceMotion.value) {
+                          return errorWidget;
+                        }
+                        return errorWidget.animate().shake(duration: 300.ms);
+                      }),
                     ),
                   ],
 
@@ -433,15 +594,17 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                         child: CupertinoButton(
                           color: Colors.black,
                           borderRadius: BorderRadius.circular(16.r),
-                          onPressed: _loading
+                          onPressed: (_loading || _isSubmitting)
                               ? null
                               : () async {
                                   setState(() => _buttonPressed = true);
                                   await Future.delayed(
                                     const Duration(milliseconds: 100),
                                   );
-                                  setState(() => _buttonPressed = false);
-                                  _addTransaction();
+                                  if (mounted) {
+                                    setState(() => _buttonPressed = false);
+                                    _addTransaction();
+                                  }
                                 },
                           child: _loading
                               ? Row(
@@ -608,5 +771,38 @@ class _CategoryPickerSheet extends StatelessWidget {
         ),
       );
     });
+  }
+}
+
+/// Helper widget for displaying budget warning rows
+class _BudgetWarningRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isWarning;
+
+  const _BudgetWarningRow({
+    required this.label,
+    required this.value,
+    this.isWarning = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
+          Text(
+            value,
+            style: TextStyle(
+              color: isWarning ? Colors.red : Colors.black87,
+              fontWeight: isWarning ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -17,11 +17,11 @@ class BudgetAdapter extends TypeAdapter<Budget> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Budget(
-      id: fields[0] as String,
+      id: fields[0] as String?,
       categoryId: fields[1] as String,
       amount: (fields[2] as num).toDouble(),
-      period: fields[3] == null ? 'monthly' : fields[3] as String,
-      startDate: fields[4] as DateTime,
+      year: (fields[5] as num).toInt(),
+      month: (fields[6] as num).toInt(),
     );
   }
 
@@ -35,10 +35,10 @@ class BudgetAdapter extends TypeAdapter<Budget> {
       ..write(obj.categoryId)
       ..writeByte(2)
       ..write(obj.amount)
-      ..writeByte(3)
-      ..write(obj.period)
-      ..writeByte(4)
-      ..write(obj.startDate);
+      ..writeByte(5)
+      ..write(obj.year)
+      ..writeByte(6)
+      ..write(obj.month);
   }
 
   @override

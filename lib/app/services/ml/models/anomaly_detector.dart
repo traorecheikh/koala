@@ -79,7 +79,9 @@ class _CategoryStats {
   double get stdDev {
     if (count < 2) return 1.0;
     final variance = (sumSq / count) - (mean * mean);
-    return sqrt(variance > 0 ? variance : 0);
+    // Prevent division by zero or extreme sensitivity for constant values
+    // If variance is 0 (constant spending), return 1.0 to keep Z-score low for small diffs
+    return max(sqrt(variance > 0 ? variance : 0), 1.0);
   }
 }
 

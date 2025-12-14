@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
+import 'package:uuid/uuid.dart';
 
 part 'local_transaction.g.dart';
 
@@ -288,7 +289,20 @@ class LocalTransaction extends HiveObject {
   @HiveField(7)
   bool isHidden;
 
+  @HiveField(8)
+  final String id; // New field, new index
+
+  @HiveField(9)
+  String? linkedDebtId; // New field, new index
+
+  @HiveField(10)
+  String? linkedRecurringId; // Links back to original recurring transaction
+
+  @HiveField(11)
+  String? linkedJobId; // Links back to original job
+
   LocalTransaction({
+    String? id,
     required this.amount,
     required this.description,
     required this.date,
@@ -297,8 +311,59 @@ class LocalTransaction extends HiveObject {
     TransactionCategory? category,
     this.categoryId,
     this.isHidden = false,
-  }) : category = category ??
+    this.linkedDebtId,
+    this.linkedRecurringId,
+    this.linkedJobId,
+  })  : id = id ?? const Uuid().v4(),
+        category = category ??
            (type == TransactionType.income
                ? TransactionCategory.otherIncome
                : TransactionCategory.otherExpense);
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'amount': amount,
+      'description': description,
+      'date': date.toIso8601String(),
+      'type': type.toString().split('.').last,
+      'isRecurring': isRecurring,
+      'category': category?.toString().split('.').last,
+      'categoryId': categoryId,
+      'isHidden': isHidden,
+      'linkedDebtId': linkedDebtId,
+      'linkedRecurringId': linkedRecurringId,
+      'linkedJobId': linkedJobId,
+    };
+  }
+
+  LocalTransaction copyWith({
+    String? id,
+    double? amount,
+    String? description,
+    DateTime? date,
+    TransactionType? type,
+    bool? isRecurring,
+    TransactionCategory? category,
+    String? categoryId,
+    bool? isHidden,
+    String? linkedDebtId,
+    String? linkedRecurringId,
+    String? linkedJobId,
+  }) {
+    return LocalTransaction(
+      id: id ?? this.id,
+      amount: amount ?? this.amount,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      type: type ?? this.type,
+      isRecurring: isRecurring ?? this.isRecurring,
+      category: category ?? this.category,
+      categoryId: categoryId ?? this.categoryId,
+      isHidden: isHidden ?? this.isHidden,
+      linkedDebtId: linkedDebtId ?? this.linkedDebtId,
+      linkedRecurringId: linkedRecurringId ?? this.linkedRecurringId,
+      linkedJobId: linkedJobId ?? this.linkedJobId,
+    );
+  }
 }

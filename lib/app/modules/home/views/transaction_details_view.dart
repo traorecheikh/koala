@@ -7,6 +7,7 @@ import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class TransactionDetailsView extends StatelessWidget {
   final LocalTransaction transaction;
@@ -44,7 +45,7 @@ class TransactionDetailsView extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(CupertinoIcons.xmark, color: Colors.black),
-          onPressed: () => Get.back(),
+          onPressed: () => NavigationHelper.safeBack(),
         ),
         actions: [
           IconButton(

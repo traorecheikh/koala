@@ -73,6 +73,30 @@ class Job extends HiveObject {
 
   double get monthlyIncome => amount * frequency.paymentsPerMonth;
 
+  bool isPaymentDue(DateTime date) {
+    // Normalize dates to ignore time component for comparison
+    final normalizedPaymentDate = DateTime(paymentDate.year, paymentDate.month, paymentDate.day);
+    final normalizedCheckDate = DateTime(date.year, date.month, date.day);
+
+    if (normalizedCheckDate.isBefore(normalizedPaymentDate)) {
+      return false; // Payment not due before the job's first payment date
+    }
+
+    switch (frequency) {
+      case PaymentFrequency.weekly:
+        // Check if the weekday matches and if it's a multiple of 7 days from paymentDate
+        return normalizedCheckDate.weekday == normalizedPaymentDate.weekday &&
+            normalizedCheckDate.difference(normalizedPaymentDate).inDays % 7 == 0;
+      case PaymentFrequency.biweekly:
+        // Check if the weekday matches and if it's a multiple of 14 days from paymentDate
+        return normalizedCheckDate.weekday == normalizedPaymentDate.weekday &&
+            normalizedCheckDate.difference(normalizedPaymentDate).inDays % 14 == 0;
+      case PaymentFrequency.monthly:
+        // Check if the day of the month matches
+        return normalizedCheckDate.day == normalizedPaymentDate.day;
+    }
+  }
+
   Job copyWith({
     String? id,
     String? name,

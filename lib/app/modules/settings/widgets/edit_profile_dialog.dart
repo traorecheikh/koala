@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 void showEditProfileDialog(BuildContext context) {
   showModalBottomSheet(
@@ -71,7 +72,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       _homeController.user.value = updatedUser;
 
       if (mounted) {
-        Navigator.pop(context);
+        NavigationHelper.safeBack();
         HapticFeedback.mediumImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -125,7 +126,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                   padding: EdgeInsets.zero,
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    Navigator.pop(context);
+                    NavigationHelper.safeBack();
                   },
                   child: Icon(
                     CupertinoIcons.xmark,

@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class DiscoverPersonaView extends StatefulWidget {
   const DiscoverPersonaView({super.key});
@@ -139,7 +140,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
             CupertinoIcons.xmark,
             color: isDark ? Colors.white : Colors.black87,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => NavigationHelper.safeBack(),
         ),
       ),
       body: SingleChildScrollView(
@@ -284,16 +285,19 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Row(
       children: [
-        Icon(icon, size: 20.sp, color: const Color(0xFF4A6C9B)),
+        Icon(icon, size: 20.sp, color: isDark ? const Color(0xFF64B5F6) : const Color(0xFF4A6C9B)),
         SizedBox(width: 8.w),
         Text(
           title,
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).textTheme.titleLarge?.color,
+            color: theme.textTheme.titleLarge?.color,
           ),
         ),
       ],

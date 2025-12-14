@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 void showRechargeDialog(BuildContext context) {
   showModalBottomSheet(
@@ -41,7 +42,7 @@ class _RechargeSheetState extends State<_RechargeSheet> {
     await Future.delayed(const Duration(milliseconds: 800));
 
     if (mounted) {
-      Navigator.pop(context);
+      NavigationHelper.safeBack();
       // TODO: Navigate to specific payment method flow
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -92,7 +93,7 @@ class _RechargeSheetState extends State<_RechargeSheet> {
                   padding: EdgeInsets.zero,
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    Navigator.pop(context);
+                    NavigationHelper.safeBack();
                   },
                   child: Icon(
                     CupertinoIcons.xmark,

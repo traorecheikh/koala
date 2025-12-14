@@ -7,6 +7,7 @@ import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 void showAddCategoryDialog(BuildContext context, {Category? category}) {
   showModalBottomSheet(
@@ -65,6 +66,32 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
     super.dispose();
   }
 
+  String _getColorName(Color color) {
+    // Map colors to their names for accessibility
+    final colorMap = {
+      Colors.red: 'Rouge',
+      Colors.pink: 'Rose',
+      Colors.purple: 'Violet',
+      Colors.deepPurple: 'Violet foncé',
+      Colors.indigo: 'Indigo',
+      Colors.blue: 'Bleu',
+      Colors.lightBlue: 'Bleu clair',
+      Colors.cyan: 'Cyan',
+      Colors.teal: 'Bleu-vert',
+      Colors.green: 'Vert',
+      Colors.lightGreen: 'Vert clair',
+      Colors.lime: 'Citron vert',
+      Colors.yellow: 'Jaune',
+      Colors.amber: 'Ambre',
+      Colors.orange: 'Orange',
+      Colors.deepOrange: 'Orange foncé',
+      Colors.brown: 'Marron',
+      Colors.grey: 'Gris',
+      Colors.blueGrey: 'Gris-bleu',
+    };
+    return colorMap[color] ?? 'Couleur';
+  }
+
   Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
       HapticFeedback.mediumImpact();
@@ -84,7 +111,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
         );
       }
       
-      Get.back();
+      NavigationHelper.safeBack();
     }
   }
 
@@ -121,7 +148,13 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                   isEditing ? 'Modifier la catégorie' : 'Nouvelle catégorie',
                   style: theme.textTheme.titleLarge,
                 ),
-                CloseButton(onPressed: () => Get.back()),
+                Semantics(
+                  button: true,
+                  enabled: true,
+                  onTap: () => NavigationHelper.safeBack(),
+                  label: 'Fermer le dialogue',
+                  child: CloseButton(onPressed: () => NavigationHelper.safeBack()),
+                ),
               ],
             ),
           ),
@@ -133,8 +166,10 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                 padding: EdgeInsets.all(24.w),
                 children: [
                   // Type Selector
-                  if (!isEditing) ...[
-                    SegmentedButton<TransactionType>(
+                  Semantics(
+                    label: 'Type de catégorie: ${_selectedType == TransactionType.expense ? "Dépense" : "Revenu"}',
+                    container: true,
+                    child: SegmentedButton<TransactionType>(
                       segments: const [
                         ButtonSegment(value: TransactionType.expense, label: Text('Dépense')),
                         ButtonSegment(value: TransactionType.income, label: Text('Revenu')),
@@ -146,8 +181,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                         });
                       },
                     ),
-                    SizedBox(height: 24.h),
-                  ],
+                  ),
+                  SizedBox(height: 24.h),
 
                   // Preview Icon
                   Center(
@@ -179,7 +214,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                       filled: true,
                       fillColor: Colors.grey.shade50,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Requis' : null,
+                    validator: (v) => v!.isEmpty ? 'Category name is required' : null,
                   ),
                   SizedBox(height: 24.h),
 
@@ -210,12 +245,35 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                             decoration: BoxDecoration(
                               color: isSelected ? _selectedColor.withOpacity(0.2) : Colors.white,
                               borderRadius: BorderRadius.circular(8.r),
-                              border: isSelected ? Border.all(color: _selectedColor) : null,
+                              border: isSelected ? Border.all(color: _selectedColor, width: 2) : Border.all(color: Colors.grey.shade200),
                             ),
-                            child: CategoryIcon(
-                              iconKey: key,
-                              size: 24.sp,
-                              color: isSelected ? _selectedColor : Colors.grey.shade700,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                CategoryIcon(
+                                  iconKey: key,
+                                  size: 24.sp,
+                                  color: isSelected ? _selectedColor : Colors.grey.shade700,
+                                ),
+                                if (isSelected)
+                                  Positioned(
+                                    top: 2.h,
+                                    right: 2.h,
+                                    child: Container(
+                                      width: 20.w,
+                                      height: 20.h,
+                                      decoration: BoxDecoration(
+                                        color: _selectedColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         );
@@ -232,23 +290,33 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                     runSpacing: 12.h,
                     children: _colors.map((color) {
                       final isSelected = _selectedColor.value == color.value;
-                      return GestureDetector(
+                      final colorName = _getColorName(color);
+                      return Semantics(
+                        button: true,
+                        enabled: true,
                         onTap: () => setState(() => _selectedColor = color),
-                        child: Container(
-                          width: 40.w,
-                          height: 40.w,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: isSelected ? Border.all(color: Colors.black, width: 3) : null,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                              )
-                            ],
+                        label: 'Couleur $colorName${isSelected ? ", sélectionnée" : ""}',
+                        child: Tooltip(
+                          message: colorName,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedColor = color),
+                            child: Container(
+                              width: 48.w, // Increased for accessibility (48x48dp min)
+                              height: 48.w,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: isSelected ? Border.all(color: Colors.black, width: 3) : Border.all(color: Colors.grey.shade300),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                  )
+                                ],
+                              ),
+                              child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
+                            ),
                           ),
-                          child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
                         ),
                       );
                     }).toList(),
@@ -256,20 +324,26 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                   SizedBox(height: 48.h),
 
                   // Save Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50.h,
-                    child: ElevatedButton(
-                      onPressed: _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                  Semantics(
+                    button: true,
+                    enabled: true,
+                    onTap: _save,
+                    label: 'Enregistrer la catégorie',
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56.h, // Increased for accessibility (min 48dp)
+                      child: ElevatedButton(
+                        onPressed: _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        'Enregistrer',
-                        style: TextStyle(fontSize: 16.sp, color: Colors.white),
+                        child: Text(
+                          'Enregistrer',
+                          style: TextStyle(fontSize: 16.sp, color: Colors.white),
+                        ),
                       ),
                     ),
                   ),

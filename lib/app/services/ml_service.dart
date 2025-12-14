@@ -9,6 +9,7 @@ export 'package:koaa/app/services/ml/models/anomaly_detector.dart';
 
 class MLService {
   KoalaMLEngine? _engine;
+  bool _mlScheduled = false;
 
   KoalaMLEngine get engine {
     if (_engine == null) {
@@ -28,18 +29,21 @@ class MLService {
     if (transactions.isEmpty) return [];
 
     try {
-      // Trigger analysis in background
-      // In a real app, we'd want to avoid running this on every UI rebuild
-      // But KoalaMLEngine should handle debouncing or efficiency
-      
-      // We assume the engine has been initialized and maybe run once.
-      // If we want real-time updates, we should await this or use a stream.
-      // For now, return whatever is current, and trigger an update.
-      
-      // We can't await here because the signature is synchronous to match old API.
-      // But we can fire-and-forget an update.
-      engine.runFullAnalysis(transactions, []); // Goals missing for now
-      
+      // Avoid triggering analysis on every UI call. Schedule one run in 5s if not already scheduled.
+      if (!_mlScheduled) {
+        _mlScheduled = true;
+        Future.delayed(const Duration(seconds: 5), () async {
+          try {
+            await engine.runFullAnalysis(transactions, []);
+          } catch (e) {
+            // Swallow - engine should log internally
+            print('Background ML analysis error: $e');
+          } finally {
+            _mlScheduled = false;
+          }
+        });
+      }
+
       return engine.getInsights();
     } catch (e) {
       print('Error generating insights: $e');

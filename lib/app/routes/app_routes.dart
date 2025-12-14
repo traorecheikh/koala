@@ -15,6 +15,7 @@ abstract class Routes {
   static const budget = _Paths.budget;
   static const debt = _Paths.debt;
   static const simulator = _Paths.simulator;
+  static const goals = _Paths.goals;
 }
 
 abstract class _Paths {
@@ -31,4 +32,5 @@ abstract class _Paths {
   static const budget = '/budget';
   static const debt = '/debt';
   static const simulator = '/simulator';
+  static const goals = '/goals';
 }

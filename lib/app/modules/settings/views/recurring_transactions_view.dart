@@ -12,6 +12,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
 import 'package:koaa/app/modules/settings/widgets/add_recurring_transaction_dialog.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 
 class RecurringTransactionsView
     extends GetView<RecurringTransactionsController> {
@@ -27,7 +28,7 @@ class RecurringTransactionsView
         centerTitle: false,
         leading: IconButton(
           icon: const Icon(CupertinoIcons.back, color: Colors.black),
-          onPressed: () => Get.back(),
+          onPressed: () => NavigationHelper.safeBack(),
         ),
         title: Text(
           'Transactions récurrentes',

@@ -2,6 +2,10 @@ import 'dart:math';
 
 import 'package:koaa/app/data/models/ml/financial_pattern.dart';
 import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
+import 'package:koaa/app/data/models/financial_goal.dart'; // New import
+import 'package:koaa/app/data/models/budget.dart'; // New import
+import 'package:koaa/app/data/models/debt.dart'; // New import
+import 'package:koaa/app/services/financial_context_service.dart'; // New import
 import 'package:koaa/app/services/ml/models/anomaly_detector.dart';
 import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
 import 'package:koaa/app/services/ml/models/financial_health_scorer.dart';
@@ -22,6 +26,7 @@ class InsightGenerator {
     required List<SpendingAnomaly> anomalies,
     required ForecastResult? forecast,
     required FinancialHealthScore health,
+    required FinancialContextService context, // New parameter
   }) {
     final insights = <MLInsight>[];
 
@@ -29,18 +34,80 @@ class InsightGenerator {
     _addAnomalyInsights(insights, anomalies, profile);
     _addForecastAlerts(insights, forecast);
 
-    // 2. Persona-based Coaching (Long-term behavioral change)
+    // 2. Cross-Feature Insights (Holistic view)
+    _addCrossFeatureInsights(insights, context);
+
+    // 3. Persona-based Coaching (Long-term behavioral change)
     _addPersonaCoaching(insights, profile);
 
-    // 3. Pattern-based Insights (Operational improvements)
+    // 4. Pattern-based Insights (Operational improvements)
     _addPatternInsights(insights, patterns);
 
-    // 4. Health-based Celebration/Warning (Motivation)
+    // 5. Health-based Celebration/Warning (Motivation)
     _addHealthInsights(insights, health);
 
     // Sort by priority and limit to top 5 to avoid overwhelming user
     insights.sort((a, b) => b.priority.compareTo(a.priority));
     return insights.take(5).toList();
+  }
+
+  void _addCrossFeatureInsights(List<MLInsight> insights, FinancialContextService context) {
+    // 1. Budget Surplus -> Goal Contribution
+    final now = DateTime.now();
+    for (var budget in context.allBudgets) {
+      if (budget.year == now.year && budget.month == now.month) {
+        final spent = context.getSpentAmountForCategory(budget.categoryId, now.year, now.month);
+        final remaining = budget.amount - spent;
+        
+        // If > 20% remaining and we are past day 25
+        if (remaining > budget.amount * 0.2 && now.day > 25) {
+          final category = context.getCategoryById(budget.categoryId);
+          insights.add(MLInsight(
+            id: 'budget_surplus_${budget.id}',
+            title: 'Surplus budgétaire : ${category?.name ?? "Catégorie"}',
+            description: 'Il vous reste ${remaining.toStringAsFixed(0)} FCFA dans ce budget. Pourquoi ne pas l\'ajouter à un objectif ?',
+            type: InsightType.positive,
+            priority: 8,
+            actionLabel: 'Verser sur un objectif',
+          ));
+        }
+      }
+    }
+
+    // 2. Debt vs Savings
+    final totalSavings = context.currentBalance.value; // Simplification
+    final debts = context.getActiveDebts();
+    if (debts.isNotEmpty && totalSavings > 0) {
+      final highInterestDebt = debts.first; // Ideally pick highest interest
+      if (totalSavings > highInterestDebt.remainingAmount) {
+         insights.add(MLInsight(
+            id: 'debt_payoff_opportunity',
+            title: 'Opportunité de remboursement',
+            description: 'Vous avez assez de liquidités pour rembourser "${highInterestDebt.personName}". Cela réduirait vos engagements mensuels.',
+            type: InsightType.info,
+            priority: 7,
+            actionLabel: 'Simuler le remboursement',
+          ));
+      }
+    }
+
+    // 3. Goal Progress Velocity
+    final activeGoals = context.allGoals.where((g) => g.status == GoalStatus.active);
+    for (var goal in activeGoals) {
+      final monthlySavings = context.averageMonthlySavings.value;
+      if (monthlySavings > 0 && goal.targetAmount > goal.currentAmount) {
+        final months = (goal.targetAmount - goal.currentAmount) / monthlySavings;
+        if (months < 2) {
+           insights.add(MLInsight(
+            id: 'goal_close_${goal.id}',
+            title: 'Objectif "${goal.title}" en vue !',
+            description: 'À ce rythme, vous pourriez l\'atteindre dans moins de 2 mois.',
+            type: InsightType.positive,
+            priority: 6,
+          ));
+        }
+      }
+    }
   }
 
   void _addAnomalyInsights(

@@ -1,0 +1,234 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/data/models/financial_goal.dart';
+import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/services/financial_context_service.dart';
+import 'package:koaa/app/services/events/financial_events_service.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:async'; // Added import for StreamSubscription
+
+class GoalsController extends GetxController {
+  final financialGoals = <FinancialGoal>[].obs;
+  late Box<FinancialGoal> _goalBox;
+  late FinancialContextService _financialContextService;
+  late FinancialEventsService _financialEventsService;
+  late StreamSubscription _goalBoxSubscription; // Store Hive box subscription
+  final List<Worker> _workers = []; // List to store GetX workers
+
+  @override
+  void onInit() {
+    super.onInit();
+    _financialContextService = Get.find<FinancialContextService>();
+    _financialEventsService = Get.find<FinancialEventsService>();
+    _goalBox = Hive.box<FinancialGoal>('financialGoalBox');
+    financialGoals.assignAll(_goalBox.values.toList());
+
+    _workers.add(ever(_financialContextService.allTransactions, (_) => _updateGoalProgress()));
+    _goalBoxSubscription = _goalBox.watch().listen((_) => financialGoals.assignAll(_goalBox.values.toList()));
+  }
+
+  @override
+  void onClose() {
+    for (var worker in _workers) {
+      worker.dispose();
+    }
+    _workers.clear();
+    _goalBoxSubscription.cancel(); // Cancel Hive box subscription
+    super.onClose();
+  }
+
+  // Getters for filtered goals
+  List<FinancialGoal> get activeGoals => financialGoals
+      .where((goal) => goal.status == GoalStatus.active)
+      .toList();
+
+  List<FinancialGoal> get completedGoals => financialGoals
+      .where((goal) => goal.status == GoalStatus.completed)
+      .toList();
+
+  List<FinancialGoal> get pausedGoals => financialGoals
+      .where((goal) => goal.status == GoalStatus.paused)
+      .toList();
+
+  List<FinancialGoal> get abandonedGoals => financialGoals
+      .where((goal) => goal.status == GoalStatus.abandoned)
+      .toList();
+
+  // CRUD operations
+  Future<void> addGoal(FinancialGoal goal) async {
+    try {
+      await _goalBox.put(goal.id, goal);
+      financialGoals.add(goal);
+      _updateGoalProgress(); // Update progress for new goal
+      Get.snackbar(
+        'Succès',
+        'Objectif ajouté avec succès',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Erreur',
+        'Impossible d\'ajouter l\'objectif: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> updateGoal(FinancialGoal updatedGoal) async {
+    try {
+      await _goalBox.put(updatedGoal.id, updatedGoal);
+      int index = financialGoals.indexWhere((goal) => goal.id == updatedGoal.id);
+      if (index != -1) {
+        financialGoals[index] = updatedGoal;
+      }
+      _updateGoalProgress(); // Update progress for updated goal
+      Get.snackbar(
+        'Succès',
+        'Objectif mis à jour avec succès',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Erreur',
+        'Impossible de mettre à jour l\'objectif: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> deleteGoal(String goalId) async {
+    try {
+      await _goalBox.delete(goalId);
+      financialGoals.removeWhere((goal) => goal.id == goalId);
+      Get.snackbar(
+        'Succès',
+        'Objectif supprimé avec succès',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Erreur',
+        'Impossible de supprimer l\'objectif: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> setGoalStatus(String goalId, GoalStatus status) async {
+    try {
+      final goal = _goalBox.get(goalId);
+      if (goal != null) {
+        final updatedGoal = goal.copyWith(status: status);
+        if (status == GoalStatus.completed) {
+          updatedGoal.completedAt = DateTime.now();
+          _financialEventsService.emit(GoalEvent(FinancialEventType.goalCompleted, updatedGoal));
+        } else if (status == GoalStatus.abandoned) {
+          updatedGoal.completedAt = null;
+          _financialEventsService.emit(GoalEvent(FinancialEventType.goalAbandoned, updatedGoal));
+        } else {
+          updatedGoal.completedAt = null;
+        }
+        await updateGoal(updatedGoal);
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Erreur',
+        'Impossible de mettre à jour le statut: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // Logic to update goal progress based on transactions
+  void _updateGoalProgress() {
+    for (var goal in financialGoals) {
+      if (goal.status == GoalStatus.active) {
+        double newCurrentAmount = 0.0;
+
+        // For savings/purchase goals, rely on linkedCategoryId
+        if (goal.type == GoalType.savings || goal.type == GoalType.purchase || goal.type == GoalType.custom) {
+          if (goal.linkedCategoryId != null) {
+            newCurrentAmount = _financialContextService.allTransactions
+                .where((tx) =>
+                    tx.categoryId == goal.linkedCategoryId &&
+                    tx.date.isAfter(goal.createdAt))
+                .fold(0.0, (sum, tx) => sum + tx.amount.abs()); // Count both income and expense contributions
+          }
+        }
+        // For debt payoff goals, sum specific debt repayment transactions
+        else if (goal.type == GoalType.debtPayoff && goal.linkedDebtId != null) {
+          // Verify the debt still exists
+          final debt = _financialContextService.allDebts.firstWhereOrNull((d) => d.id == goal.linkedDebtId);
+          if (debt != null) {
+            newCurrentAmount = _financialContextService.allTransactions
+                .where((tx) =>
+                    tx.type == TransactionType.expense &&
+                    tx.linkedDebtId == goal.linkedDebtId &&
+                    tx.date.isAfter(goal.createdAt))
+                .fold(0.0, (sum, tx) => sum + tx.amount);
+          }
+        }
+
+        // Only update if amount changed to avoid infinite loops or unnecessary writes
+        if ((newCurrentAmount - goal.currentAmount).abs() > 0.01) {
+          final oldProgress = goal.progressPercentage;
+          final updatedGoal = goal.copyWith(currentAmount: newCurrentAmount);
+          final newProgress = updatedGoal.progressPercentage;
+
+          // Check for completion
+          if (updatedGoal.currentAmount >= updatedGoal.targetAmount && goal.status != GoalStatus.completed) {
+            updatedGoal.status = GoalStatus.completed;
+            updatedGoal.completedAt = DateTime.now();
+            _financialEventsService.emit(GoalEvent(FinancialEventType.goalCompleted, updatedGoal));
+          } else {
+             // Check for milestones (e.g., every 25%)
+             if ((newProgress / 25).floor() > (oldProgress / 25).floor()) {
+               _financialEventsService.emit(GoalEvent(FinancialEventType.goalMilestoneReached, updatedGoal));
+             }
+          }
+
+          _goalBox.put(updatedGoal.id, updatedGoal);
+          // Update the observable list directly without triggering another listenable() event
+          int index = financialGoals.indexWhere((g) => g.id == updatedGoal.id);
+          if (index != -1) {
+            financialGoals[index] = updatedGoal;
+          }
+        }
+      }
+    }
+  }
+
+  // Calculate estimated completion date (simplified)
+  DateTime? estimateCompletionDate(FinancialGoal goal) {
+    if (goal.targetAmount <= goal.currentAmount) return DateTime.now();
+    
+    final remainingAmount = goal.targetAmount - goal.currentAmount;
+    // Assuming monthly savings. This needs to be more sophisticated, considering
+    // average monthly savings or user-defined monthly contribution.
+    final monthlyContribution = _financialContextService.averageMonthlySavings.value; // Example, need to implement this getter
+
+    if (monthlyContribution <= 0) return null; // No progress, cannot estimate
+
+    final monthsToComplete = remainingAmount / monthlyContribution;
+    return DateTime.now().add(Duration(days: (monthsToComplete * 30).round()));
+  }
+
+  // Method to get a specific goal by ID
+  FinancialGoal? getGoalById(String goalId) {
+    return _goalBox.get(goalId);
+  }
+
+  // Clear all goals (for testing/reset)
+  Future<void> clearAllGoals() async {
+    await _goalBox.clear();
+    financialGoals.clear();
+  }
+}

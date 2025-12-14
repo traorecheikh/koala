@@ -3,8 +3,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
 import 'package:koaa/app/modules/settings/widgets/edit_profile_dialog.dart';
+import 'package:koaa/app/modules/settings/widgets/reset_app_sheet.dart';
+import 'package:koaa/app/modules/settings/views/privacy_policy_view.dart';
+import 'package:koaa/app/modules/settings/views/terms_view.dart';
+import 'package:koaa/app/services/notification_service.dart';
 
 import '../controllers/settings_controller.dart';
 
@@ -23,7 +28,7 @@ class SettingsView extends GetView<SettingsController> {
             CupertinoIcons.back,
             color: theme.textTheme.bodyLarge?.color,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => NavigationHelper.safeBack(),
         ),
         title: Text(
           'Paramètres', // Translated from 'Settings'
@@ -112,9 +117,15 @@ class SettingsView extends GetView<SettingsController> {
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.bell_fill,
-                title:
-                    'Paramètres de notification', // Translated from 'Notification Settings'
-                onTap: () {},
+                title: 'Tester les notifications',
+                onTap: () async {
+                  await NotificationService.requestPermissions();
+                  await NotificationService.showNotification(
+                    id: 12345,
+                    title: 'Test de Notification',
+                    body: 'Ceci est un test pour vérifier que les notifications fonctionnent.',
+                  );
+                },
               ),
             ],
           ),
@@ -128,17 +139,31 @@ class SettingsView extends GetView<SettingsController> {
                 icon: CupertinoIcons.hand_raised_fill,
                 title:
                     'Politique de confidentialité', // Translated from 'Privacy Policy'
-                onTap: () {},
+                onTap: () => Get.to(() => const PrivacyPolicyView()),
               ),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.doc_text_fill,
                 title:
                     'Conditions d\'utilisation', // Translated from 'Terms of Service'
-                onTap: () {},
+                onTap: () => Get.to(() => const TermsView()),
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          _buildSettingsSection(
+            context,
+            title: 'Zone de danger',
+            children: [
+              _buildSettingsItem(
+                context,
+                icon: CupertinoIcons.trash_fill,
+                title: 'Réinitialiser l\'application',
+                onTap: () => showResetAppSheet(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );
