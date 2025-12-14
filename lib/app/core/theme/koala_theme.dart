@@ -21,7 +21,6 @@ class KoalaTheme {
       primary: primaryColor,
       secondary: accentColor,
       error: dangerColor,
-      background: lightBackgroundColor,
       surface: lightCardColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
@@ -131,7 +130,6 @@ class KoalaTheme {
       primary: primaryColor,
       secondary: accentColor,
       error: dangerColor,
-      background: darkBackgroundColor,
       surface: darkCardColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
@@ -233,3 +231,4 @@ class KoalaTheme {
     // ),
   );
 }
+
