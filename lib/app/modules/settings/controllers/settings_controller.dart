@@ -384,3 +384,4 @@ class SettingsController extends GetxController {
   }
 }
 
+
