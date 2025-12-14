@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart';
-import 'package:koaa/app/data/models/local_transaction.dart';
-import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/services/financial_context_service.dart'; // New Import
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/simulator_engine.dart';
@@ -71,3 +68,4 @@ class SimulatorController extends GetxController {
     }
   }
 }
+
