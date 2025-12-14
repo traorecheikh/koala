@@ -9,3 +9,4 @@ class SimulatorBinding extends Bindings {
     );
   }
 }
+
