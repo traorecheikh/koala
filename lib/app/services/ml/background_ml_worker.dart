@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 // Top-level background worker function for compute()
 // Accepts a Map payload with keys: 'transactions' (List<Map>), 'currentBalance' (double)
@@ -64,3 +63,4 @@ Map<String, dynamic> _analyzeTransactions(Map payload) {
 
 // compute() requires a top-level or static function, so expose a wrapper
 Map<String, dynamic> analyzeTransactions(Map payload) => _analyzeTransactions(payload);
+
