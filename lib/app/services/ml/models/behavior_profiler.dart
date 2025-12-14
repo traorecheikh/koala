@@ -76,8 +76,11 @@ class BehaviorProfiler {
     double income = 0;
     double expense = 0;
     for (var tx in txs) {
-      if (tx.type == TransactionType.income) income += tx.amount;
-      else expense += tx.amount;
+      if (tx.type == TransactionType.income) {
+        income += tx.amount;
+      } else {
+        expense += tx.amount;
+      }
     }
     if (income == 0) return 0.0;
     return max(0.0, (income - expense) / income);
@@ -144,3 +147,4 @@ class BehaviorProfiler {
      return getAdvice(persona);
   }
 }
+
