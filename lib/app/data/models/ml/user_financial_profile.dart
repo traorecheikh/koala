@@ -19,12 +19,28 @@ class UserFinancialProfile extends HiveObject {
   @HiveField(4)
   List<String> detectedPatterns;
 
+  @HiveField(5)
+  double weekendRatio;
+
+  @HiveField(6)
+  double nightRatio;
+
+  @HiveField(7)
+  String dominantCategory;
+
+  @HiveField(8)
+  double averageAmount;
+
   UserFinancialProfile({
     required this.personaType,
     required this.savingsRate,
     required this.consistencyScore,
     required this.categoryPreferences,
     required this.detectedPatterns,
+    this.weekendRatio = 0.0,
+    this.nightRatio = 0.0,
+    this.dominantCategory = 'Autre',
+    this.averageAmount = 0.0,
   });
 }
 
