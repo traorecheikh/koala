@@ -412,28 +412,29 @@ class FinancialHealthScorer {
             tx.date.isBefore(now.add(const Duration(days: 1))))
         .toList();
 
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
     // 1. RECKLESS TRANSACTION DETECTION
     // A single transaction > 30% of monthly income is reckless
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
     final recklessThreshold = monthlyIncome * 0.30;
     final recklessTransactions =
         thisMonthExpenses.where((tx) => tx.amount > recklessThreshold).toList();
     final recklessCount = recklessTransactions.length;
 
     if (recklessCount > 0) {
-      final penaltyPoints = (recklessCount * 10).clamp(0, 30);
+      final penaltyPoints =
+          (recklessCount * 15).clamp(0, 45); // Increased penalty
       score -= penaltyPoints;
       penalties.add(HealthPenalty(
-        reason: '$recklessCount dépense(s) impulsive(s) (>30% du revenu)',
+        reason: '$recklessCount dépense(s) massive(s) (>30% du revenu)',
         points: penaltyPoints.toDouble(),
       ));
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
     // 2. SPENDING VELOCITY - How fast are you spending?
     // If you spend >50% of income in first 10 days = bad
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
     final tenthOfMonth = DateTime(now.year, now.month, 10);
     final first10DaysExpenses = thisMonthExpenses
         .where((tx) => tx.date.isBefore(tenthOfMonth))
@@ -442,23 +443,28 @@ class FinancialHealthScorer {
     final velocityPercent =
         monthlyIncome > 0 ? (first10DaysExpenses / monthlyIncome) * 100 : 0.0;
 
-    if (velocityPercent > 70) {
-      // Spent >70% in first 10 days - critical
-      score -= 25;
+    if (velocityPercent > 80) {
+      // Spent >80% in first 10 days - CRITICAL
+      score -= 40;
       penalties.add(HealthPenalty(
         reason:
-            '${velocityPercent.toStringAsFixed(0)}% du revenu dépensé en 10 jours',
-        points: 15,
+            'Budget épuisé trop vite (${velocityPercent.toStringAsFixed(0)}% en <10 jours)',
+        points: 40,
       ));
-    } else if (velocityPercent > 50) {
-      // Spent >50% in first 10 days - warning
-      score -= 10;
+    } else if (velocityPercent > 60) {
+      // Spent >60% in first 10 days - warning
+      score -= 20;
+      penalties.add(HealthPenalty(
+        reason:
+            'Dépenses rapides (${velocityPercent.toStringAsFixed(0)}% en <10 jours)',
+        points: 10,
+      ));
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
     // 3. DAILY SPENDING SPIKES
     // Multiple large expenses on same day is suspicious
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════
     final expensesByDay = <String, double>{};
     for (var tx in thisMonthExpenses) {
       final dayKey = '${tx.date.year}-${tx.date.month}-${tx.date.day}';
@@ -466,11 +472,31 @@ class FinancialHealthScorer {
     }
 
     final dailyThreshold = monthlyIncome * 0.25; // 25% of income in one day
-    final spikeDays =
-        expensesByDay.values.where((v) => v > dailyThreshold).length;
+    final severeDailyThreshold =
+        monthlyIncome * 0.50; // 50% of income in one day
 
-    if (spikeDays > 2) {
-      score -= 10;
+    int warningSpikes = 0;
+    int severeSpikes = 0;
+
+    expensesByDay.forEach((day, amount) {
+      if (amount > severeDailyThreshold) {
+        severeSpikes++;
+      } else if (amount > dailyThreshold) {
+        warningSpikes++;
+      }
+    });
+
+    if (severeSpikes > 0) {
+      // Even ONE severe spike (burning 50% in one day) is a problem
+      score -= (severeSpikes * 20).clamp(0, 40);
+      penalties.add(HealthPenalty(
+        reason: 'Pic de dépenses critique (>50% revenu en 1 jour)',
+        points: 20,
+      ));
+    }
+
+    if (warningSpikes > 1) {
+      score -= (warningSpikes * 5).clamp(0, 20);
     }
 
     // Build description
