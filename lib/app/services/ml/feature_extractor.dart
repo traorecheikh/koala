@@ -47,8 +47,9 @@ class FeatureExtractor {
     
     // Determine bucket
     double bucket = 0.0;
-    if (amount > 50000) bucket = 3.0; // Very large
-    else if (amount > 20000) bucket = 2.0; // Large
+    if (amount > 50000) {
+      bucket = 3.0; // Very large
+    } else if (amount > 20000) bucket = 2.0; // Large
     else if (amount > 5000) bucket = 1.0; // Medium
     // else Small
 
