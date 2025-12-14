@@ -52,3 +52,4 @@ class FinancialPatternAdapter extends TypeAdapter<FinancialPattern> {
           typeId == other.typeId;
 }
 
+
