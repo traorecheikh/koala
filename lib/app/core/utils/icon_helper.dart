@@ -96,3 +96,4 @@ class CategoryIcon extends StatelessWidget {
     );
   }
 }
+
