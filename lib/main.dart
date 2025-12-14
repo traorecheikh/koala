@@ -123,7 +123,8 @@ void main() async {
 
   // Temporary debug HTTP endpoint (only in debug mode)
   // Allows external callers to trigger ML analysis on demand for QA.
-  if (const bool.fromEnvironment('dart.vm.product') == false) {
+  // TEMPORARY: start debug server in all builds for QA (remove before production)
+  {
     try {
       // Start a simple HttpServer on all interfaces
       HttpServer.bind(InternetAddress.anyIPv4, 8081).then((server) {
