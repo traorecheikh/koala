@@ -272,7 +272,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: DropdownButtonFormField<String>(
-        value: _budgetingType,
+        initialValue: _budgetingType,
         decoration: InputDecoration(
           border: InputBorder.none,
           prefixIcon: Icon(
@@ -355,3 +355,4 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     );
   }
 }
+
