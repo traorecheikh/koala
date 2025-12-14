@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,8 +9,8 @@ import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/routes/app_pages.dart';
 import 'package:intl/intl.dart';
 
-/// A comprehensive financial health dashboard widget
-/// Shows health score, alerts, and quick forecasts
+/// A smart, clean financial profile widget
+/// "Smart Clean" aesthetic: Solid colors, Bento grid, Functional animations
 class FinancialHealthWidget extends StatelessWidget {
   const FinancialHealthWidget({super.key});
 
@@ -26,48 +26,43 @@ class FinancialHealthWidget extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Health Score Header
-            _HealthScoreCard(summary: summary),
+            // 1. Main Score Card (Minimalist Ring)
+            _SmartScoreCard(summary: summary),
             SizedBox(height: 16.h),
 
-            // Quick Forecast Summary
-            if (service.forecast.value != null)
-              _ForecastSummaryCard(forecast: service.forecast.value!),
-            SizedBox(height: 16.h),
-
-            // Proactive Alerts (if any critical/high)
-            if (service.highPriorityAlerts.isNotEmpty) ...[
-              _AlertsSection(alerts: service.highPriorityAlerts),
-            ],
+            // 2. Alerts & Insights (Bento Grid)
+            if (service.highPriorityAlerts.isNotEmpty ||
+                service.forecast.value != null)
+              _BentoGridSection(
+                alerts: service.highPriorityAlerts,
+                forecast: service.forecast.value,
+              ),
           ],
-        ).animate().fadeIn().slideY(begin: 0.1, end: 0);
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0);
       },
     );
   }
 
   Widget _buildLoadingState(BuildContext context) {
     return Container(
-      height: 120.h,
-      padding: EdgeInsets.all(16.w),
+      height: 160.h,
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: BorderRadius.circular(KoalaRadius.xl),
         border: Border.all(color: KoalaColors.border(context)),
       ),
       child: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: 24.w,
-              height: 24.w,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: KoalaColors.primary),
+            CircularProgressIndicator(
+              strokeWidth: 3,
+              color: KoalaColors.primaryUi(context),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 16.h),
             Text(
-              'Analyse en cours...',
-              style: KoalaTypography.bodySmall(context)
+              'Analyse de vos finances...',
+              style: KoalaTypography.bodyMedium(context)
                   .copyWith(color: KoalaColors.textSecondary(context)),
             ),
           ],
@@ -77,150 +72,190 @@ class FinancialHealthWidget extends StatelessWidget {
   }
 }
 
-/// Displays the financial health score with a clean, secondary card style
-class _HealthScoreCard extends StatelessWidget {
+/// Minimalist Score Card with Solid Ring
+class _SmartScoreCard extends StatelessWidget {
   final IntelligenceSummary summary;
 
-  const _HealthScoreCard({required this.summary});
+  const _SmartScoreCard({required this.summary});
 
   @override
   Widget build(BuildContext context) {
-    Color scoreColor;
+    // Determine status color (Solid, no gradients)
+    Color statusColor;
     if (summary.healthScore >= 80) {
-      scoreColor = KoalaColors.success;
+      statusColor = KoalaColors.success;
     } else if (summary.healthScore >= 60) {
-      scoreColor = KoalaColors.warning; // Used as Amber roughly
-    } else if (summary.healthScore >= 40) {
-      scoreColor = const Color(
-          0xFFFFCC00); // Yellow/Amber manually if warning is too orange
+      statusColor = KoalaColors.warning;
     } else {
-      scoreColor = KoalaColors.destructive;
+      statusColor = KoalaColors.destructive;
     }
 
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: BorderRadius.circular(KoalaRadius.xl),
         border: Border.all(color: KoalaColors.border(context)),
-        boxShadow: KoalaColors.shadowSubtle,
+        boxShadow: KoalaShadows.sm,
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Circular Score Indicator
-          _AnimatedHealthScore(
-            score: summary.healthScore,
-            color: scoreColor,
-          ),
-          SizedBox(width: 20.w),
-
-          // Status Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Santé Financière',
-                  style: KoalaTypography.bodySmall(context).copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: KoalaColors.textSecondary(context),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Profil Financier',
+                    style: KoalaTypography.bodyMedium(context).copyWith(
+                      color: KoalaColors.textSecondary(context),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    Text(
-                      summary.statusText,
-                      style: KoalaTypography.heading2(context),
+                  SizedBox(height: 8.h),
+                  Text(
+                    summary.statusText,
+                    style: KoalaTypography.heading2(context).copyWith(
+                      height: 1.0,
                     ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      summary.statusEmoji,
-                      style: TextStyle(fontSize: 22.sp),
+                  ),
+                  SizedBox(height: 8.h),
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(KoalaRadius.full),
                     ),
-                  ],
-                ),
-                SizedBox(height: 4.h),
-                Text(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_getStatusIcon(summary.healthScore),
+                            size: 14.sp, color: statusColor),
+                        SizedBox(width: 6.w),
+                        Text(
+                          summary.healthScore >= 80
+                              ? 'Excellent'
+                              : summary.healthScore >= 60
+                                  ? 'Bon'
+                                  : 'Attention',
+                          style: KoalaTypography.caption(context).copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              // Smart Ring
+              _SolidScoreRing(score: summary.healthScore, color: statusColor),
+            ],
+          ),
+          SizedBox(height: 24.h),
+          Divider(height: 1, color: KoalaColors.border(context)),
+          SizedBox(height: 16.h),
+          // Action / Insight text
+          Row(
+            children: [
+              Icon(CupertinoIcons.info,
+                  size: 16.sp, color: KoalaColors.textSecondary(context)),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
                   summary.statusDescription,
-                  style: KoalaTypography.caption(context).copyWith(
+                  style: KoalaTypography.bodySmall(context).copyWith(
                     color: KoalaColors.textSecondary(context),
-                    height: 1.3,
                   ),
                   maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
-    ).animate().scale(
-          begin: const Offset(0.95, 0.95),
-          duration: 400.ms,
-          curve: Curves.easeOutBack,
-        );
+    );
+  }
+
+  IconData _getStatusIcon(int score) {
+    if (score >= 80) return CupertinoIcons.check_mark_circled_solid;
+    if (score >= 60) return CupertinoIcons.info_circle_fill;
+    return CupertinoIcons.exclamationmark_triangle_fill;
   }
 }
 
-/// Animated circular health score indicator
-class _AnimatedHealthScore extends StatelessWidget {
+/// Functional, solid color ring
+class _SolidScoreRing extends StatelessWidget {
   final int score;
   final Color color;
 
-  const _AnimatedHealthScore({
-    required this.score,
-    required this.color,
-  });
+  const _SolidScoreRing({required this.score, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 70.w,
-      height: 70.w,
+      width: 100.w,
+      height: 100.w,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Background circle
+          // Track
           SizedBox(
-            width: 70.w,
-            height: 70.w,
+            width: 100.w,
+            height: 100.w,
             child: CircularProgressIndicator(
               value: 1,
-              strokeWidth: 6.w,
-              backgroundColor: color.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation(color.withOpacity(0.1)),
+              strokeWidth: 8.w,
+              color:
+                  KoalaColors.border(context).withOpacity(0.5), // Subtle track
             ),
           ),
-          // Animated progress circle
+          // Progress
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: score / 100),
-            duration: const Duration(milliseconds: 1200),
-            curve: Curves.easeOutCubic,
+            duration: 1000.ms,
+            curve: Curves.easeOutExpo,
             builder: (context, value, _) {
               return SizedBox(
-                width: 70.w,
-                height: 70.w,
-                child: CustomPaint(
-                  painter: _ArcPainter(
-                    progress: value,
+                  width: 100.w,
+                  height: 100.w,
+                  child: CircularProgressIndicator(
+                    value: value,
+                    strokeWidth: 8.w,
                     color: color,
-                    strokeWidth: 6.w,
-                  ),
-                ),
-              );
+                    strokeCap: StrokeCap.round,
+                  ));
             },
           ),
-          // Score text
-          TweenAnimationBuilder<int>(
-            tween: IntTween(begin: 0, end: score),
-            duration: const Duration(milliseconds: 1200),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, _) {
-              return Text(
-                '$value',
-                style: KoalaTypography.heading3(context).copyWith(color: color),
-              );
-            },
+          // Score Number
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<int>(
+                tween: IntTween(begin: 0, end: score),
+                duration: 1000.ms,
+                curve: Curves.easeOutExpo,
+                builder: (context, value, _) {
+                  return Text(
+                    '$value',
+                    style: KoalaTypography.heading2(context).copyWith(
+                      fontSize: 28.sp,
+                      height: 1.0,
+                    ),
+                  );
+                },
+              ),
+              Text(
+                '/100',
+                style: KoalaTypography.caption(context).copyWith(
+                  color: KoalaColors.textSecondary(context),
+                  fontSize: 10.sp,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -228,347 +263,241 @@ class _AnimatedHealthScore extends StatelessWidget {
   }
 }
 
-class _ArcPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final double strokeWidth;
-
-  _ArcPainter({
-    required this.progress,
-    required this.color,
-    required this.strokeWidth,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - strokeWidth) / 2;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2, // Start from top
-      2 * math.pi * progress, // Sweep angle
-      false,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ArcPainter oldDelegate) =>
-      progress != oldDelegate.progress || color != oldDelegate.color;
-}
-
-/// Section showing proactive alerts
-class _AlertsSection extends StatelessWidget {
+/// Bento Grid for Alerts and Forecasts
+class _BentoGridSection extends StatelessWidget {
   final List<ProactiveAlert> alerts;
+  final CashFlowForecast? forecast;
 
-  const _AlertsSection({required this.alerts});
+  const _BentoGridSection({required this.alerts, this.forecast});
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.bell_fill,
-                color: KoalaColors.warning,
-                size: 20.sp,
-              ),
-              SizedBox(width: 8.w),
-              Text(
-                'Alertes',
-                style: KoalaTypography.heading3(context),
-              ),
-            ],
+        if (forecast != null) ...[
+          // Forecast Card (Full Width)
+          _ForecastBentoCard(forecast: forecast!),
+          SizedBox(height: 16.h),
+        ],
+        // Alerts Grid (2 columns if multiple, or list)
+        if (alerts.isNotEmpty)
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: alerts.take(3).length,
+            separatorBuilder: (_, __) => SizedBox(height: 12.h),
+            itemBuilder: (context, index) =>
+                _AlertBentoCard(alert: alerts[index]),
           ),
-        ),
-        ...alerts.take(3).map((alert) => _AlertCard(alert: alert)),
       ],
     );
   }
 }
 
-/// Individual alert card styled like Insights
-class _AlertCard extends StatelessWidget {
-  final ProactiveAlert alert;
-
-  const _AlertCard({required this.alert});
-
-  @override
-  Widget build(BuildContext context) {
-    Color alertColor;
-    switch (alert.severity) {
-      case AlertSeverity.critical:
-        alertColor = KoalaColors.destructive;
-        break;
-      case AlertSeverity.high:
-        alertColor = KoalaColors.warning; // Orange for high
-        break;
-      case AlertSeverity.medium:
-        alertColor = const Color(0xFFFFCC00); // Amber/Yellow
-        break;
-      case AlertSeverity.positive:
-        alertColor = KoalaColors.success;
-        break;
-      default:
-        alertColor = KoalaColors.accent;
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      decoration: BoxDecoration(
-        color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: KoalaColors.shadowSubtle,
-        border: Border.all(color: KoalaColors.border(context)),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: alertColor, width: 6.w)),
-        ),
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: alertColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(alert.icon, size: 16.sp, color: alertColor),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Text(
-                    alert.title,
-                    style: KoalaTypography.bodyMedium(context)
-                        .copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                InkWell(
-                  onTap: () =>
-                      Get.find<IntelligenceService>().dismissAlert(alert.id),
-                  borderRadius: BorderRadius.circular(12.r),
-                  child: Padding(
-                    padding: EdgeInsets.all(4.w),
-                    child: Icon(CupertinoIcons.xmark,
-                        size: 18.sp, color: KoalaColors.textSecondary(context)),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              alert.message,
-              style: KoalaTypography.bodySmall(context).copyWith(
-                color: KoalaColors.textSecondary(context),
-                height: 1.4,
-              ),
-            ),
-            if (alert.actionSuggestion.isNotEmpty) ...[
-              SizedBox(height: 12.h),
-              GestureDetector(
-                onTap: () {
-                  // Navigate to relevant screen based on action
-                  final action = alert.actionSuggestion.toLowerCase();
-                  if (action.contains('budget') ||
-                      action.contains('dépenses') ||
-                      action.contains('strict')) {
-                    Get.toNamed(Routes.budget);
-                  } else if (action.contains('dette') ||
-                      action.contains('remboursement')) {
-                    Get.toNamed(Routes.debt);
-                  } else if (action.contains('objectif')) {
-                    Get.toNamed(Routes.goals);
-                  } else if (action.contains('prêts') ||
-                      action.contains('suivre')) {
-                    Get.toNamed(Routes.debt);
-                  } else if (action.contains('planifier')) {
-                    Get.toNamed(Routes.budget);
-                  } else {
-                    Get.toNamed(Routes.analytics);
-                  }
-                },
-                child: Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    color: KoalaColors.background(context),
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(color: alertColor.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        CupertinoIcons.lightbulb,
-                        size: 14.sp,
-                        color: alertColor,
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          alert.actionSuggestion,
-                          style: KoalaTypography.caption(context).copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Icon(CupertinoIcons.chevron_right,
-                          size: 14.sp,
-                          color: KoalaColors.textSecondary(context)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.1);
-  }
-}
-
-/// Quick forecast summary card
-class _ForecastSummaryCard extends StatelessWidget {
+class _ForecastBentoCard extends StatelessWidget {
   final CashFlowForecast forecast;
 
-  const _ForecastSummaryCard({required this.forecast});
+  const _ForecastBentoCard({required this.forecast});
 
   @override
   Widget build(BuildContext context) {
     final summary = forecast.summary;
-
     final isPositive = summary.endBalance > 0;
     final trendColor =
         isPositive ? KoalaColors.success : KoalaColors.destructive;
 
     return Container(
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(24.r),
-        boxShadow: KoalaColors.shadowSubtle,
+        borderRadius: BorderRadius.circular(KoalaRadius.lg),
         border: Border.all(color: KoalaColors.border(context)),
+        boxShadow: KoalaShadows.xs,
       ),
-      clipBehavior: Clip.hardEdge,
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: KoalaColors.accent.withOpacity(0.1),
-                    shape: BoxShape.circle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(CupertinoIcons.graph_square_fill,
+                  color: KoalaColors.primaryUi(context), size: 18.sp),
+              SizedBox(width: 8.w),
+              Text('Prévision 30 jours', style: KoalaTypography.label(context)),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Solde estimé',
+                    style: KoalaTypography.caption(context),
                   ),
-                  child: Icon(
-                    CupertinoIcons.chart_bar_alt_fill,
-                    color: KoalaColors.accent,
-                    size: 18.sp,
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${NumberFormat.compact(locale: "fr_FR").format(summary.endBalance)} F',
+                    style: KoalaTypography.heading3(context)
+                        .copyWith(color: trendColor),
                   ),
-                ),
-                SizedBox(width: 12.w),
-                Text(
-                  'Prévision 30 jours',
-                  style: KoalaTypography.heading3(context),
-                ),
-              ],
-            ),
-            SizedBox(height: 20.h),
-            Row(
-              children: [
-                Expanded(
-                  child: _ForecastMetric(
-                    label: 'Solde prévu',
-                    value:
-                        '${NumberFormat.compact(locale: "fr_FR").format(summary.endBalance)} F',
-                    // Compact format for space
-                    color: trendColor,
-                    icon: isPositive
-                        ? CupertinoIcons.arrow_up_right
-                        : CupertinoIcons.arrow_down_right,
+                ],
+              ),
+              Container(
+                  width: 1, height: 32.h, color: KoalaColors.border(context)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Point bas',
+                    style: KoalaTypography.caption(context),
                   ),
-                ),
-                Container(
-                  width: 1,
-                  height: 40.h,
-                  color: KoalaColors.border(context),
-                ),
-                Expanded(
-                  child: _ForecastMetric(
-                    label: 'Point bas',
-                    value:
-                        '${NumberFormat.compact(locale: "fr_FR").format(summary.lowestBalance)} F',
-                    color: summary.lowestBalance < 0
-                        ? KoalaColors.destructive
-                        : KoalaColors.textSecondary(context),
-                    icon: CupertinoIcons.arrow_down,
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${NumberFormat.compact(locale: "fr_FR").format(summary.lowestBalance)} F',
+                    style: KoalaTypography.heading3(context).copyWith(
+                        color: summary.lowestBalance < 0
+                            ? KoalaColors.destructive
+                            : KoalaColors.text(context)),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
-    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
-  }
-}
-
-class _ForecastMetric extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final IconData icon;
-
-  const _ForecastMetric({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          label,
-          style: KoalaTypography.caption(context)
-              .copyWith(color: KoalaColors.textSecondary(context)),
-        ),
-        SizedBox(height: 8.h),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 16.sp),
-            SizedBox(width: 6.w),
-            Text(
-              value,
-              style: KoalaTypography.heading3(context),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
 
+class _AlertBentoCard extends StatelessWidget {
+  final ProactiveAlert alert;
+
+  const _AlertBentoCard({required this.alert});
+
+  @override
+  Widget build(BuildContext context) {
+    Color accentColor;
+    IconData icon;
+
+    switch (alert.severity) {
+      case AlertSeverity.critical:
+        accentColor = KoalaColors.destructive;
+        icon = CupertinoIcons.exclamationmark_shield_fill;
+        break;
+      case AlertSeverity.high:
+        accentColor = KoalaColors.warning;
+        icon = CupertinoIcons.exclamationmark_triangle_fill;
+        break;
+      case AlertSeverity.positive:
+        accentColor = KoalaColors.success;
+        icon = CupertinoIcons.hand_thumbsup_fill;
+        break;
+      default:
+        accentColor = KoalaColors.accent;
+        icon = CupertinoIcons.lightbulb_fill;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        // Simple routing logic based on action suggestion (reused from before)
+        _handleNavigation(alert.actionSuggestion);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: KoalaColors.surface(context),
+          borderRadius: BorderRadius.circular(KoalaRadius.lg),
+          border: Border.all(color: KoalaColors.border(context)),
+          boxShadow: KoalaShadows.xs,
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Accent Strip
+              Container(width: 4.w, color: accentColor),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(12.w),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(6.w),
+                        decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.1),
+                            shape: BoxShape.circle),
+                        child: Icon(icon, size: 16.sp, color: accentColor),
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              alert.title,
+                              style: KoalaTypography.bodyMedium(context)
+                                  .copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              alert.message,
+                              style: KoalaTypography.caption(context)
+                                  .copyWith(height: 1.3),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (alert.actionSuggestion.isNotEmpty) ...[
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Text(
+                                    alert.actionSuggestion,
+                                    style: KoalaTypography.caption(context)
+                                        .copyWith(
+                                            color: accentColor,
+                                            fontWeight: FontWeight.w600),
+                                  ),
+                                  Icon(CupertinoIcons.chevron_right,
+                                      size: 12.sp, color: accentColor),
+                                ],
+                              ),
+                            ]
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Get.find<IntelligenceService>()
+                            .dismissAlert(alert.id),
+                        child: Icon(CupertinoIcons.xmark,
+                            size: 16.sp,
+                            color: KoalaColors.textSecondary(context)),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleNavigation(String action) {
+    if (action.isEmpty) return;
+    final act = action.toLowerCase();
+    if (act.contains('budget') || act.contains('dépenses')) {
+      Get.toNamed(Routes.budget);
+    } else if (act.contains('dette') || act.contains('remboursement')) {
+      Get.toNamed(Routes.debt);
+    } else if (act.contains('objectif')) {
+      Get.toNamed(Routes.goals);
+    } else {
+      Get.toNamed(Routes.analytics);
+    }
+  }
+}
 
