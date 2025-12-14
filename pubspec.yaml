@@ -52,6 +52,7 @@ dependencies:
   open_file: ^3.3.2
   restart_app: ^1.2.1
   shorebird_code_push: ^2.0.0
+  local_auth: ^2.2.0
 
 
 dev_dependencies:
@@ -71,3 +72,4 @@ flutter:
     - assets/icons/
     - assets/
     - shorebird.yaml
+
