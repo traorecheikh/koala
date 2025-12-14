@@ -27,3 +27,4 @@ class FinancialPattern extends HiveObject {
     this.isActive = true,
   });
 }
+
