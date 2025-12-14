@@ -109,4 +109,3 @@ class FrequencyAdapter extends TypeAdapter<Frequency> {
           typeId == other.typeId;
 }
 
-
