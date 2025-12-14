@@ -98,3 +98,4 @@ class PaymentFrequencyAdapter extends TypeAdapter<PaymentFrequency> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
