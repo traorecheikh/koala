@@ -25,10 +25,10 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
   final TextEditingController _targetAmountController = TextEditingController();
   GoalType _selectedGoalType = GoalType.savings;
   DateTime? _selectedTargetDate;
-  
+
   // For icon and color selection
   int? _selectedIconKey;
-  Color _selectedColor = Colors.blue;
+  final Color _selectedColor = Colors.blue;
 
   @override
   void dispose() {
@@ -69,7 +69,8 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Titre de l\'objectif',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r)),
               ),
             ),
             SizedBox(height: 16.h),
@@ -77,7 +78,8 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
               controller: _descriptionController,
               decoration: InputDecoration(
                 labelText: 'Description (optionnel)',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r)),
               ),
               maxLines: 3,
               minLines: 1,
@@ -89,21 +91,26 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
                 labelText: 'Montant cible',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r)),
                 suffixText: 'FCFA',
               ),
             ),
             SizedBox(height: 16.h),
             DropdownButtonFormField<GoalType>(
-              value: _selectedGoalType,
+              initialValue: _selectedGoalType,
               decoration: InputDecoration(
                 labelText: 'Type d\'objectif',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r)),
               ),
-              items: GoalType.values.map((type) => DropdownMenuItem(
-                value: type,
-                child: Text(type.toString().split('.').last), // e.g., 'savings'
-              )).toList(),
+              items: GoalType.values
+                  .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(
+                            type.toString().split('.').last), // e.g., 'savings'
+                      ))
+                  .toList(),
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -119,34 +126,73 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
                   : 'Date cible: ${DateFormat('dd/MM/yyyy').format(_selectedTargetDate!)}'),
               trailing: const Icon(CupertinoIcons.calendar),
               onTap: () => _selectDate(context),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r)),
               tileColor: theme.inputDecorationTheme.fillColor,
             ),
             SizedBox(height: 16.h),
-            // TODO: Add icon and color picker
-            
+            // Icon and color picker row
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Icône:',
+                      style: TextStyle(fontWeight: FontWeight.w500)),
+                ),
+                Wrap(
+                  spacing: 8.w,
+                  children: [0, 1, 2, 3, 4, 5].map((index) {
+                    final isSelected = _selectedIconKey == index;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedIconKey = index),
+                      child: Container(
+                        padding: EdgeInsets.all(8.w),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? _selectedColor.withOpacity(0.2)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: isSelected
+                              ? Border.all(color: _selectedColor, width: 2)
+                              : null,
+                        ),
+                        child: CategoryIcon(
+                            iconKey: index.toString(),
+                            size: 24.sp,
+                            color: isSelected ? _selectedColor : Colors.grey),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+
             SizedBox(height: 24.h),
             Row(
               children: [
-                Expanded(child: OutlinedButton(onPressed: () => NavigationHelper.safeBack(), child: const Text('Annuler'))),
+                Expanded(
+                    child: OutlinedButton(
+                        onPressed: () => NavigationHelper.safeBack(),
+                        child: const Text('Annuler'))),
                 SizedBox(width: 12.w),
-                Expanded(child: ElevatedButton(
+                Expanded(
+                    child: ElevatedButton(
                   onPressed: () async {
-                    if (_titleController.text.isNotEmpty && _targetAmountController.text.isNotEmpty) {
-                          final amount = double.parse(_amountController.text);
-                          
-                          final newGoal = FinancialGoal(
-                            title: _titleController.text,
-                            description: _descriptionController.text,
-                            targetAmount: amount,
-                            type: _selectedType,
-                            targetDate: _selectedDate,
-                            iconKey: 0, // TODO: Map _selectedIcon (String) to index (int) or update picker
-                            colorValue: _selectedColor.value,
-                          );
+                    if (_titleController.text.isNotEmpty &&
+                        _targetAmountController.text.isNotEmpty) {
+                      final amount = double.parse(_amountController.text);
 
-                          await controller.addGoal(newGoal);
-                          NavigationHelper.safeBack();
+                      final newGoal = FinancialGoal(
+                        title: _titleController.text,
+                        description: _descriptionController.text,
+                        targetAmount: amount,
+                        type: _selectedType,
+                        targetDate: _selectedDate,
+                        iconKey: _selectedIconKey ?? 0,
+                        colorValue: _selectedColor.value,
+                      );
+
+                      await controller.addGoal(newGoal);
+                      NavigationHelper.safeBack();
                     }
                   },
                   child: const Text('Créer'),
@@ -159,3 +205,4 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
     );
   }
 }
+
