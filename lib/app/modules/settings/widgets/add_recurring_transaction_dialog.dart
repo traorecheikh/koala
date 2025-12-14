@@ -87,9 +87,9 @@ class _AddRecurringTransactionSheetState
       if (_selectedCategory == null) {
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Veuillez sélectionner une catégorie'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Veuillez sélectionner une catégorie'),
+            backgroundColor: KoalaColors.destructive,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -97,30 +97,82 @@ class _AddRecurringTransactionSheetState
       }
 
       if (_frequency == Frequency.weekly && _selectedDays.isEmpty) {
-         HapticFeedback.lightImpact();
+        HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Veuillez sélectionner au moins un jour'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Veuillez sélectionner au moins un jour'),
+            backgroundColor: KoalaColors.destructive,
             behavior: SnackBarBehavior.floating,
           ),
         );
         return;
       }
 
-      HapticFeedback.heavyImpact();
-      setState(() => _loading = true);
+      // Validate day of month for monthly frequency
+      if (_frequency == Frequency.monthly && _dayOfMonth > 28) {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Jour $_dayOfMonth peut ne pas exister dans tous les mois (ex: février)'),
+            backgroundColor: KoalaColors.warning,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Continuer',
+              textColor: Colors.white,
+              onPressed: () => _proceedWithTransaction(),
+            ),
+          ),
+        );
+        return;
+      }
 
-      // Removed artificial delay
+      await _proceedWithTransaction();
+    } else {
+      HapticFeedback.lightImpact();
+    }
+  }
 
+  Future<void> _proceedWithTransaction() async {
+    HapticFeedback.heavyImpact();
+    setState(() => _loading = true);
+
+    try {
       final cleanAmount = _amountController.text.replaceAll(RegExp(r'[^\d]'), '');
       final amount = double.parse(cleanAmount);
-      
+
+      // Validate amount bounds
+      if (amount <= 0) {
+        if (mounted) {
+          setState(() => _loading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Le montant doit être supérieur à zéro'),
+              backgroundColor: KoalaColors.destructive,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (amount > 1000000000) { // 1 billion max
+        if (mounted) {
+          setState(() => _loading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Le montant est trop élevé'),
+              backgroundColor: KoalaColors.warning,
+            ),
+          );
+        }
+        return;
+      }
+
       if (widget.transaction != null) {
-        // Edit existing
+        // Edit existing with error handling
         final t = widget.transaction!;
         t.amount = amount;
-        t.description = _descriptionController.text;
+        t.description = _descriptionController.text.trim();
         t.frequency = _frequency;
         t.daysOfWeek = List.from(_selectedDays);
         t.dayOfMonth = _dayOfMonth;
@@ -128,10 +180,10 @@ class _AddRecurringTransactionSheetState
         t.type = _selectedType;
         await _controller.updateRecurringTransaction(t);
       } else {
-        // Create new
+        // Create new with error handling
         final newTransaction = RecurringTransaction(
           amount: amount,
-          description: _descriptionController.text,
+          description: _descriptionController.text.trim(),
           frequency: _frequency,
           daysOfWeek: _selectedDays,
           dayOfMonth: _dayOfMonth,
@@ -147,17 +199,29 @@ class _AddRecurringTransactionSheetState
         HapticFeedback.mediumImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.transaction != null 
-              ? 'Transaction modifiée avec succès'
-              : 'Transaction récurrente ajoutée avec succès'),
-            backgroundColor: Colors.green,
+            content: Text(widget.transaction != null
+                ? 'Transaction modifiée avec succès'
+                : 'Transaction récurrente ajoutée avec succès'),
+            backgroundColor: KoalaColors.success,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
         );
       }
-    } else {
-      HapticFeedback.lightImpact();
+    } catch (e) {
+      // Error handling for database operations
+      if (mounted) {
+        setState(() => _loading = false);
+        HapticFeedback.heavyImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: KoalaColors.destructive,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -181,17 +245,21 @@ class _AddRecurringTransactionSheetState
     final theme = Theme.of(context);
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isEditing = widget.transaction != null;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.75, // Explicit height constraint
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: screenHeight * 0.9, // Responsive height with max constraint
+        minHeight: screenHeight * 0.5, // Minimum height
+      ),
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
-            24.w,
+            KoalaSpacing.xxl,
             0,
-            24.w,
-            keyboardHeight + 24.h,
+            KoalaSpacing.xxl,
+            keyboardHeight + KoalaSpacing.xxl,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,10 +267,10 @@ class _AddRecurringTransactionSheetState
                 [     
                       // Type Selector (Income/Expense)
                       Container(
-                        padding: EdgeInsets.all(4.w),
+                        padding: EdgeInsets.all(KoalaSpacing.xs),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12.r),
+                          color: KoalaColors.border(context),
+                          borderRadius: BorderRadius.circular(KoalaRadius.sm),
                         ),
                         child: Row(
                           children: [
@@ -219,7 +287,7 @@ class _AddRecurringTransactionSheetState
                           ],
                         ),
                       ),
-                      SizedBox(height: 24.h),
+                      SizedBox(height: KoalaSpacing.xxl),
 
                       // Amount Field
                       KoalaTextField(
@@ -240,7 +308,7 @@ class _AddRecurringTransactionSheetState
                           return null;
                         },
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: KoalaSpacing.lg),
                       
                       // Category Selector
                       GestureDetector(
@@ -251,10 +319,10 @@ class _AddRecurringTransactionSheetState
                             vertical: 16.h,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.brightness == Brightness.dark ? const Color(0xFF2C2C2E) : Colors.white,
-                            borderRadius: BorderRadius.circular(16.r),
+                            color: theme.brightness == Brightness.dark ? KoalaColors.darkInputBackground : Colors.white,
+                            borderRadius: BorderRadius.circular(KoalaRadius.md),
                             border: Border.all(
-                                color: theme.brightness == Brightness.dark ? Colors.white10 : Colors.grey.shade200
+                                color: theme.brightness == Brightness.dark ? KoalaColors.darkBorder : KoalaColors.border(context)
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -270,7 +338,7 @@ class _AddRecurringTransactionSheetState
                                 _selectedCategory?.icon ?? '📦',
                                 style: TextStyle(fontSize: 24.sp),
                               ),
-                              SizedBox(width: 12.w),
+                              SizedBox(width: KoalaSpacing.md),
                               Expanded(
                                 child: Text(
                                   _selectedCategory?.displayName ??
@@ -280,20 +348,20 @@ class _AddRecurringTransactionSheetState
                                     fontWeight: FontWeight.w500,
                                     color: _selectedCategory != null
                                         ? (theme.brightness == Brightness.dark ? Colors.white : Colors.black)
-                                        : Colors.grey.shade500,
+                                        : KoalaColors.textSecondary(context),
                                   ),
                                 ),
                               ),
                               Icon(
                                 CupertinoIcons.chevron_right,
-                                color: Colors.grey.shade400,
+                                color: KoalaColors.textSecondary(context),
                                 size: 20.sp,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: KoalaSpacing.lg),
 
                       // Description Field
                       KoalaTextField(
@@ -307,19 +375,19 @@ class _AddRecurringTransactionSheetState
                           return null;
                         },
                       ),
-                      SizedBox(height: 24.h),
+                      SizedBox(height: KoalaSpacing.xxl),
                       
                       Text(
                         'Fréquence',
                         style: theme.textTheme.titleMedium,
                       ),
-                      SizedBox(height: 12.h),
+                      SizedBox(height: KoalaSpacing.md),
                       _buildFrequencySelector(),
                       if (_frequency == Frequency.weekly)
                         _buildWeeklyDaySelector(),
                       if (_frequency == Frequency.monthly)
                         _buildMonthlyDaySelector(),
-                      SizedBox(height: 48.h),
+                      SizedBox(height: KoalaSpacing.huge),
                       
                       KoalaButton(
                         text: isEditing ? 'Modifier' : 'Enregistrer',
@@ -355,7 +423,7 @@ class _AddRecurringTransactionSheetState
           padding: EdgeInsets.symmetric(vertical: 10.h),
           decoration: BoxDecoration(
             color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(10.r),
+            borderRadius: BorderRadius.circular(KoalaRadius.sm),
             boxShadow: isSelected ? [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -370,7 +438,7 @@ class _AddRecurringTransactionSheetState
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
-              color: isSelected ? activeColor : Colors.grey.shade600,
+              color: isSelected ? activeColor : KoalaColors.textSecondary(context),
             ),
           ),
         ),
@@ -402,12 +470,12 @@ class _AddRecurringTransactionSheetState
               decoration: BoxDecoration(
                 color: isSelected
                     ? Theme.of(context).colorScheme.primary
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12.r),
+                    : KoalaColors.border(context),
+                borderRadius: BorderRadius.circular(KoalaRadius.sm),
                 border: Border.all(
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary
-                      : Colors.grey.shade200,
+                      : KoalaColors.border(context),
                 ),
               ),
               child: Text(
@@ -416,7 +484,7 @@ class _AddRecurringTransactionSheetState
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  color: isSelected ? Colors.white : KoalaColors.text(context),
                 ),
               ),
             ),
@@ -435,9 +503,9 @@ class _AddRecurringTransactionSheetState
         children: [
           Text(
             'Jours de la semaine',
-             style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+             style: TextStyle(fontSize: 14.sp, color: KoalaColors.textSecondary(context)),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: KoalaSpacing.sm),
           Wrap(
             spacing: 8.w,
             runSpacing: 8.h,
@@ -464,7 +532,7 @@ class _AddRecurringTransactionSheetState
                   decoration: BoxDecoration(
                     color: isSelected
                         ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade100,
+                        : KoalaColors.border(context),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -473,7 +541,7 @@ class _AddRecurringTransactionSheetState
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : Colors.grey.shade700,
+                        color: isSelected ? Colors.white : KoalaColors.text(context),
                       ),
                     ),
                   ),
@@ -492,18 +560,18 @@ class _AddRecurringTransactionSheetState
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: Colors.grey.shade200),
+          color: KoalaColors.inputBackground(context),
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          border: Border.all(color: KoalaColors.border(context)),
         ),
         child: Row(
           children: [
             Icon(
               CupertinoIcons.calendar,
-              color: Colors.grey.shade500,
+              color: KoalaColors.textSecondary(context),
               size: 20.sp,
             ),
-            SizedBox(width: 12.w),
+            SizedBox(width: KoalaSpacing.md),
             Expanded(
               child: DropdownButton<int>(
                 value: _dayOfMonth,
@@ -592,8 +660,8 @@ class _CategoryPickerSheet extends StatelessWidget {
                       Container(
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(KoalaRadius.md),
+                          border: Border.all(color: KoalaColors.border(context)),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -602,7 +670,7 @@ class _CategoryPickerSheet extends StatelessWidget {
                               category.icon,
                               style: TextStyle(fontSize: 32.sp),
                             ),
-                            SizedBox(height: 8.h),
+                            SizedBox(height: KoalaSpacing.sm),
                             Text(
                               category.displayName,
                               style: TextStyle(
