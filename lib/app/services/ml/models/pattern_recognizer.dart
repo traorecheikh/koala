@@ -120,3 +120,4 @@ class PatternRecognizer {
     return words.take(count).join(' ');
   }
 }
+
