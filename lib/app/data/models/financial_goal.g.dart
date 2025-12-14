@@ -128,4 +128,3 @@ class GoalMilestoneAdapter extends TypeAdapter<GoalMilestone> {
           typeId == other.typeId;
 }
 
-
