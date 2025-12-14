@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
-import 'package:uuid/uuid.dart';
 
 /// Data migration service for managing schema changes across app versions
 /// SECURITY: Handles migration of encrypted and unencrypted data safely
