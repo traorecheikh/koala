@@ -12,13 +12,14 @@ import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 import 'package:uuid/uuid.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/core/design_system.dart';
 
 void showUserSetupDialog(BuildContext context) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    isDismissible: false,
-    enableDrag: false,
+    isDismissible: true,
+    enableDrag: true,
     backgroundColor: Colors.transparent,
     builder: (context) => const _UserSetupSheet(),
   );
@@ -44,8 +45,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   String? _selectedJobTitle;
   double _selectedSalary = 150000;
   PaymentFrequency _selectedFrequency = PaymentFrequency.monthly;
-  DateTime _paymentDate = DateTime.now();
-  List<Job> _jobs = [];
+  final DateTime _paymentDate = DateTime.now();
+  final List<Job> _jobs = [];
 
   final List<String> _jobTitles = [
     'Développeur FullStack',
@@ -101,9 +102,9 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     if (digitsOnly.isEmpty) return '';
     final number = int.parse(digitsOnly);
     return number.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match match) => '${match[1]} ',
-    );
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match match) => '${match[1]} ',
+        );
   }
 
   bool get _canContinue {
@@ -111,10 +112,10 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       case 0:
         return _fullNameController.text.trim().isNotEmpty;
       case 1:
-        return true; 
+        return true;
       case 2:
         final age = int.tryParse(_ageController.text);
-        return age != null && age > 0;
+        return age != null && age > 0 && age <= 120;
       case 3:
         return true;
       default:
@@ -147,7 +148,20 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   }
 
   void _skipSetup() {
-    NavigationHelper.safeBack();
+    if (_currentStep == 0 || _fullNameController.text.trim().isEmpty) {
+      // First step or no data entered, allow direct skip
+      NavigationHelper.safeBack();
+    } else {
+      // Show confirmation if user has entered data
+      KoalaConfirmationDialog.show(
+        context: context,
+        title: 'Quitter la configuration ?',
+        message: 'Vos informations ne seront pas sauvegardées.',
+        confirmText: 'Quitter',
+        isDestructive: true,
+        onConfirm: () => NavigationHelper.safeBack(),
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -156,31 +170,76 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     HapticFeedback.heavyImpact();
     setState(() => _loading = true);
 
-    final jobBox = Hive.box<Job>('jobBox');
-    for (final job in _jobs) {
-      await jobBox.put(job.id, job);
+    try {
+      final jobBox = Hive.box<Job>('jobBox');
+      for (final job in _jobs) {
+        await jobBox.put(job.id, job);
+      }
+
+      final homeController = Get.find<HomeController>();
+      final totalMonthlyIncome = _jobs.fold(
+        0.0,
+        (sum, job) => sum + job.monthlyIncome,
+      );
+      final defaultPayday = _jobs.isNotEmpty ? _jobs.first.paymentDate.day : 1;
+
+      final newUser = LocalUser(
+        fullName: _fullNameController.text.trim(),
+        salary: totalMonthlyIncome,
+        payday: defaultPayday,
+        age: int.parse(_ageController.text),
+        budgetingType: _budgetingType,
+      );
+
+      homeController.user.value = newUser;
+
+      // Generate initial transactions based on new jobs
+      await homeController.generateJobIncomeTransactions();
+
+      if (mounted) {
+        NavigationHelper.safeBack();
+        HapticFeedback.mediumImpact();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la sauvegarde: ${e.toString()}'),
+            backgroundColor: KoalaColors.destructive,
+          ),
+        );
+      }
     }
+  }
 
-    final homeController = Get.find<HomeController>();
-    final totalMonthlyIncome = _jobs.fold(
-      0.0,
-      (sum, job) => sum + job.monthlyIncome,
-    );
-    final defaultPayday = _jobs.isNotEmpty ? _jobs.first.paymentDate.day : 1;
+  String _getStepTitle() {
+    switch (_currentStep) {
+      case 0:
+        return 'Bienvenue sur Koaa';
+      case 1:
+        return 'Vos revenus';
+      case 2:
+        return 'Votre profil';
+      case 3:
+        return 'Votre budget';
+      default:
+        return 'Configuration';
+    }
+  }
 
-    final newUser = LocalUser(
-      fullName: _fullNameController.text.trim(),
-      salary: totalMonthlyIncome, 
-      payday: defaultPayday, 
-      age: int.parse(_ageController.text),
-      budgetingType: _budgetingType,
-    );
-
-    homeController.user.value = newUser;
-
-    if (mounted) {
-      NavigationHelper.safeBack();
-      HapticFeedback.mediumImpact();
+  String _getStepSubtitle() {
+    switch (_currentStep) {
+      case 0:
+        return 'Configurons votre profil pour commencer.';
+      case 1:
+        return 'Ajoutez toutes vos sources de revenus.';
+      case 2:
+        return 'Quelques informations supplémentaires.';
+      case 3:
+        return 'Choisissez votre méthode de budgétisation.';
+      default:
+        return '';
     }
   }
 
@@ -188,169 +247,217 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return WillPopScope(
-      onWillPop: () async => false,
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return PopScope(
+      canPop: _currentStep == 0 || _fullNameController.text.trim().isEmpty,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _skipSetup();
+        }
+      },
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: screenHeight * 0.92,
+          minHeight: screenHeight * 0.5,
         ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Container(
-                width: 36.w,
-                height: 4.h,
-                margin: EdgeInsets.only(top: 12.h),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              Padding(
-                padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 16.h),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Bienvenue sur Koaa',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 24.sp,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Configurons votre profil pour commencer.',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: Colors.grey.shade600,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_currentStep == 0)
-                      TextButton(
-                        onPressed: _skipSetup,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey.shade600,
-                        ),
-                        child: const Text('Passer'),
-                      ),
-                  ],
-                ),
-              ),
-
-              // Enhanced Progress Indicator
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                child: Row(
-                  children: List.generate(4, (index) {
-                    final isActive = index <= _currentStep;
-                    return Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        height: 4.h,
-                        margin: EdgeInsets.only(right: index < 3 ? 8.w : 0),
-                        decoration: BoxDecoration(
-                          color: isActive ? theme.colorScheme.primary : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ).animate().fadeIn(duration: 300.ms),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    top: 32.h,
-                    bottom: keyboardHeight > 0 ? keyboardHeight + 24.h : 24.h,
-                    left: 24.w,
-                    right: 24.w,
-                  ),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.1, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _buildStepContent(),
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(KoalaRadius.lg)),
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                Container(
+                  width: 36.w,
+                  height: 4.h,
+                  margin: EdgeInsets.only(top: KoalaSpacing.md),
+                  decoration: BoxDecoration(
+                    color: KoalaColors.border(context),
+                    borderRadius: BorderRadius.circular(KoalaRadius.xs),
                   ),
                 ),
-              ),
 
-              Padding(
-                padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 32.h),
-                child: Row(
-                  children: [
-                    if (_currentStep > 0)
-                      Padding(
-                        padding: EdgeInsets.only(right: 16.w),
-                        child: SizedBox(
-                          width: 56.w,
-                          height: 56.h,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16.r),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(KoalaSpacing.xl, KoalaSpacing.xl,
+                      KoalaSpacing.xl, KoalaSpacing.lg),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Étape ${_currentStep + 1} sur 4',
+                              style: KoalaTypography.caption(context).copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: KoalaColors.primary,
                               ),
-                              side: BorderSide(color: Colors.grey.shade300),
                             ),
-                            onPressed: _previousStep,
-                            child: Icon(CupertinoIcons.back, color: Colors.black),
-                          ),
+                            SizedBox(height: KoalaSpacing.xs),
+                            Text(
+                              _getStepTitle(),
+                              style: KoalaTypography.heading3(context).copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: KoalaSpacing.sm),
+                            Text(
+                              _getStepSubtitle(),
+                              style:
+                                  KoalaTypography.bodyMedium(context).copyWith(
+                                color: KoalaColors.textSecondary(context),
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    Expanded(
-                      child: SizedBox(
-                        height: 56.h,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.r),
-                            ),
+                      if (_currentStep == 0)
+                        TextButton(
+                          onPressed: _skipSetup,
+                          style: TextButton.styleFrom(
+                            foregroundColor: KoalaColors.textSecondary(context),
                           ),
-                          onPressed: _canContinue ? (_currentStep == 3 ? _submit : _nextStep) : null,
-                          child: _loading
-                              ? const CupertinoActivityIndicator(color: Colors.white)
-                              : Text(
-                                  _currentStep == 3 ? 'Terminer' : 'Continuer',
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                          child: const Text('Passer'),
                         ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Enhanced Progress Indicator
+                Semantics(
+                  label: 'Progression: étape ${_currentStep + 1} sur 4',
+                  readOnly: true,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: KoalaSpacing.xl),
+                    child: Row(
+                      children: List.generate(4, (index) {
+                        final isActive = index <= _currentStep;
+                        return Expanded(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            height: 4.h,
+                            margin: EdgeInsets.only(right: index < 3 ? 8.w : 0),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? theme.colorScheme.primary
+                                  : KoalaColors.border(context),
+                              borderRadius:
+                                  BorderRadius.circular(KoalaRadius.xs),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ).animate().fadeIn(duration: 300.ms),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      top: KoalaSpacing.xxxl,
+                      bottom: keyboardHeight > 0
+                          ? keyboardHeight + KoalaSpacing.xl
+                          : KoalaSpacing.xl,
+                      left: KoalaSpacing.xl,
+                      right: KoalaSpacing.xl,
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.1, 0),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _buildStepContent(),
+                    ),
+                  ),
+                ),
+
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      KoalaSpacing.xl, 0, KoalaSpacing.xl, KoalaSpacing.xxxl),
+                  child: Row(
+                    children: [
+                      if (_currentStep > 0)
+                        Padding(
+                          padding: EdgeInsets.only(right: KoalaSpacing.lg),
+                          child: Tooltip(
+                            message: 'Étape précédente',
+                            child: SizedBox(
+                              width: 56.w,
+                              height: 56.h,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(KoalaRadius.md),
+                                  ),
+                                  side: BorderSide(
+                                      color: KoalaColors.border(context)),
+                                ),
+                                onPressed: _previousStep,
+                                child: Icon(CupertinoIcons.back,
+                                    color: KoalaColors.primary),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: Tooltip(
+                          message: _currentStep == 3
+                              ? 'Terminer la configuration'
+                              : 'Continuer vers l\'étape suivante',
+                          child: SizedBox(
+                            height: 56.h,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: KoalaColors.primary,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KoalaRadius.md),
+                                ),
+                              ),
+                              onPressed: _canContinue
+                                  ? (_currentStep == 3 ? _submit : _nextStep)
+                                  : null,
+                              child: _loading
+                                  ? const CupertinoActivityIndicator(
+                                      color: Colors.white)
+                                  : Text(
+                                      _currentStep == 3
+                                          ? 'Terminer'
+                                          : 'Continuer',
+                                      style: TextStyle(
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -359,11 +466,16 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
 
   Widget _buildStepContent() {
     switch (_currentStep) {
-      case 0: return _buildNameStep();
-      case 1: return _buildJobsStep();
-      case 2: return _buildAgeStep();
-      case 3: return _buildBudgetingTypeStep();
-      default: return const SizedBox.shrink();
+      case 0:
+        return _buildNameStep();
+      case 1:
+        return _buildJobsStep();
+      case 2:
+        return _buildAgeStep();
+      case 3:
+        return _buildBudgetingTypeStep();
+      default:
+        return const SizedBox.shrink();
     }
   }
 
@@ -376,7 +488,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           'Comment vous appelez-vous ?',
           style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
         ),
-        SizedBox(height: 24.h),
+        SizedBox(height: KoalaSpacing.xl),
         _buildTextField(
           controller: _fullNameController,
           focusNode: _nameFocusNode,
@@ -398,57 +510,64 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           'Ajoutez vos revenus',
           style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: KoalaSpacing.sm),
         Text(
           'Vous pouvez ajouter plusieurs sources de revenus.',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 15.sp),
+          style: TextStyle(
+              color: KoalaColors.textSecondary(context), fontSize: 15.sp),
         ),
-        SizedBox(height: 24.h),
-
+        SizedBox(height: KoalaSpacing.xl),
         if (_jobs.isNotEmpty) ...[
           ..._jobs.asMap().entries.map((entry) {
             final index = entry.key;
             final job = entry.value;
             return Container(
-              margin: EdgeInsets.only(bottom: 12.h),
-              padding: EdgeInsets.all(16.w),
+              margin: EdgeInsets.only(bottom: KoalaSpacing.md),
+              padding: EdgeInsets.all(KoalaSpacing.lg),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: Colors.grey.shade200),
+                color: KoalaColors.inputBackground(context),
+                borderRadius: BorderRadius.circular(KoalaRadius.md),
+                border: Border.all(color: KoalaColors.border(context)),
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(10.w),
+                    padding: EdgeInsets.all(KoalaSpacing.sm),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12.r),
+                      color: KoalaColors.surface(context),
+                      borderRadius: BorderRadius.circular(KoalaRadius.sm),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
+                        BoxShadow(
+                            color: KoalaColors.primary.withOpacity(0.05),
+                            blurRadius: 4),
                       ],
                     ),
-                    child: Icon(CupertinoIcons.briefcase, color: Colors.black, size: 20.sp),
+                    child: Icon(CupertinoIcons.briefcase,
+                        color: KoalaColors.primary, size: 20.sp),
                   ),
-                  SizedBox(width: 16.w),
+                  SizedBox(width: KoalaSpacing.lg),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           job.name,
-                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 16.sp, fontWeight: FontWeight.w600),
                         ),
-                        SizedBox(height: 4.h),
+                        SizedBox(height: KoalaSpacing.xs),
                         Text(
                           '${job.frequency.displayName} • FCFA ${_formatAmount(job.amount.toString())}',
-                          style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+                          style: TextStyle(
+                              fontSize: 14.sp,
+                              color: KoalaColors.textSecondary(context)),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: Icon(CupertinoIcons.minus_circle, color: Colors.red.shade400),
+                    icon: Icon(CupertinoIcons.minus_circle,
+                        color: Colors.red.shade400),
                     onPressed: () {
                       HapticFeedback.mediumImpact();
                       setState(() {
@@ -459,63 +578,76 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                 ],
               ),
             );
-          }).toList(),
-          SizedBox(height: 24.h),
+          }),
+          SizedBox(height: KoalaSpacing.xl),
         ],
-
         Container(
-          padding: EdgeInsets.all(20.w),
+          padding: EdgeInsets.all(KoalaSpacing.xl),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(color: Colors.grey.shade200),
+            color: KoalaColors.surface(context),
+            borderRadius: BorderRadius.circular(KoalaRadius.lg),
+            border: Border.all(color: KoalaColors.border(context)),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(
+                  color: KoalaColors.primary.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4)),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _jobs.isEmpty ? 'Ajouter une source' : 'Ajouter une autre source',
+                _jobs.isEmpty
+                    ? 'Ajouter une source'
+                    : 'Ajouter une autre source',
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: KoalaSpacing.lg),
               DropdownButtonFormField<String>(
                 value: _selectedJobTitle,
                 decoration: InputDecoration(
                   hintText: 'Type de poste',
-                  fillColor: Colors.grey.shade50,
+                  fillColor: KoalaColors.inputBackground(context),
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                      borderSide: BorderSide.none),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
                 ),
-                items: _jobTitles.map((job) => DropdownMenuItem(value: job, child: Text(job))).toList(),
+                items: _jobTitles
+                    .map(
+                        (job) => DropdownMenuItem(value: job, child: Text(job)))
+                    .toList(),
                 onChanged: (value) => setState(() => _selectedJobTitle = value),
               ),
-              
               if (_selectedJobTitle == 'Autre') ...[
-                SizedBox(height: 12.h),
+                SizedBox(height: KoalaSpacing.md),
                 TextField(
                   controller: _customJobController,
                   decoration: InputDecoration(
                     hintText: 'Précisez votre poste',
-                    fillColor: Colors.grey.shade50,
+                    fillColor: KoalaColors.inputBackground(context),
                     filled: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                        borderSide: BorderSide.none),
                   ),
                 ),
               ],
-              
               SizedBox(height: 20.h),
-              Text('Revenu Mensuel', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: Colors.grey.shade600)),
-              SizedBox(height: 8.h),
-              
+              Text('Revenu Mensuel',
+                  style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: KoalaColors.textSecondary(context))),
+              SizedBox(height: KoalaSpacing.sm),
               Container(
                 padding: EdgeInsets.symmetric(vertical: 16.h),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(16.r),
+                  color: KoalaColors.inputBackground(context),
+                  borderRadius: BorderRadius.circular(KoalaRadius.md),
                 ),
                 child: Column(
                   children: [
@@ -523,11 +655,17 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                       controller: _salaryController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 28.sp, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: TextStyle(
+                          fontSize: 28.sp,
+                          fontWeight: FontWeight.bold,
+                          color: KoalaColors.primary),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
                         suffixText: 'FCFA',
-                        suffixStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey),
+                        suffixStyle: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey),
                       ),
                       onChanged: (value) {
                         String digits = value.replaceAll(RegExp(r'[^\d]'), '');
@@ -541,11 +679,12 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                     ),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: Colors.black,
-                        inactiveTrackColor: Colors.grey.shade300,
-                        thumbColor: Colors.black,
+                        activeTrackColor: KoalaColors.primary,
+                        inactiveTrackColor: KoalaColors.border(context),
+                        thumbColor: KoalaColors.primary,
                         trackHeight: 4.h,
-                        thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
+                        thumbShape:
+                            RoundSliderThumbShape(enabledThumbRadius: 10.r),
                         overlayShape: SliderComponentShape.noOverlay,
                       ),
                       child: Slider(
@@ -556,7 +695,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                           final newValue = (value / 5000).round() * 5000.0;
                           setState(() {
                             _selectedSalary = newValue;
-                            _salaryController.text = _formatAmount(newValue.toStringAsFixed(0));
+                            _salaryController.text =
+                                _formatAmount(newValue.toStringAsFixed(0));
                           });
                         },
                       ),
@@ -564,18 +704,19 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                   ],
                 ),
               ),
-              
               SizedBox(height: 20.h),
               SizedBox(
                 width: double.infinity,
                 height: 50.h,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    backgroundColor: KoalaColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(KoalaRadius.sm)),
                   ),
                   onPressed: _canAddJob() ? _addJob : null,
-                  child: const Text('Ajouter ce revenu', style: TextStyle(color: Colors.white)),
+                  child: const Text('Ajouter ce revenu',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ),
             ],
@@ -587,14 +728,14 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
 
   bool _canAddJob() {
     if (_selectedJobTitle == 'Autre') {
-       return _customJobController.text.isNotEmpty && _selectedSalary > 0;
+      return _customJobController.text.isNotEmpty && _selectedSalary > 0;
     }
     return _selectedJobTitle != null && _selectedSalary > 0;
   }
 
   void _addJob() {
     if (!_canAddJob()) return;
-    
+
     String jobName = _selectedJobTitle!;
     if (jobName == 'Autre') {
       jobName = _customJobController.text.trim();
@@ -613,7 +754,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       _selectedJobTitle = null;
       _customJobController.clear();
       _selectedSalary = 150000;
-      _salaryController.text = _formatAmount(_selectedSalary.toStringAsFixed(0));
+      _salaryController.text =
+          _formatAmount(_selectedSalary.toStringAsFixed(0));
       _selectedFrequency = PaymentFrequency.monthly;
     });
 
@@ -621,12 +763,17 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   }
 
   Widget _buildAgeStep() {
+    final age = int.tryParse(_ageController.text);
+    final hasError = _ageController.text.isNotEmpty &&
+        (age == null || age <= 0 || age > 120);
+
     return Column(
       key: const ValueKey('ageStep'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quel âge avez-vous ?', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700)),
-        SizedBox(height: 24.h),
+        Text('Quel âge avez-vous ?',
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700)),
+        SizedBox(height: KoalaSpacing.xl),
         _buildTextField(
           controller: _ageController,
           focusNode: _ageFocusNode,
@@ -635,6 +782,27 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _nextStep(),
         ),
+        if (hasError) ...[
+          SizedBox(height: KoalaSpacing.sm),
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.exclamationmark_circle,
+                size: 14.sp,
+                color: KoalaColors.destructive,
+              ),
+              SizedBox(width: KoalaSpacing.xs),
+              Text(
+                age != null && age > 120
+                    ? 'L\'âge doit être inférieur à 120 ans'
+                    : 'Veuillez entrer un âge valide (1-120)',
+                style: KoalaTypography.caption(context).copyWith(
+                  color: KoalaColors.destructive,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -644,12 +812,15 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       key: const ValueKey('budgetingStep'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Votre méthode budgétaire', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700)),
-        SizedBox(height: 24.h),
-        _buildBudgetingOption('50/30/20', '50% besoins, 30% loisirs, 20% épargne'),
-        SizedBox(height: 12.h),
-        _buildBudgetingOption('70/20/10', '70% besoins, 20% loisirs, 10% épargne'),
-        SizedBox(height: 12.h),
+        Text('Votre méthode budgétaire',
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700)),
+        SizedBox(height: KoalaSpacing.xl),
+        _buildBudgetingOption(
+            '50/30/20', '50% besoins, 30% loisirs, 20% épargne'),
+        SizedBox(height: KoalaSpacing.md),
+        _buildBudgetingOption(
+            '70/20/10', '70% besoins, 20% loisirs, 10% épargne'),
+        SizedBox(height: KoalaSpacing.md),
         _buildBudgetingOption('Zero-Based', 'Chaque franc a une destination'),
       ],
     );
@@ -661,12 +832,24 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       onTap: () => setState(() => _budgetingType = type),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.all(20.w),
+        padding: EdgeInsets.all(KoalaSpacing.xl),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.white,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: isSelected ? Colors.black : Colors.grey.shade200, width: 1.5),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))] : [],
+          color:
+              isSelected ? KoalaColors.primary : KoalaColors.surface(context),
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          border: Border.all(
+              color: isSelected
+                  ? KoalaColors.primary
+                  : KoalaColors.border(context),
+              width: 1.5),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                      color: KoalaColors.primary.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4))
+                ]
+              : [],
         ),
         child: Row(
           children: [
@@ -674,13 +857,25 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(type, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : Colors.black)),
-                  SizedBox(height: 4.h),
-                  Text(description, style: TextStyle(fontSize: 14.sp, color: isSelected ? Colors.white70 : Colors.grey.shade600)),
+                  Text(type,
+                      style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isSelected ? Colors.white : KoalaColors.primary)),
+                  SizedBox(height: KoalaSpacing.xs),
+                  Text(description,
+                      style: TextStyle(
+                          fontSize: 14.sp,
+                          color: isSelected
+                              ? Colors.white70
+                              : KoalaColors.textSecondary(context))),
                 ],
               ),
             ),
-            if (isSelected) Icon(CupertinoIcons.check_mark_circled_solid, color: Colors.white, size: 24.sp),
+            if (isSelected)
+              const Icon(CupertinoIcons.check_mark_circled_solid,
+                  color: Colors.white, size: 24),
           ],
         ),
       ),
@@ -699,9 +894,9 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
+        color: KoalaColors.inputBackground(context),
+        borderRadius: BorderRadius.circular(KoalaRadius.md),
+        border: Border.all(color: KoalaColors.border(context)),
       ),
       child: TextField(
         controller: controller,
@@ -710,7 +905,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey.shade400),
+          hintStyle: TextStyle(color: KoalaColors.textSecondary(context)),
           border: InputBorder.none,
           suffixText: suffix,
         ),
@@ -720,3 +915,4 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     );
   }
 }
+
