@@ -20,7 +20,6 @@ import 'package:koaa/app/services/notification_service.dart';
 import 'package:koaa/hive_registrar.g.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
-import 'dart:io';
 
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/services/data_migration_service.dart';
@@ -121,55 +120,6 @@ void main() async {
 
   runApp(AppInfo(data: await AppInfoData.get(), child: const MyApp()));
 
-  // Temporary debug HTTP endpoint (only in debug mode)
-  // Allows external callers to trigger ML analysis on demand for QA.
-  // TEMPORARY: start debug server in all builds for QA (remove before production)
-  {
-    try {
-      // Start a simple HttpServer on all interfaces
-      HttpServer.bind(InternetAddress.anyIPv4, 8081).then((server) {
-        print('DEBUG: ML debug server started on port 8081');
-        server.listen((HttpRequest request) async {
-          print('DEBUG: ML debug request: ${request.uri}');
-          final path = request.uri.path;
-          if (path == '/trigger_ml') {
-            try {
-              final engine = Get.find<KoalaMLEngine>();
-              final fcs = Get.find<FinancialContextService>();
-              final transactions = fcs.allTransactions.toList();
-
-              await engine.runFullAnalysis(transactions, []);
-
-              final resp = {
-                'status': 'ok',
-                'healthScore': engine.currentHealth?.totalScore ?? null,
-                'forecastLowest': engine.currentForecast?.lowestBalance ?? null,
-              };
-
-              request.response
-                ..statusCode = 200
-                ..headers.contentType = ContentType.json
-                ..write(resp)
-                ..close();
-            } catch (e, st) {
-              request.response
-                ..statusCode = 500
-                ..headers.contentType = ContentType.text
-                ..write('error: $e')
-                ..close();
-            }
-          } else {
-            request.response
-              ..statusCode = 404
-              ..write('Not found')
-              ..close();
-          }
-        });
-      });
-    } catch (e) {
-      // Ignore if unable to start server in this environment
-    }
-  }
 }
 
 
