@@ -36,3 +36,4 @@ class RecurringTransactionsController extends GetxController {
     await transaction.delete();
   }
 }
+
