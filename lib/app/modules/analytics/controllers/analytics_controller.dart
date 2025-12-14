@@ -15,7 +15,7 @@ class ChartData {
   final String name;
   final double value;
   final int colorValue;
-  
+
   ChartData(this.name, this.value, this.colorValue);
 }
 
@@ -71,7 +71,7 @@ class GoalProgressData {
 class AnalyticsController extends GetxController {
   final transactions = <LocalTransaction>[].obs;
   final jobs = <Job>[].obs;
-  
+
   final selectedYear = DateTime.now().year.obs;
   final selectedMonth = DateTime.now().month.obs;
   final selectedTimeRange = TimeRange.month.obs;
@@ -86,13 +86,13 @@ class AnalyticsController extends GetxController {
   final budgetComparison = <BudgetComparisonData>[].obs; // New observable
   final debtTimeline = <DebtTimelineData>[].obs; // New observable
   final goalProgress = <GoalProgressData>[].obs; // New observable
-  
+
   // Trends
   final _previousTotalExpenses = 0.0.obs;
 
   // Savings goal (old model, will be replaced by FinancialGoal)
   final currentSavingsGoal = Rx<SavingsGoal?>(null);
-  
+
   final _mlService = MLService();
   late FinancialContextService _financialContextService; // New service
 
@@ -102,7 +102,8 @@ class AnalyticsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _financialContextService = Get.find<FinancialContextService>(); // Inject service
+    _financialContextService =
+        Get.find<FinancialContextService>(); // Inject service
     _initializeData();
 
     // Listen to changes and store workers for cleanup
@@ -111,13 +112,18 @@ class AnalyticsController extends GetxController {
     _workers.add(ever(selectedTimeRange, (_) => _updateCachedData()));
 
     // Listen to financial context changes to refresh analytics data
-    _workers.add(ever(_financialContextService.allTransactions, (_) => _updateCachedData()));
-    _workers.add(ever(_financialContextService.allJobs, (_) => _updateCachedData()));
-    _workers.add(ever(_financialContextService.allBudgets, (_) => _updateCachedData()));
-    _workers.add(ever(_financialContextService.allCategories, (_) => _updateCachedData()));
-    _workers.add(ever(_financialContextService.allDebts, (_) => _updateCachedData())); // Listen to debts
-    _workers.add(ever(_financialContextService.allGoals, (_) => _updateCachedData())); // Listen to goals
-
+    _workers.add(ever(
+        _financialContextService.allTransactions, (_) => _updateCachedData()));
+    _workers.add(
+        ever(_financialContextService.allJobs, (_) => _updateCachedData()));
+    _workers.add(
+        ever(_financialContextService.allBudgets, (_) => _updateCachedData()));
+    _workers.add(ever(
+        _financialContextService.allCategories, (_) => _updateCachedData()));
+    _workers.add(ever(_financialContextService.allDebts,
+        (_) => _updateCachedData())); // Listen to debts
+    _workers.add(ever(_financialContextService.allGoals,
+        (_) => _updateCachedData())); // Listen to goals
 
     _updateCachedData();
   }
@@ -148,7 +154,7 @@ class AnalyticsController extends GetxController {
     // Get data directly from FinancialContextService
     transactions.assignAll(_financialContextService.allTransactions);
     jobs.assignAll(_financialContextService.allJobs);
-    
+
     // No need to listen to individual Hive boxes here directly, FinancialContextService does that
     // and triggers updates through its observables which we listen to above.
 
@@ -169,12 +175,12 @@ class AnalyticsController extends GetxController {
     _updateTotals();
     _updateChartDataLogic();
     _updateInsights();
-    _updateBudgetComparison(); 
-    _updateDebtTimeline(); 
+    _updateBudgetComparison();
+    _updateDebtTimeline();
     _updateGoalProgress(); // New call
     _loadCurrentSavingsGoal(); // Re-evaluate current savings goal as month/year might change
   }
-  
+
   void _updateInsights() {
     // We pass ALL transactions to ML service for better pattern detection
     // regardless of the current view filter.
@@ -183,10 +189,11 @@ class AnalyticsController extends GetxController {
 
   void _updateFilteredTransactions() {
     DateTime start, end;
-    
+
     if (selectedTimeRange.value == TimeRange.month) {
       start = DateTime(selectedYear.value, selectedMonth.value, 1);
-      end = DateTime(selectedYear.value, selectedMonth.value + 1, 0, 23, 59, 59);
+      end =
+          DateTime(selectedYear.value, selectedMonth.value + 1, 0, 23, 59, 59);
     } else if (selectedTimeRange.value == TimeRange.year) {
       start = DateTime(selectedYear.value, 1, 1);
       end = DateTime(selectedYear.value, 12, 31, 23, 59, 59);
@@ -197,11 +204,12 @@ class AnalyticsController extends GetxController {
     }
 
     _filteredTransactions.value = transactions
-        .where((t) => t.date.isAfter(start.subtract(const Duration(seconds: 1))) && 
-                      t.date.isBefore(end.add(const Duration(seconds: 1))))
+        .where((t) =>
+            t.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            t.date.isBefore(end.add(const Duration(seconds: 1))))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
-      
+
     // Update Comparison (Previous Period)
     DateTime prevStart, prevEnd;
     if (selectedTimeRange.value == TimeRange.month) {
@@ -215,26 +223,29 @@ class AnalyticsController extends GetxController {
       prevEnd = DateTime(selectedYear.value - 1, 12, 31, 23, 59, 59);
     } else {
       prevStart = DateTime(2000);
-      prevEnd = DateTime(2000); 
+      prevEnd = DateTime(2000);
     }
-    
-    final prevTransactions = transactions
-        .where((t) => t.type == TransactionType.expense && t.date.isAfter(prevStart) && t.date.isBefore(prevEnd));
-        
-    _previousTotalExpenses.value = prevTransactions
-        .fold(0.0, (sum, t) => sum + t.amount);
+
+    final prevTransactions = transactions.where((t) =>
+        t.type == TransactionType.expense &&
+        t.date.isAfter(prevStart) &&
+        t.date.isBefore(prevEnd));
+
+    _previousTotalExpenses.value =
+        prevTransactions.fold(0.0, (sum, t) => sum + t.amount);
   }
 
   void _updateSpendingByCategory() {
     final categories = <String, double>{};
     final categoriesController = Get.find<CategoriesController>();
-    
+
     for (var transaction in _filteredTransactions) {
       if (transaction.type == TransactionType.expense) {
         String categoryName = 'Autre';
-        
+
         if (transaction.categoryId != null) {
-          final cat = categoriesController.categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
+          final cat = categoriesController.categories
+              .firstWhereOrNull((c) => c.id == transaction.categoryId);
           if (cat != null) categoryName = cat.name;
         } else if (transaction.category != null) {
           categoryName = transaction.category!.displayName;
@@ -265,9 +276,8 @@ class AnalyticsController extends GetxController {
 
   void _updateChartDataLogic() {
     // Create cache key from spending by category
-    final cacheKey = _spendingByCategory.entries
-        .map((e) => '${e.key}:${e.value}')
-        .join(',');
+    final cacheKey =
+        _spendingByCategory.entries.map((e) => '${e.key}:${e.value}').join(',');
 
     // Check if cache is still valid
     if (_chartDataCache != null && _chartDataCache!['key'] == cacheKey) {
@@ -285,7 +295,8 @@ class AnalyticsController extends GetxController {
 
     int getColor(String name) {
       if (name == 'Autre') return 0xFF9E9E9E;
-      final cat = categoriesController.categories.firstWhereOrNull((c) => c.name == name);
+      final cat = categoriesController.categories
+          .firstWhereOrNull((c) => c.name == name);
       if (cat != null) return cat.colorValue;
       return 0xFF4C6EF5;
     }
@@ -299,7 +310,8 @@ class AnalyticsController extends GetxController {
       for (var entry in top4) {
         data.add(ChartData(entry.key, entry.value, getColor(entry.key)));
       }
-      final others = sorted.skip(4).fold(0.0, (sum, entry) => sum + entry.value);
+      final others =
+          sorted.skip(4).fold(0.0, (sum, entry) => sum + entry.value);
       data.add(ChartData('Autres', others, 0xFF9E9E9E));
     }
 
@@ -327,17 +339,20 @@ class AnalyticsController extends GetxController {
         .where((t) => t.type == TransactionType.expense)
         .toList();
 
-    // Get budgets for the current selected month 
-    final currentMonthBudgets = _financialContextService.allBudgets.where((b) =>
-      b.year == selectedYear.value && b.month == selectedMonth.value).toList();
+    // Get budgets for the current selected month
+    final currentMonthBudgets = _financialContextService.allBudgets
+        .where((b) =>
+            b.year == selectedYear.value && b.month == selectedMonth.value)
+        .toList();
 
     for (var budget in currentMonthBudgets) {
-      final category = categoriesController.categories.firstWhereOrNull((c) => c.id == budget.categoryId);
+      final category = categoriesController.categories
+          .firstWhereOrNull((c) => c.id == budget.categoryId);
       if (category != null) {
         final spentAmount = currentPeriodTransactions
             .where((t) => t.categoryId == category.id)
             .fold(0.0, (sum, t) => sum + t.amount);
-        
+
         data.add(BudgetComparisonData(
           categoryName: category.name,
           budgetedAmount: budget.amount,
@@ -365,11 +380,15 @@ class AnalyticsController extends GetxController {
     if (selectedTimeRange.value == TimeRange.year) {
       startDate = DateTime(selectedYear.value, 1, 1);
       endDate = DateTime(selectedYear.value, 12, 31, 23, 59, 59);
-    } else { // TimeRange.all
+    } else {
+      // TimeRange.all
       final allDebts = _financialContextService.allDebts;
       if (allDebts.isNotEmpty) {
-        startDate = allDebts.map((d) => d.createdAt).reduce((a, b) => a.isBefore(b) ? a : b);
-        startDate = DateTime(startDate.year, startDate.month, 1); // Start from the beginning of that month
+        startDate = allDebts
+            .map((d) => d.createdAt)
+            .reduce((a, b) => a.isBefore(b) ? a : b);
+        startDate = DateTime(startDate.year, startDate.month,
+            1); // Start from the beginning of that month
       } else {
         debtTimeline.clear();
         return; // No debts, no timeline
@@ -377,7 +396,8 @@ class AnalyticsController extends GetxController {
     }
 
     // Aggregate data by month
-    DateTime currentMonthIterator = DateTime(startDate.year, startDate.month, 1);
+    DateTime currentMonthIterator =
+        DateTime(startDate.year, startDate.month, 1);
     final monthEnd = DateTime(endDate.year, endDate.month + 1, 0);
 
     while (currentMonthIterator.isBefore(monthEnd)) {
@@ -386,14 +406,16 @@ class AnalyticsController extends GetxController {
 
       for (var debt in _financialContextService.allDebts) {
         // Only consider debts that existed by the start of currentMonthIterator
-        if (debt.createdAt.isBefore(currentMonthIterator.add(const Duration(days: 1)))) {
+        if (debt.createdAt
+            .isBefore(currentMonthIterator.add(const Duration(days: 1)))) {
           double effectiveOutstanding = debt.originalAmount;
 
           // Subtract payments made for this debt up to the current month iterator
           for (var tx in _financialContextService.allTransactions) {
             if (tx.type == TransactionType.expense &&
-                tx.date.isBefore(currentMonthIterator.add(const Duration(days: 1))) &&
-                tx.linkedDebtId == debt.id) { 
+                tx.date.isBefore(
+                    currentMonthIterator.add(const Duration(days: 1))) &&
+                tx.linkedDebtId == debt.id) {
               effectiveOutstanding -= tx.amount;
             }
           }
@@ -407,17 +429,19 @@ class AnalyticsController extends GetxController {
               tx.date.year == currentMonthIterator.year &&
               tx.date.month == currentMonthIterator.month &&
               tx.type == TransactionType.expense &&
-              tx.linkedDebtId != null 
-          )
+              tx.linkedDebtId != null)
           .fold(0.0, (sum, tx) => sum + tx.amount);
 
       debtTimeline.add(DebtTimelineData(
         date: currentMonthIterator,
-        totalOutstanding: totalOutstanding.isNegative ? 0.0 : totalOutstanding, // Ensure outstanding is not negative
+        totalOutstanding: totalOutstanding.isNegative
+            ? 0.0
+            : totalOutstanding, // Ensure outstanding is not negative
         paymentsMade: paymentsMade,
       ));
 
-      currentMonthIterator = DateTime(currentMonthIterator.year, currentMonthIterator.month + 1, 1);
+      currentMonthIterator = DateTime(
+          currentMonthIterator.year, currentMonthIterator.month + 1, 1);
     }
 
     debtTimeline.sort((a, b) => a.date.compareTo(b.date));
@@ -433,7 +457,9 @@ class AnalyticsController extends GetxController {
 
     final allGoals = _financialContextService.allGoals;
     final goalsToDisplay = (selectedTimeRange.value == TimeRange.month)
-        ? allGoals.where((goal) => goal.status == GoalStatus.active).toList() // For month view, maybe just active ones
+        ? allGoals
+            .where((goal) => goal.status == GoalStatus.active)
+            .toList() // For month view, maybe just active ones
         : allGoals.toList(); // For all time, show all goals
 
     for (var goal in goalsToDisplay) {
@@ -530,7 +556,8 @@ class AnalyticsController extends GetxController {
 
     if (selectedTimeRange.value == TimeRange.month) {
       // Prevent going beyond current month
-      if (selectedYear.value == currentYear && selectedMonth.value == DateTime.now().month) {
+      if (selectedYear.value == currentYear &&
+          selectedMonth.value == DateTime.now().month) {
         return; // Can't go further forward
       }
 
@@ -543,7 +570,8 @@ class AnalyticsController extends GetxController {
 
       // Ensure we don't go beyond current date
       if (selectedYear.value > currentYear ||
-          (selectedYear.value == currentYear && selectedMonth.value > DateTime.now().month)) {
+          (selectedYear.value == currentYear &&
+              selectedMonth.value > DateTime.now().month)) {
         selectedYear.value = currentYear;
         selectedMonth.value = DateTime.now().month;
       }
@@ -561,7 +589,7 @@ class AnalyticsController extends GetxController {
     selectedYear.value = DateTime.now().year;
     selectedMonth.value = DateTime.now().month;
   }
-  
+
   void setTimeRange(TimeRange range) {
     selectedTimeRange.value = range;
   }
@@ -577,6 +605,21 @@ class AnalyticsController extends GetxController {
 
   double get netBalance => totalIncome - totalExpenses;
 
+  double get savingsRate {
+    if (totalIncome == 0) return 0.0;
+    return netBalance / totalIncome;
+  }
+
+  ({String label, int color}) get savingsStatus {
+    if (netBalance < 0) {
+      return (label: 'Déficit Attention 🚨', color: 0xFFEF4444); // Red
+    }
+    if (savingsRate < 0.20) {
+      return (label: 'Budget Serré ⚠️', color: 0xFFF59E0B); // Orange
+    }
+    return (label: 'Épargne Saine 🚀', color: 0xFF10B981); // Green
+  }
+
   // Old savings progress, will be replaced by goalProgress observable
   double get savingsProgress {
     final goal = currentSavingsGoal.value;
@@ -591,17 +634,45 @@ class AnalyticsController extends GetxController {
     if (selectedTimeRange.value == TimeRange.all) {
       return 'Tout';
     }
-    const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const months = [
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre'
+    ];
     return months[selectedMonth.value - 1];
   }
-  
-  String get currentMonthName { 
-     const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+  String get currentMonthName {
+    const months = [
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre'
+    ];
     return months[selectedMonth.value - 1];
   }
-  
+
   double get expenseTrendPercentage {
     if (previousTotalExpenses == 0) return 0;
-    return ((totalExpenses - previousTotalExpenses) / previousTotalExpenses) * 100;
+    return ((totalExpenses - previousTotalExpenses) / previousTotalExpenses) *
+        100;
   }
 }
+
