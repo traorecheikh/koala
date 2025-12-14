@@ -241,7 +241,7 @@ class _BackCard extends GetView<HomeController> {
     final gradient = controller.getTimeOfDayGradient();
 
     return Container(
-      height: 205.h,
+      height: 215.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: gradient,
