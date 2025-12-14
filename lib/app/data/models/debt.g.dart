@@ -102,3 +102,4 @@ class DebtTypeAdapter extends TypeAdapter<DebtType> {
           typeId == other.typeId;
 }
 
+
