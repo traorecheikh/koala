@@ -535,3 +535,4 @@ class _AddGoalViewState extends State<AddGoalView> {
     NavigationHelper.safeBack();
   }
 }
+
