@@ -99,4 +99,3 @@ class PaymentFrequencyAdapter extends TypeAdapter<PaymentFrequency> {
           typeId == other.typeId;
 }
 
-
