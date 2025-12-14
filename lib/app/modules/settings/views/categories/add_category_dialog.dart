@@ -355,3 +355,4 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
     );
   }
 }
+
