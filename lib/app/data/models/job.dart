@@ -117,3 +117,4 @@ class Job extends HiveObject {
     );
   }
 }
+
