@@ -174,3 +174,4 @@ class TermsView extends StatelessWidget {
     ).animate().fadeIn(delay: delay.ms).slideY(begin: 0.1, curve: Curves.easeOutQuart);
   }
 }
+
