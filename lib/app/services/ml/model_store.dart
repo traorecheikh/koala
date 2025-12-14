@@ -2,7 +2,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/ml/financial_pattern.dart';
 import 'package:koaa/app/data/models/ml/ml_model_state.dart';
 import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
-import 'package:koaa/app/services/encryption_service.dart'; // Import encryption service
+// Import encryption service
 
 class MLModelStore {
   static const String _modelStateBoxName = 'ml_model_states';
