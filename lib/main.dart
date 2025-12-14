@@ -13,6 +13,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/background_worker.dart';
@@ -29,6 +30,7 @@ import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/events/financial_events_service.dart';
 import 'package:koaa/app/services/celebration_service.dart';
 import 'package:koaa/app/services/encryption_service.dart';
+import 'package:koaa/app/services/security_service.dart';
 
 import 'app/routes/app_pages.dart';
 
@@ -44,8 +46,8 @@ void main() async {
   );
   // Schedule the daily check (runs periodically every 24h)
   Workmanager().registerPeriodicTask(
-    "1", 
-    kDailyCheckTask, 
+    "1",
+    kDailyCheckTask,
     frequency: const Duration(hours: 24),
     initialDelay: const Duration(minutes: 15), // First run after 15m
     constraints: Constraints(
@@ -53,7 +55,7 @@ void main() async {
       requiresBatteryNotLow: true,
     ),
   );
-  
+
   final appDocDir = await getApplicationDocumentsDirectory();
 
   // Initialize Hive with encryption for sensitive data
@@ -67,19 +69,22 @@ void main() async {
 
   // Open boxes with encryption for sensitive financial data
   await Hive.openBox<LocalUser>('userBox', encryptionCipher: hiveCipher);
-  await Hive.openBox<LocalTransaction>('transactionBox', encryptionCipher: hiveCipher);
-  await Hive.openBox<RecurringTransaction>('recurringTransactionBox', encryptionCipher: hiveCipher);
+  await Hive.openBox<LocalTransaction>('transactionBox',
+      encryptionCipher: hiveCipher);
+  await Hive.openBox<RecurringTransaction>('recurringTransactionBox',
+      encryptionCipher: hiveCipher);
   await Hive.openBox<Job>('jobBox', encryptionCipher: hiveCipher);
-  await Hive.openBox<SavingsGoal>('savingsGoalBox', encryptionCipher: hiveCipher);
+  await Hive.openBox<SavingsGoal>('savingsGoalBox',
+      encryptionCipher: hiveCipher);
   await Hive.openBox<Budget>('budgetBox', encryptionCipher: hiveCipher);
   await Hive.openBox<Debt>('debtBox', encryptionCipher: hiveCipher);
-  await Hive.openBox<FinancialGoal>('financialGoalBox', encryptionCipher: hiveCipher);
+  await Hive.openBox<FinancialGoal>('financialGoalBox',
+      encryptionCipher: hiveCipher);
 
   // Non-sensitive boxes without encryption for better performance
   await Hive.openBox<Category>('categoryBox');
   await Hive.openBox('settingsBox');
 
-  
   // Run data migrations
   final migrationService = DataMigrationService();
   await migrationService.runMigrations();
@@ -92,6 +97,8 @@ void main() async {
 
   // Initialize CelebrationService
   Get.put<CelebrationService>(CelebrationService(), permanent: true);
+
+  Get.lazyPut(() => RecurringTransactionsController(), fenix: true);
 
   // await Hive.deleteFromDisk();
 
@@ -110,6 +117,9 @@ void main() async {
   // Initialize SettingsController globally to ensure theme and settings are applied on startup
   Get.put<SettingsController>(SettingsController(), permanent: true);
 
+  // Initialize SecurityService
+  Get.put<SecurityService>(SecurityService(), permanent: true);
+
   Get.lazyPut<CategoriesController>(
     () => CategoriesController(),
     fenix: true,
@@ -119,9 +129,7 @@ void main() async {
   WidgetsBinding.instance.addObserver(AppLifecycleListener());
 
   runApp(AppInfo(data: await AppInfoData.get(), child: const MyApp()));
-
 }
-
 
 class AppLifecycleListener extends WidgetsBindingObserver {
   @override
@@ -129,7 +137,8 @@ class AppLifecycleListener extends WidgetsBindingObserver {
     if (state == AppLifecycleState.paused) {
       try {
         // Check if welcome notification was already shown
-        final welcomeShown = Hive.box('settingsBox').get('welcomeShown', defaultValue: false);
+        final welcomeShown =
+            Hive.box('settingsBox').get('welcomeShown', defaultValue: false);
 
         // Only schedule notification if welcome has NOT been shown yet
         if (welcomeShown == false || welcomeShown == null) {
@@ -178,3 +187,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
