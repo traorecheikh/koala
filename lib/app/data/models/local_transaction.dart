@@ -366,3 +366,4 @@ class LocalTransaction extends HiveObject {
   }
 }
 
+
