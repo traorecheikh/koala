@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/modules/simulator/controllers/simulator_controller.dart';
 import 'package:koaa/app/services/ml/models/simulator_engine.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
@@ -14,24 +17,18 @@ class SimulatorView extends GetView<SimulatorController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(CupertinoIcons.back, color: theme.iconTheme.color),
+          icon: Icon(CupertinoIcons.back, color: KoalaColors.text(context)),
           onPressed: () => NavigationHelper.safeBack(),
         ),
         title: Text(
           'Simulateur',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 20.sp,
-          ),
+          style: KoalaTypography.heading3(context),
         ),
         centerTitle: true,
       ),
@@ -43,18 +40,18 @@ class SimulatorView extends GetView<SimulatorController> {
               SizedBox(height: 40.h),
               Text(
                 'Quel achat envisagez-vous ?',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: Colors.grey,
+                style: KoalaTypography.bodyLarge(context).copyWith(
+                  color: KoalaColors.textSecondary(context),
                   fontWeight: FontWeight.w500,
                 ),
               ),
               SizedBox(height: 24.h),
-              
+
               // Clean Input
               _AmountInput(controller: controller.amountController),
-              
+
               SizedBox(height: 40.h),
-              
+
               // Action Button
               Obx(() {
                 final isValid = controller.isAmountValid.value;
@@ -70,18 +67,38 @@ class SimulatorView extends GetView<SimulatorController> {
                           }
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isValid ? theme.primaryColor : Colors.grey.shade400,
-                      foregroundColor: Colors.white,
+                      backgroundColor: isValid
+                          ? KoalaColors.primaryUi(context)
+                          : KoalaColors.surface(context),
+                      foregroundColor: isValid
+                          ? (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black
+                              : Colors.white)
+                          : KoalaColors.textSecondary(context),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16.r),
                       ),
                     ),
                     child: controller.isLoading.value
-                        ? const CupertinoActivityIndicator(color: Colors.white)
+                        ? CupertinoActivityIndicator(
+                            color: isValid
+                                ? (Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.black
+                                    : Colors.white)
+                                : KoalaColors.textSecondary(context))
                         : Text(
                             'Analyser l\'impact',
-                            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                            style: KoalaTypography.bodyLarge(context).copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isValid
+                                  ? (Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.black
+                                      : Colors.white)
+                                  : KoalaColors.textSecondary(context),
+                            ),
                           ),
                   ),
                 );
@@ -91,10 +108,12 @@ class SimulatorView extends GetView<SimulatorController> {
 
               // Results
               Obx(() {
-                if (controller.result.value == null) return const SizedBox.shrink();
+                if (controller.result.value == null) {
+                  return const SizedBox.shrink();
+                }
                 return _SimulationResultView(result: controller.result.value!);
               }),
-              
+
               SizedBox(height: 40.h),
             ],
           ),
@@ -111,31 +130,25 @@ class _AmountInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return IntrinsicWidth(
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        style: TextStyle(
+        style: KoalaTypography.heading1(context).copyWith(
           fontSize: 48.sp,
           fontWeight: FontWeight.w900,
-          color: isDark ? Colors.white : const Color(0xFF2D3250),
           letterSpacing: -1,
         ),
         decoration: InputDecoration(
           hintText: '0',
-          hintStyle: TextStyle(color: Colors.grey.withOpacity(0.3)),
+          hintStyle: TextStyle(
+              color: KoalaColors.textSecondary(context).withOpacity(0.3)),
           border: InputBorder.none,
           suffixText: 'F',
-          suffixStyle: TextStyle(
-            fontSize: 24.sp,
-            color: Colors.grey,
-            fontWeight: FontWeight.w600,
-            height: 2,
+          suffixStyle: KoalaTypography.heading2(context).copyWith(
+            color: KoalaColors.textSecondary(context),
           ),
         ),
       ),
@@ -154,10 +167,8 @@ class _SimulationResultView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final isSolvent = result.isSolvent;
-    final color = isSolvent ? Colors.green : Colors.red;
+    final color = isSolvent ? KoalaColors.success : KoalaColors.destructive;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,11 +186,13 @@ class _SimulationResultView extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: KoalaColors.surface(context),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isSolvent ? CupertinoIcons.checkmark_alt : CupertinoIcons.exclamationmark,
+                  isSolvent
+                      ? CupertinoIcons.checkmark_alt
+                      : CupertinoIcons.exclamationmark,
                   color: color,
                   size: 24.sp,
                 ),
@@ -191,8 +204,7 @@ class _SimulationResultView extends StatelessWidget {
                   children: [
                     Text(
                       isSolvent ? 'Simulation Positive' : 'Risque Financier',
-                      style: TextStyle(
-                        fontSize: 16.sp,
+                      style: KoalaTypography.bodyLarge(context).copyWith(
                         fontWeight: FontWeight.bold,
                         color: color,
                       ),
@@ -200,9 +212,8 @@ class _SimulationResultView extends StatelessWidget {
                     SizedBox(height: 4.h),
                     Text(
                       result.summary,
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                        color: KoalaColors.textSecondary(context),
                       ),
                     ),
                   ],
@@ -216,9 +227,9 @@ class _SimulationResultView extends StatelessWidget {
 
         Text(
           'Aperçu de la simulation',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: KoalaTypography.heading3(context),
         ).animate().fadeIn(delay: 100.ms),
-        
+
         SizedBox(height: 16.h),
 
         // Metrics Grid
@@ -229,7 +240,7 @@ class _SimulationResultView extends StatelessWidget {
                 label: 'Solde Initial',
                 value: 'FCFA ${_formatAmount(result.initialBalance)}',
                 icon: CupertinoIcons.money_dollar_circle_fill,
-                color: Colors.blue,
+                color: Colors.blue, // Keep blue for neutral/info
                 delay: 200,
               ),
             ),
@@ -239,7 +250,7 @@ class _SimulationResultView extends StatelessWidget {
                 label: 'Solde Final',
                 value: 'FCFA ${_formatAmount(result.finalBalance)}',
                 icon: CupertinoIcons.graph_square_fill,
-                color: Colors.purple,
+                color: Colors.purple, // Keep purple for neutral/info
                 delay: 300,
               ),
             ),
@@ -252,8 +263,9 @@ class _SimulationResultView extends StatelessWidget {
               child: _MetricCard(
                 label: 'Solde Min. Atteint',
                 value: 'FCFA ${_formatAmount(result.lowestBalance)}',
-                icon: CupertinoIcons.arrow_down_circle_fill, // Fixed icon
-                color: isSolvent ? Colors.green : Colors.red,
+                icon: CupertinoIcons.arrow_down_circle_fill,
+                color:
+                    isSolvent ? KoalaColors.success : KoalaColors.destructive,
                 delay: 400,
               ),
             ),
@@ -262,10 +274,11 @@ class _SimulationResultView extends StatelessWidget {
               child: _MetricCard(
                 label: '1ère Date Négative',
                 value: result.firstNegativeBalanceDate != null
-                    ? DateFormat('dd MMM yyyy').format(result.firstNegativeBalanceDate!)
+                    ? DateFormat('dd MMM yyyy')
+                        .format(result.firstNegativeBalanceDate!)
                     : 'N/A',
                 icon: CupertinoIcons.calendar_badge_minus,
-                color: Colors.redAccent,
+                color: KoalaColors.destructive,
                 delay: 500,
               ),
             ),
@@ -276,27 +289,86 @@ class _SimulationResultView extends StatelessWidget {
           SizedBox(height: 24.h),
           Text(
             'Événements Clés',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: KoalaTypography.heading3(context),
           ).animate().fadeIn(delay: 600.ms),
           SizedBox(height: 16.h),
           _CashFlowTimelineWidget(timeline: result.cashFlowTimeline),
         ],
 
-        if (result.budgetImpact.isNotEmpty || result.goalProgressImpact.isNotEmpty) ...[
+        if (result.budgetImpact.isNotEmpty ||
+            result.goalProgressImpact.isNotEmpty) ...[
           SizedBox(height: 24.h),
           Text(
             'Impacts Détaillés',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: KoalaTypography.heading3(context),
           ).animate().fadeIn(delay: 700.ms),
           SizedBox(height: 16.h),
-          // TODO: Implement dedicated widgets for budget and goal impacts
-          Text(
-            'Impact sur les budgets et objectifs (à implémenter)',
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: isDark ? Colors.white70 : Colors.grey.shade700,
-            ),
-          ),
+          // Budget impacts
+          if (result.budgetImpact.isNotEmpty)
+            ...result.budgetImpact.entries.map((entry) {
+              final spent = entry.value;
+              return Container(
+                margin: EdgeInsets.only(bottom: 8.h),
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: KoalaColors.surface(context),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: KoalaColors.border(context)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(CupertinoIcons.chart_pie,
+                        color: Colors.blue, size: 20.sp),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Text(
+                        'Budget catégorie',
+                        style: KoalaTypography.bodyMedium(context),
+                      ),
+                    ),
+                    Text(
+                      '${NumberFormat.compact(locale: 'fr_FR').format(spent)} F dépensé',
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: KoalaColors.warning),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          // Goal impacts
+          if (result.goalProgressImpact.isNotEmpty)
+            ...result.goalProgressImpact.entries.map((entry) {
+              final progress = entry.value;
+              return Container(
+                margin: EdgeInsets.only(bottom: 8.h),
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: KoalaColors.surface(context),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: KoalaColors.border(context)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(CupertinoIcons.flag,
+                        color: KoalaColors.success, size: 20.sp),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Text(
+                        'Objectif',
+                        style: KoalaTypography.bodyMedium(context),
+                      ),
+                    ),
+                    Text(
+                      '${NumberFormat.compact(locale: 'fr_FR').format(progress)} F épargné',
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: KoalaColors.success),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
         ],
         SizedBox(height: 40.h),
       ],
@@ -315,23 +387,14 @@ class _CashFlowTimelineWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: KoalaColors.shadowSubtle,
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100,
+          color: KoalaColors.border(context),
         ),
       ),
       child: ListView.builder(
@@ -350,19 +413,16 @@ class _CashFlowTimelineWidget extends StatelessWidget {
                     children: [
                       Text(
                         DateFormat('dd MMM').format(event.date),
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: Colors.grey,
+                        style: KoalaTypography.caption(context).copyWith(
+                          color: KoalaColors.textSecondary(context),
                         ),
                       ),
                       Text(
                         event.description,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13.sp,
+                        style: KoalaTypography.bodyMedium(context).copyWith(
                           fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
                     ],
@@ -371,10 +431,11 @@ class _CashFlowTimelineWidget extends StatelessWidget {
                 SizedBox(width: 8.w),
                 Text(
                   '${event.amount > 0 ? '+' : '-'} FCFA ${_formatAmount(event.amount.abs())}',
-                  style: TextStyle(
-                    fontSize: 13.sp,
+                  style: KoalaTypography.bodyMedium(context).copyWith(
                     fontWeight: FontWeight.w600,
-                    color: event.amount > 0 ? Colors.green : Colors.red,
+                    color: event.amount > 0
+                        ? KoalaColors.success
+                        : KoalaColors.destructive,
                   ),
                 ),
               ],
@@ -392,7 +453,6 @@ class _MetricCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final int delay;
-  final bool fullWidth;
 
   const _MetricCard({
     required this.label,
@@ -400,28 +460,17 @@ class _MetricCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.delay,
-    this.fullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Container(
-      width: fullWidth ? double.infinity : null,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: KoalaColors.border(context)),
+        boxShadow: KoalaColors.shadowSubtle,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,18 +486,14 @@ class _MetricCard extends StatelessWidget {
           SizedBox(height: 12.h),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
+            style: KoalaTypography.bodyMedium(context)
+                .copyWith(fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 4.h),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Colors.grey,
+            style: KoalaTypography.caption(context).copyWith(
+              color: KoalaColors.textSecondary(context),
             ),
           ),
         ],
@@ -456,3 +501,4 @@ class _MetricCard extends StatelessWidget {
     ).animate().fadeIn(delay: delay.ms).slideY(begin: 0.1);
   }
 }
+
