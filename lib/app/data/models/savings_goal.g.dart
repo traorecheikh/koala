@@ -52,4 +52,3 @@ class SavingsGoalAdapter extends TypeAdapter<SavingsGoal> {
           typeId == other.typeId;
 }
 
-
