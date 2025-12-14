@@ -93,3 +93,4 @@ class OptimizationSuggestion {
 
 enum SuggestionType { adjustment, opportunity, warning }
 
+
