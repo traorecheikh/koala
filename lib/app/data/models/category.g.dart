@@ -55,4 +55,3 @@ class CategoryAdapter extends TypeAdapter<Category> {
           typeId == other.typeId;
 }
 
-
