@@ -11,11 +11,13 @@ abstract class Routes {
   static const recurring = _Paths.recurring;
   static const categories = _Paths.categories;
   static const persona = _Paths.persona;
+  static const securitySettings = _Paths.securitySettings; // New Route
   static const transactions = _Paths.transactions;
   static const budget = _Paths.budget;
   static const debt = _Paths.debt;
   static const simulator = _Paths.simulator;
   static const goals = _Paths.goals;
+  static const intelligence = _Paths.intelligence;
 }
 
 abstract class _Paths {
@@ -28,9 +30,12 @@ abstract class _Paths {
   static const recurring = '/recurring';
   static const categories = '/categories';
   static const persona = '/persona';
+  static const securitySettings = '/security_settings'; // New Path
   static const transactions = '/transactions';
   static const budget = '/budget';
   static const debt = '/debt';
   static const simulator = '/simulator';
   static const goals = '/goals';
+  static const intelligence = '/intelligence';
 }
+
