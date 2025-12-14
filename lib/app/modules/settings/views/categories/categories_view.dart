@@ -49,3 +49,4 @@ class CategoriesView extends GetView<CategoriesController> {
     );
   }
 }
+
