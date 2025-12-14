@@ -52,3 +52,4 @@ class UserFinancialProfileAdapter extends TypeAdapter<UserFinancialProfile> {
           typeId == other.typeId;
 }
 
+
