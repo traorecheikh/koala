@@ -3,6 +3,8 @@ import 'package:koaa/app/modules/analytics/bindings/analytics_binding.dart';
 import 'package:koaa/app/modules/analytics/views/analytics_view.dart';
 import 'package:koaa/app/modules/settings/bindings/categories_binding.dart';
 import 'package:koaa/app/modules/settings/views/categories/categories_view.dart';
+import 'package:koaa/app/modules/settings/bindings/security_settings_binding.dart'; // New Import
+import 'package:koaa/app/modules/settings/views/security_settings_view.dart'; // New Import
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
 import 'package:koaa/app/modules/settings/views/persona/discover_persona_view.dart';
 import 'package:koaa/app/modules/transactions/bindings/transactions_binding.dart';
@@ -15,6 +17,7 @@ import 'package:koaa/app/modules/simulator/bindings/simulator_binding.dart';
 import 'package:koaa/app/modules/simulator/views/simulator_view.dart';
 import 'package:koaa/app/modules/goals/views/goals_view.dart';
 import 'package:koaa/app/modules/goals/bindings/goals_binding.dart';
+import 'package:koaa/app/modules/intelligence/views/intelligence_view.dart';
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -65,6 +68,12 @@ class AppPages {
       transition: Transition.zoom,
     ),
     GetPage(
+      name: _Paths.securitySettings, // New GetPage
+      page: () => const SecuritySettingsView(),
+      binding: SecuritySettingsBinding(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
       name: _Paths.transactions,
       page: () => const TransactionsView(),
       binding: TransactionsBinding(),
@@ -94,5 +103,11 @@ class AppPages {
       binding: GoalsBinding(),
       transition: Transition.cupertino,
     ),
+    GetPage(
+      name: _Paths.intelligence,
+      page: () => const IntelligenceView(),
+      transition: Transition.cupertino,
+    ),
   ];
 }
+
