@@ -332,3 +332,4 @@ class IntelligenceService extends GetxService {
   }
 }
 
+
