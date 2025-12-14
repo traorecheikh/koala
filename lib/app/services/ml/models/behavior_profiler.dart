@@ -41,34 +41,36 @@ class BehaviorProfiler {
     final discretionaryRatio = _calculateDiscretionaryRatio(transactions);
     final frequency = _calculateFrequency(transactions);
 
-    final userVector = Vector.fromList([
-      savingsRate,
-      consistency,
-      discretionaryRatio,
-      frequency,
-    ]);
+    // 2. New Mega Persona Metrics
+    final weekendRatio = _calculateWeekendRatio(transactions);
+    final nightRatio = _calculateNightRatio(transactions);
+    final avgAmount = _calculateAverageAmount(transactions);
+    final categoryPreferences = _calculateCategoryPreferences(transactions);
+    final dominantCategory = categoryPreferences.isNotEmpty
+        ? categoryPreferences.entries
+            .reduce((a, b) => a.value > b.value ? a : b)
+            .key
+        : 'Autre';
 
-    // 2. Find nearest persona
-    var bestPersona = FinancialPersona.planner;
-    var minDistance = double.infinity;
+    // 3. Category preferences (already calculated above)
 
-    _centroids.forEach((persona, centroid) {
-      final distance = userVector.distanceTo(centroid, distance: Distance.euclidean);
-      if (distance < minDistance) {
-        minDistance = distance;
-        bestPersona = persona;
-      }
-    });
+    // 4. Determine Persona Type (Now just passing the raw profile to be classified by definitions later)
+    // For backward compatibility, we still assign a basic type here, but the UI will use the smart definitions.
+    // We can also run the full classification here if we want to store the "Mega Persona" name directly.
 
-    // 3. Category preferences
-    final preferences = _calculateCategoryPreferences(transactions);
+    // For now, let's store a basic one, but populating all the rich data fields is key.
 
     return UserFinancialProfile(
-      personaType: bestPersona.name,
+      personaType: FinancialPersona.planner
+          .name, // Placeholder, real classification happens in UI/Service based on data
       savingsRate: savingsRate,
       consistencyScore: consistency,
-      categoryPreferences: preferences,
+      categoryPreferences: categoryPreferences,
       detectedPatterns: [],
+      weekendRatio: weekendRatio,
+      nightRatio: nightRatio,
+      dominantCategory: dominantCategory,
+      averageAmount: avgAmount,
     );
   }
 
@@ -87,28 +89,56 @@ class BehaviorProfiler {
   }
 
   double _calculateConsistency(List<LocalTransaction> txs) {
-    // Inverse of coefficient of variation of daily spending?
-    // Simplified: 1.0 if variance is low
     return 0.5; // Placeholder
   }
 
   double _calculateDiscretionaryRatio(List<LocalTransaction> txs) {
-    // Needs category classification of "Essential" vs "Discretionary"
     return 0.4; // Placeholder
   }
 
   double _calculateFrequency(List<LocalTransaction> txs) {
-    // Txs per day normalized
     if (txs.isEmpty) return 0.0;
     final duration = txs.last.date.difference(txs.first.date).inDays.abs() + 1;
     final perDay = txs.length / duration;
-    return min(1.0, perDay / 5.0); // Cap at 5 txs/day
+    return min(1.0, perDay / 5.0);
   }
 
-  Map<String, double> _calculateCategoryPreferences(List<LocalTransaction> txs) {
+  double _calculateWeekendRatio(List<LocalTransaction> txs) {
+    if (txs.isEmpty) return 0.0;
+    int weekendCount = 0;
+    for (var tx in txs) {
+      if (tx.date.weekday >= 6) weekendCount++;
+    }
+    return weekendCount / txs.length;
+  }
+
+  double _calculateNightRatio(List<LocalTransaction> txs) {
+    if (txs.isEmpty) return 0.0;
+    int nightCount = 0;
+    for (var tx in txs) {
+      if (tx.date.hour >= 20 || tx.date.hour <= 5) nightCount++;
+    }
+    return nightCount / txs.length;
+  }
+
+  double _calculateAverageAmount(List<LocalTransaction> txs) {
+    if (txs.isEmpty) return 0.0;
+    double total = 0;
+    int count = 0;
+    for (var tx in txs) {
+      if (tx.type == TransactionType.expense) {
+        total += tx.amount;
+        count++;
+      }
+    }
+    return count == 0 ? 0.0 : total / count;
+  }
+
+  Map<String, double> _calculateCategoryPreferences(
+      List<LocalTransaction> txs) {
     final totals = <String, double>{};
     double grandTotal = 0;
-    
+
     for (var tx in txs) {
       if (tx.type == TransactionType.expense) {
         final cat = tx.category?.displayName ?? 'Autre';
@@ -118,7 +148,7 @@ class BehaviorProfiler {
     }
 
     if (grandTotal == 0) return {};
-    
+
     return totals.map((key, value) => MapEntry(key, value / grandTotal));
   }
 
@@ -126,26 +156,30 @@ class BehaviorProfiler {
     // Can be localized later
     switch (persona) {
       case FinancialPersona.saver:
-        return ['Vous épargnez bien ! Pensez à diversifier vos investissements.'];
+        return [
+          'Vous épargnez bien ! Pensez à diversifier vos investissements.'
+        ];
       case FinancialPersona.spender:
         return ['Essayez la règle des 50/30/20 pour mieux gérer vos envies.'];
       case FinancialPersona.planner:
-        return ['Votre budget est solide. Avez-vous un fonds d\'urgence de 6 mois ?'];
+        return [
+          'Votre budget est solide. Avez-vous un fonds d\'urgence de 6 mois ?'
+        ];
       case FinancialPersona.survival:
-        return ['Priorité : constituez un petit fonds de secours de 50.000 FCFA.'];
+        return [
+          'Priorité : constituez un petit fonds de secours de 50.000 FCFA.'
+        ];
       case FinancialPersona.fluctuator:
         return ['Lissez vos dépenses en mettant de côté les mois fastes.'];
     }
     return [];
   }
-  
+
   List<String> getAdviceForPersona(String personaName) {
-     final persona = FinancialPersona.values.firstWhere(
-       (e) => e.name == personaName, 
-       orElse: () => FinancialPersona.planner
-     );
-     return getAdvice(persona);
+    final persona = FinancialPersona.values.firstWhere(
+        (e) => e.name == personaName,
+        orElse: () => FinancialPersona.planner);
+    return getAdvice(persona);
   }
 }
-
 
