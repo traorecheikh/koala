@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/core/design_system.dart';
 
 class GoalCard extends StatelessWidget {
   final FinancialGoal goal;
@@ -21,23 +21,15 @@ class GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final color = Color(goal.colorValue ?? KoalaColors.primary.value);
 
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade100,
-        ),
+        boxShadow: KoalaColors.shadowSubtle,
+        border: Border.all(color: KoalaColors.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,12 +39,12 @@ class GoalCard extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: Color(goal.colorValue ?? Colors.blue.value).withOpacity(0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Icon(
                   IconHelper.getGoalIconByIndex(goal.iconKey),
-                  color: Color(goal.colorValue ?? Colors.blue.value),
+                  color: color,
                   size: 20.sp,
                 ),
               ),
@@ -60,37 +52,22 @@ class GoalCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   goal.title,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
+                  style: KoalaTypography.heading4(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  // Show options (Edit/Delete) - This needs a callback or controller access
-                  // For now, let's assume the parent handles the tap on the card for details
-                  // But if we want specific actions here:
-                  // Get.find<GoalsController>().showGoalOptions(goal);
-                },
-                child: Icon(
-                  CupertinoIcons.ellipsis,
-                  color: isDark ? Colors.white70 : Colors.grey.shade400,
-                  size: 20.sp,
-                ),
+              Icon(
+                CupertinoIcons.chevron_right,
+                color: KoalaColors.textSecondary(context),
+                size: 20.sp,
               ),
             ],
           ),
           SizedBox(height: 12.h),
           Text(
             goal.description ?? 'Aucune description',
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: isDark ? Colors.white60 : Colors.grey.shade600,
-            ),
+            style: KoalaTypography.bodySmall(context),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -100,50 +77,40 @@ class GoalCard extends StatelessWidget {
             children: [
               Text(
                 'Progression',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white70 : Colors.grey.shade600,
-                ),
+                style: KoalaTypography.caption(context)
+                    .copyWith(fontWeight: FontWeight.w500),
               ),
               Text(
                 '${goal.progressPercentage.toStringAsFixed(1)}%',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+                style: KoalaTypography.bodyMedium(context)
+                    .copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
           SizedBox(height: 8.h),
-          LinearProgressIndicator(
-            value: (goal.progressPercentage / 100).clamp(0.0, 1.0),
-            backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
-            color: Color(goal.colorValue ?? Colors.blue.value),
-            minHeight: 8.h,
+          ClipRRect(
             borderRadius: BorderRadius.circular(4.r),
+            child: LinearProgressIndicator(
+              value: (goal.progressPercentage / 100).clamp(0.0, 1.0),
+              backgroundColor: KoalaColors.background(context),
+              color: color,
+              minHeight: 8.h,
+            ),
           ),
           SizedBox(height: 8.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'FCFA ${_formatAmount(goal.currentAmount)} / ${_formatAmount(goal.targetAmount)}',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: isDark ? Colors.white60 : Colors.grey.shade500,
-                ),
+                '${_formatAmount(goal.currentAmount)} F / ${_formatAmount(goal.targetAmount)} F',
+                style: KoalaTypography.caption(context),
               ),
               if (goal.targetDate != null)
                 Flexible(
                   child: Text(
-                    'Date cible: ${DateFormat('dd/MM/yyyy').format(goal.targetDate!)}',
+                    'Cible: ${DateFormat('dd/MM/yyyy').format(goal.targetDate!)}',
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: isDark ? Colors.white60 : Colors.grey.shade500,
-                    ),
+                    style: KoalaTypography.caption(context),
                   ),
                 ),
             ],
@@ -155,14 +122,13 @@ class GoalCard extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: KoalaColors.success.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Text(
                   'Objectif Atteint 🎉',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.green,
+                  style: KoalaTypography.bodySmall(context).copyWith(
+                    color: KoalaColors.success,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -174,3 +140,4 @@ class GoalCard extends StatelessWidget {
     );
   }
 }
+
