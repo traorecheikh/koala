@@ -11,3 +11,4 @@ class CategoriesBinding extends Bindings {
   }
 }
 
+
