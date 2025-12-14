@@ -240,3 +240,4 @@ class _InsightCard extends StatelessWidget {
   }
 }
 
+
