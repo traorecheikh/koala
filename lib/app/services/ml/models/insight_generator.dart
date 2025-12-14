@@ -374,3 +374,4 @@ class MLInsight {
 
 enum InsightType { positive, warning, tip, info }
 
+
