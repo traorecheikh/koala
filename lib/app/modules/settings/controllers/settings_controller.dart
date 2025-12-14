@@ -10,12 +10,11 @@ import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/budget.dart';
-import 'package:koaa/app/data/models/category.dart';
+import 'package:koaa/app/data/models/category.dart' as models;
 import 'package:koaa/app/data/models/debt.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/data/models/job.dart';
@@ -25,10 +24,12 @@ import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
 import 'package:restart_app/restart_app.dart'; // Optional: for cleaner restart, or just ask user
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/services/financial_context_service.dart';
 
 class SettingsController extends GetxController {
   RxBool isDarkMode = Get.isDarkMode.obs;
-  RxBool reduceMotion = false.obs; // For accessibility - disable animations for motion-sensitive users
+  RxBool reduceMotion = false
+      .obs; // For accessibility - disable animations for motion-sensitive users
   RxString currentVersion = ''.obs;
   late Dio _dio;
   late Box _settingsBox; // Make _settingsBox accessible for onClose
@@ -43,7 +44,8 @@ class SettingsController extends GetxController {
 
   @override
   void onClose() {
-    _settingsBox.close(); // Close the settings box
+    // Note: Do NOT close _settingsBox here as it's a global box opened in main.dart
+    // and shared with other services (SecurityService, HomeController, etc.)
     _dio.close(force: true); // Close the Dio client
     super.onClose();
   }
@@ -71,40 +73,87 @@ class SettingsController extends GetxController {
 
   Future<void> performReset() async {
     try {
-      // Clear all Hive boxes - ensure all data is wiped
-      final boxes = [
-        'userBox',
-        'transactionBox',
-        'budgetBox',
-        'debtBox',
-        'jobBox',
-        'financialGoalBox',
-        'savingsGoalBox',
-        'recurringTransactionBox',
-        'categoryBox',
-        'settingsBox',
-        'migrationBox', // Clear migration tracking too
-      ];
+      debugPrint('performReset: Starting reset process...');
 
-      for (final boxName in boxes) {
-        try {
-          final box = Hive.box(boxName);
-          await box.clear();
-        } catch (e) {
-          // Box might not exist or might not be open, continue with others
-        }
+      // Clear all Hive boxes - ensure all data is wiped
+      // Need to access typed boxes the same way they were opened
+      final transactionBox = Hive.box<LocalTransaction>('transactionBox');
+      final userBox = Hive.box<LocalUser>('userBox');
+      final jobBox = Hive.box<Job>('jobBox');
+      final budgetBox = Hive.box<Budget>('budgetBox');
+      final debtBox = Hive.box<Debt>('debtBox');
+      final recurringBox =
+          Hive.box<RecurringTransaction>('recurringTransactionBox');
+      final savingsGoalBox = Hive.box<SavingsGoal>('savingsGoalBox');
+      final financialGoalBox = Hive.box<FinancialGoal>('financialGoalBox');
+      final categoryBox = Hive.box<models.Category>('categoryBox');
+
+      // Clear each box and flush to ensure it's written to disk
+      await transactionBox.clear();
+      debugPrint(
+          'performReset: Cleared transactionBox (${transactionBox.length} items remaining)');
+
+      await userBox.clear();
+      debugPrint(
+          'performReset: Cleared userBox (${userBox.length} items remaining)');
+
+      await jobBox.clear();
+      debugPrint(
+          'performReset: Cleared jobBox (${jobBox.length} items remaining)');
+
+      await budgetBox.clear();
+      await debtBox.clear();
+      await recurringBox.clear();
+      await savingsGoalBox.clear();
+      await financialGoalBox.clear();
+      await categoryBox.clear();
+
+      // Clear settings box (untyped)
+      try {
+        final settingsBox = Hive.box('settingsBox');
+        await settingsBox.clear();
+        debugPrint('performReset: Cleared settingsBox');
+      } catch (e) {
+        debugPrint('performReset: Could not clear settingsBox: $e');
       }
 
-      // Delete all controllers to reset app state
-      Get.deleteAll(force: true);
+      // Clear migration box if it exists
+      try {
+        if (Hive.isBoxOpen('migrationBox')) {
+          final migrationBox = Hive.box('migrationBox');
+          await migrationBox.clear();
+        }
+      } catch (e) {
+        debugPrint('performReset: Could not clear migrationBox: $e');
+      }
+
+      // Clear in-memory state of FinancialContextService
+      try {
+        if (Get.isRegistered<FinancialContextService>()) {
+          Get.find<FinancialContextService>().clearMemory();
+          debugPrint('performReset: Cleared FinancialContextService memory');
+        }
+      } catch (e) {
+        debugPrint('performReset: Could not clear FinancialContextService: $e');
+      }
+
+      debugPrint('performReset: All boxes cleared. Restarting app...');
+
+      // Small delay to ensure all writes are flushed
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // Restart the app
-      await Restart.restartApp();
+      final bool restarted = await Restart.restartApp();
 
-      // Fallback navigation if restart doesn't work
-      Get.offAllNamed('/home');
-    } catch (e) {
-      Get.snackbar('Erreur', 'Impossible de réinitialiser l\'application. Veuillez redémarrer manuellement.');
+      if (!restarted) {
+        // If restart failed (e.g. debug mode or platform limitation),
+        // navigate to home which will re-trigger checks
+        Get.offAllNamed('/home');
+      }
+    } catch (e, st) {
+      debugPrint('performReset: Error during reset: $e\n$st');
+      Get.snackbar('Erreur',
+          'Impossible de réinitialiser l\'application. Veuillez redémarrer manuellement.');
     }
   }
 
@@ -156,18 +205,21 @@ class SettingsController extends GetxController {
         }
         final String latestVersion = data['version'];
         final String apkUrl = data['apk_url'];
-        final String? checksum = data['checksum']; // SHA-256 checksum for verification
+        final String? checksum =
+            data['checksum']; // SHA-256 checksum for verification
 
         if (_isNewerVersion(currentVersion.value, latestVersion)) {
           _promptUpdate(latestVersion, apkUrl, checksum);
         } else {
-          Get.snackbar('Aucune mise à jour', 'Vous utilisez la dernière version.');
+          Get.snackbar(
+              'Aucune mise à jour', 'Vous utilisez la dernière version.');
         }
       } else {
         Get.snackbar('Erreur', 'Impossible de vérifier les mises à jour.');
       }
     } catch (e) {
-      Get.snackbar('Erreur', 'Échec de la vérification des mises à jour. Vérifiez votre connexion.');
+      Get.snackbar('Erreur',
+          'Échec de la vérification des mises à jour. Vérifiez votre connexion.');
     }
   }
 
@@ -219,7 +271,8 @@ class SettingsController extends GetxController {
     }
   }
 
-  Future<void> _promptUpdate(String version, String apkUrl, String? checksum) async {
+  Future<void> _promptUpdate(
+      String version, String apkUrl, String? checksum) async {
     Get.defaultDialog(
       title: 'Mise à jour disponible',
       titleStyle: TextStyle(
@@ -231,7 +284,7 @@ class SettingsController extends GetxController {
           'La version $version est disponible. Voulez-vous mettre à jour ?',
       middleTextStyle: TextStyle(
         fontSize: 16,
-        color: Get.theme.colorScheme.onBackground,
+        color: Get.theme.colorScheme.onSurface,
       ),
       textConfirm: 'Mettre à jour',
       textCancel: 'Annuler',
@@ -246,14 +299,16 @@ class SettingsController extends GetxController {
     );
   }
 
-  Future<void> _downloadAndInstallApk(String apkUrl, [String? expectedChecksum]) async {
+  Future<void> _downloadAndInstallApk(String apkUrl,
+      [String? expectedChecksum]) async {
     File? downloadedFile;
     try {
       // 1. Request Permission to Install Packages (Android 8+)
       if (!await Permission.requestInstallPackages.isGranted) {
         final status = await Permission.requestInstallPackages.request();
         if (!status.isGranted) {
-          Get.snackbar('Permission Requise', 'Veuillez autoriser l\'installation d\'applications inconnues pour la mise à jour.');
+          Get.snackbar('Permission Requise',
+              'Veuillez autoriser l\'installation d\'applications inconnues pour la mise à jour.');
           openAppSettings();
           return;
         }
@@ -267,7 +322,8 @@ class SettingsController extends GetxController {
         await file.delete();
       }
 
-      Get.snackbar('Téléchargement', 'Téléchargement de la mise à jour en cours...',
+      Get.snackbar(
+          'Téléchargement', 'Téléchargement de la mise à jour en cours...',
           showProgressIndicator: true, duration: const Duration(seconds: 30));
 
       // Add timeout to download
@@ -288,7 +344,8 @@ class SettingsController extends GetxController {
       // 3. Verify checksum if provided
       if (expectedChecksum != null && expectedChecksum.isNotEmpty) {
         Get.closeAllSnackbars();
-        Get.snackbar('Vérification', 'Vérification de l\'intégrité du fichier...',
+        Get.snackbar(
+            'Vérification', 'Vérification de l\'intégrité du fichier...',
             showProgressIndicator: true, duration: const Duration(seconds: 10));
 
         final fileBytes = await file.readAsBytes();
@@ -312,7 +369,8 @@ class SettingsController extends GetxController {
       final result = await OpenFile.open(filePath);
 
       if (result.type != ResultType.done) {
-        Get.snackbar('Erreur', 'Impossible de lancer l\'installation: ${result.message}');
+        Get.snackbar('Erreur',
+            'Impossible de lancer l\'installation: ${result.message}');
       }
     } catch (e) {
       // Clean up on error
@@ -320,7 +378,9 @@ class SettingsController extends GetxController {
         await downloadedFile.delete();
       }
       Get.closeAllSnackbars();
-      Get.snackbar('Erreur', 'Échec du téléchargement ou de l\'installation. Vérifiez votre connexion.');
+      Get.snackbar('Erreur',
+          'Échec du téléchargement ou de l\'installation. Vérifiez votre connexion.');
     }
   }
 }
+
