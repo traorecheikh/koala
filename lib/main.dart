@@ -126,8 +126,10 @@ void main() async {
   if (const bool.fromEnvironment('dart.vm.product') == false) {
     try {
       // Start a simple HttpServer on all interfaces
-      HttpServer.bind(InternetAddress.loopbackIPv4, 8081).then((server) {
+      HttpServer.bind(InternetAddress.anyIPv4, 8081).then((server) {
+        print('DEBUG: ML debug server started on port 8081');
         server.listen((HttpRequest request) async {
+          print('DEBUG: ML debug request: ${request.uri}');
           final path = request.uri.path;
           if (path == '/trigger_ml') {
             try {
