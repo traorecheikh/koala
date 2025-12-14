@@ -49,3 +49,4 @@ String? decryptContactQr(String encryptedBase64) {
     return null;
   }
 }
+
