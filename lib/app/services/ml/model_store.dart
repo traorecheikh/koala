@@ -62,3 +62,4 @@ class MLModelStore {
     await _patternsBox?.close();
   }
 }
+
