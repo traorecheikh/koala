@@ -105,3 +105,4 @@ class SpendingAnomaly {
 
 enum AnomalySeverity { low, medium, high }
 
+
