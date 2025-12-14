@@ -52,3 +52,4 @@ class BudgetAdapter extends TypeAdapter<Budget> {
           typeId == other.typeId;
 }
 
+
