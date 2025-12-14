@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:countup/countup.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,15 +15,11 @@ import 'package:koaa/app/modules/home/widgets/add_transaction_dialog.dart';
 import 'package:koaa/app/modules/home/widgets/enhanced_balance_card.dart';
 import 'package:koaa/app/modules/home/widgets/financial_health_widget.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
-import 'package:koaa/app/data/models/financial_goal.dart';
-import 'package:koaa/app/data/models/debt.dart';
-import 'package:koaa/app/data/models/budget.dart';
-import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/modules/goals/controllers/goals_controller.dart';
-import 'package:koaa/app/modules/settings/controllers/categories_controller.dart'; // New Import
+import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import '../widgets/smart_insights_widget.dart';
-import '../../goals/views/widgets/goal_card.dart'; // Reusing goal card from goals module
+import '../../goals/views/widgets/goal_card.dart';
 
 import '../../../routes/app_pages.dart';
 import '../controllers/home_controller.dart';
@@ -34,12 +29,10 @@ import '../controllers/home_controller.dart';
 class _TransactionListItem extends StatelessWidget {
   final LocalTransaction transaction;
 
-  const _TransactionListItem({super.key, required this.transaction});
+  const _TransactionListItem({required this.transaction});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final isExpense = transaction.type == TransactionType.expense;
 
     // Amount formatting with +/- symbol
@@ -66,71 +59,77 @@ class _TransactionListItem extends StatelessWidget {
     // Determine icon background color based on category color, with subtle opacity
     final categoryColor = category != null
         ? Color(category.colorValue)
-        : (isExpense ? Colors.red : Colors.green);
-    final containerColor = categoryColor.withOpacity(isDark ? 0.15 : 0.1);
+        : (isExpense ? KoalaColors.destructive : KoalaColors.success);
+    final containerColor = categoryColor.withOpacity(0.12);
 
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
+      margin: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
       decoration: BoxDecoration(
-        color: isDark
-            ? theme.scaffoldBackgroundColor.withOpacity(0.8)
-            : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: KoalaColors.shadowSubtle,
+        border: Border.all(color: KoalaColors.border(context)),
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        leading: Container(
-          width: 50.w,
-          height: 50.w,
-          decoration: BoxDecoration(
-            color: containerColor,
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          padding: EdgeInsets.all(10.w),
-          child: CategoryIcon(
-            iconKey: iconKey,
-            size: 24.sp,
-            useOriginalColor: true,
-          ),
-        ),
-        title: Text(
-          transaction.description,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: isDark ? Colors.white : const Color(0xFF2D3250),
-            fontWeight: FontWeight.w600,
-            fontSize: 16.sp,
-          ),
-        ),
-        subtitle: Padding(
-          padding: EdgeInsets.only(top: 4.h),
-          child: Text(
-            DateFormat('dd MMM, HH:mm', 'fr_FR').format(transaction.date),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: isDark ? Colors.white38 : Colors.grey.shade500,
-              fontSize: 12.sp,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // Navigate to details if needed
+          },
+          borderRadius: BorderRadius.circular(20.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            child: Row(
+              children: [
+                Container(
+                  width: 50.w,
+                  height: 50.w,
+                  decoration: BoxDecoration(
+                    color: containerColor,
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: Center(
+                    child: CategoryIcon(
+                      iconKey: iconKey,
+                      size: 24.sp,
+                      useOriginalColor: true,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        transaction.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KoalaTypography.bodyLarge(context)
+                            .copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        DateFormat('dd MMM, HH:mm', 'fr_FR')
+                            .format(transaction.date),
+                        style: KoalaTypography.caption(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  amountString,
+                  style: KoalaTypography.bodyLarge(context).copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isExpense
+                        ? KoalaColors.text(context)
+                        : KoalaColors.success,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        trailing: Text(
-          amountString,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: isDark ? Colors.white : const Color(0xFF2D3250),
-            fontWeight: FontWeight.bold,
-            fontSize: 16.sp,
-          ),
-        ),
-        onTap: () {
-          // Navigate to details if needed
-        },
       ),
     )
         .animate()
@@ -148,16 +147,28 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
   @override
   ThemeData appBarTheme(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return theme.copyWith(
       appBarTheme: theme.appBarTheme.copyWith(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: KoalaColors.background(context),
         elevation: 0,
-        iconTheme: theme.iconTheme,
-        titleTextStyle: theme.textTheme.titleLarge,
+        iconTheme: IconThemeData(color: KoalaColors.text(context)),
+        titleTextStyle: KoalaTypography.heading3(context),
       ),
-      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+      inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
+        hintStyle: KoalaTypography.bodyMedium(context)
+            .copyWith(color: KoalaColors.textSecondary(context)),
       ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: KoalaColors.primary,
+        selectionColor: KoalaColors.primary.withOpacity(0.2),
+      ),
+      textTheme: theme.textTheme.copyWith(
+        titleLarge: KoalaTypography.bodyLarge(context),
+      ),
+      scaffoldBackgroundColor: KoalaColors.background(context),
     );
   }
 
@@ -166,7 +177,7 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
     return [
       if (query.isNotEmpty)
         IconButton(
-          icon: const Icon(CupertinoIcons.clear),
+          icon: Icon(CupertinoIcons.clear, color: KoalaColors.text(context)),
           onPressed: () => query = '',
         ),
     ];
@@ -175,7 +186,7 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
-      icon: const Icon(CupertinoIcons.back),
+      icon: Icon(CupertinoIcons.back, color: KoalaColors.text(context)),
       onPressed: () => close(context, null),
     );
   }
@@ -195,10 +206,8 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
       return Center(
         child: Text(
           'Commencez à taper pour rechercher des transactions.',
-          style: Theme.of(context)
-              .textTheme
-              .bodyLarge
-              ?.copyWith(color: Colors.grey),
+          style: KoalaTypography.bodyMedium(context)
+              .copyWith(color: KoalaColors.textSecondary(context)),
           textAlign: TextAlign.center,
         ),
       );
@@ -216,12 +225,15 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
       return descriptionMatch || amountMatch || categoryMatch;
     }).toList();
 
-    return ListView.builder(
-      padding: EdgeInsets.all(16.w),
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        return _TransactionListItem(transaction: results[index]);
-      },
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: ListView.builder(
+        padding: EdgeInsets.only(top: 16.h),
+        itemCount: results.length,
+        itemBuilder: (context, index) {
+          return _TransactionListItem(transaction: results[index]);
+        },
+      ),
     );
   }
 }
@@ -234,7 +246,7 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: KoalaColors.background(context),
       body: Stack(
         children: [
           SafeArea(
@@ -310,9 +322,10 @@ class HomeView extends GetView<HomeController> {
                       right: 0,
                       child: Container(
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
+                            color: KoalaColors.surface(context),
                             borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(24.r)),
+                            boxShadow: KoalaColors.shadowMedium,
                           ),
                           child: const _MoreOptionsSheet()),
                     ),
@@ -332,7 +345,6 @@ class _Header extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 8.w),
       child: Row(
@@ -341,11 +353,12 @@ class _Header extends GetView<HomeController> {
           Obx(
             () => Text(
               'Bonjour, ${controller.userName.value}',
-              style: theme.textTheme.titleLarge,
+              style: KoalaTypography.heading2(context),
             ),
           ),
           IconButton(
-            icon: Icon(CupertinoIcons.settings, size: 28.sp),
+            icon: Icon(CupertinoIcons.settings,
+                size: 28.sp, color: KoalaColors.text(context)),
             onPressed: () => Get.toNamed(Routes.settings),
             splashRadius: 24,
           ),
@@ -372,7 +385,7 @@ class _QuickActions extends GetView<HomeController> {
         _AnimatedActionButton(
           icon: CupertinoIcons.arrow_down,
           label: 'Revenu',
-          color: Colors.green,
+          color: KoalaColors.success,
           onTap: () =>
               showAddTransactionDialog(context, TransactionType.income),
         ),
@@ -380,7 +393,7 @@ class _QuickActions extends GetView<HomeController> {
         _AnimatedActionButton(
           icon: CupertinoIcons.arrow_up,
           label: 'Dépense',
-          color: Colors.black,
+          color: KoalaColors.text(context),
           onTap: () =>
               showAddTransactionDialog(context, TransactionType.expense),
         ),
@@ -396,8 +409,9 @@ class _QuickActions extends GetView<HomeController> {
             onWillAccept: (data) => data != null && data != currentAction,
             builder: (context, candidateData, rejectedData) {
               final isHovered = candidateData.isNotEmpty;
-              final actionToShow =
-                  isHovered ? (candidateData.firstOrNull ?? currentAction) : currentAction;
+              final actionToShow = isHovered
+                  ? (candidateData.firstOrNull ?? currentAction)
+                  : currentAction;
 
               return AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
@@ -410,7 +424,7 @@ class _QuickActions extends GetView<HomeController> {
                   key: ValueKey(actionToShow),
                   icon: _getIcon(actionToShow),
                   label: _getLabel(actionToShow),
-                  color: _getColor(actionToShow, theme),
+                  color: _getColor(actionToShow, context),
                   onTap: () => isHovered ? {} : _handleTap(actionToShow),
                   onLongPress: () => _showSelectionSheet(context),
                 ),
@@ -422,7 +436,7 @@ class _QuickActions extends GetView<HomeController> {
         _AnimatedActionButton(
           icon: CupertinoIcons.square_grid_2x2_fill,
           label: 'Plus',
-          color: Colors.grey.shade600,
+          color: KoalaColors.textSecondary(context),
           onTap: () {
             controller.isMoreOptionsOpen.value = true;
           },
@@ -447,6 +461,8 @@ class _QuickActions extends GetView<HomeController> {
         return CupertinoIcons.archivebox_fill;
       case QuickActionType.settings:
         return CupertinoIcons.settings_solid;
+      case QuickActionType.intelligence:
+        return CupertinoIcons.sparkles;
     }
   }
 
@@ -466,25 +482,30 @@ class _QuickActions extends GetView<HomeController> {
         return 'Catég.';
       case QuickActionType.settings:
         return 'Param.';
+      case QuickActionType.intelligence:
+        return 'IA';
     }
   }
 
-  Color _getColor(QuickActionType type, ThemeData theme) {
+  Color _getColor(QuickActionType type, BuildContext context) {
+    // Standardize colors using KoalaColors where possible, or semantic colors that fit the premium theme
     switch (type) {
       case QuickActionType.goals:
-        return Colors.pinkAccent;
+        return const Color(0xFFFF2D55); // Pink
       case QuickActionType.analytics:
-        return theme.colorScheme.secondary;
+        return const Color(0xFF5E5CE6); // Indigo
       case QuickActionType.budget:
-        return Colors.orange;
+        return const Color(0xFFFF9F0A); // Orange
       case QuickActionType.debt:
-        return Colors.teal;
+        return const Color(0xFF30B0C7); // Teal
       case QuickActionType.simulator:
-        return Colors.purpleAccent;
+        return const Color(0xFFBF5AF2); // Purple
       case QuickActionType.categories:
-        return Colors.brown;
+        return const Color(0xFFA2845E); // Brown
       case QuickActionType.settings:
-        return Colors.black45;
+        return KoalaColors.textSecondary(context);
+      case QuickActionType.intelligence:
+        return const Color(0xFF64D2FF); // Cyan/Blue
     }
   }
 
@@ -511,53 +532,47 @@ class _QuickActions extends GetView<HomeController> {
       case QuickActionType.settings:
         Get.offAndToNamed(Routes.settings);
         break;
+      case QuickActionType.intelligence:
+        Get.toNamed(Routes.intelligence);
+        break;
     }
   }
 
   void _showSelectionSheet(BuildContext context) {
-    final theme = Theme.of(context);
     Get.bottomSheet(
-      Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Choisir un raccourci', style: theme.textTheme.titleLarge),
-            SizedBox(height: 24.h),
-            Wrap(
-              spacing: 24.w,
-              runSpacing: 24.h,
-              alignment: WrapAlignment.center,
-              children: QuickActionType.values.map((type) {
-                return GestureDetector(
-                  onTap: () {
-                    controller.setThirdAction(type);
-                    NavigationHelper.safeBack();
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(12.w),
-                        decoration: BoxDecoration(
-                          color: _getColor(type, theme).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(_getIcon(type),
-                            color: _getColor(type, theme), size: 28.sp),
+      KoalaBottomSheet(
+        title: 'Choisir un raccourci',
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Wrap(
+            spacing: 24.w,
+            runSpacing: 24.h,
+            alignment: WrapAlignment.center,
+            children: QuickActionType.values.map((type) {
+              return GestureDetector(
+                onTap: () {
+                  controller.setThirdAction(type);
+                  NavigationHelper.safeBack();
+                },
+                child: Column(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12.w),
+                      decoration: BoxDecoration(
+                        color: _getColor(type, context).withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
-                      SizedBox(height: 8.h),
-                      Text(_getLabel(type), style: TextStyle(fontSize: 12.sp)),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-            SizedBox(height: 32.h),
-          ],
+                      child: Icon(_getIcon(type),
+                          color: _getColor(type, context), size: 28.sp),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(_getLabel(type),
+                        style: KoalaTypography.caption(context)),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -569,7 +584,6 @@ class _MoreOptionsSheet extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final padding = 16.w;
     final availableWidth = screenWidth - (padding * 2);
@@ -585,7 +599,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0.w, vertical: 8.0.h),
-            child: Text('Plus d’options', style: theme.textTheme.titleLarge),
+            child: Text('Plus d’options',
+                style: KoalaTypography.heading3(context)),
           ),
           SizedBox(height: 16.h),
           Obx(() {
@@ -626,10 +641,11 @@ class _MoreOptionsSheet extends GetView<HomeController> {
                           return Transform.scale(
                             scale: isHovered ? 1.1 : 1.0, // Pop effect on hover
                             child: _buildDraggableOption(
+                              context: context,
                               type: type,
                               icon: _getIcon(type),
                               label: _getLabel(type),
-                              color: _getColor(type, theme),
+                              color: _getColor(type, context),
                               onTap: () => _handleTap(type),
                             ),
                           );
@@ -647,6 +663,7 @@ class _MoreOptionsSheet extends GetView<HomeController> {
   }
 
   Widget _buildDraggableOption({
+    required BuildContext context,
     required QuickActionType type,
     required IconData icon,
     required String label,
@@ -657,9 +674,6 @@ class _MoreOptionsSheet extends GetView<HomeController> {
       data: type,
       delay: const Duration(milliseconds: 200),
       onDragUpdate: (details) {
-        // Dynamic hiding: Hide sheet if dragging UP (out of sheet area)
-        // Show sheet if dragging DOWN (inside sheet area)
-        // Threshold: Approx 65% of screen height (assuming sheet is bottom 35%)
         if (details.globalPosition.dy < Get.height * 0.65) {
           controller.isSheetHidden.value = true;
         } else {
@@ -722,6 +736,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return CupertinoIcons.archivebox_fill;
       case QuickActionType.settings:
         return CupertinoIcons.settings_solid;
+      case QuickActionType.intelligence:
+        return CupertinoIcons.sparkles;
     }
   }
 
@@ -741,25 +757,29 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return 'Catég.';
       case QuickActionType.settings:
         return 'Param.';
+      case QuickActionType.intelligence:
+        return 'IA';
     }
   }
 
-  Color _getColor(QuickActionType type, ThemeData theme) {
+  Color _getColor(QuickActionType type, BuildContext context) {
     switch (type) {
       case QuickActionType.goals:
-        return Colors.pinkAccent;
+        return const Color(0xFFFF2D55);
       case QuickActionType.analytics:
-        return theme.colorScheme.secondary;
+        return const Color(0xFF5E5CE6);
       case QuickActionType.budget:
-        return Colors.orange;
+        return const Color(0xFFFF9F0A);
       case QuickActionType.debt:
-        return Colors.teal;
+        return const Color(0xFF30B0C7);
       case QuickActionType.simulator:
-        return Colors.purpleAccent;
+        return const Color(0xFFBF5AF2);
       case QuickActionType.categories:
-        return Colors.brown;
+        return const Color(0xFFA2845E);
       case QuickActionType.settings:
-        return Colors.black45;
+        return KoalaColors.textSecondary(context);
+      case QuickActionType.intelligence:
+        return const Color(0xFF64D2FF);
     }
   }
 
@@ -786,6 +806,9 @@ class _MoreOptionsSheet extends GetView<HomeController> {
       case QuickActionType.settings:
         Get.offAndToNamed(Routes.settings);
         break;
+      case QuickActionType.intelligence:
+        Get.toNamed(Routes.intelligence);
+        break;
     }
   }
 }
@@ -795,7 +818,7 @@ class _AnimatedActionButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress; // Added
+  final VoidCallback? onLongPress;
 
   const _AnimatedActionButton({
     super.key,
@@ -803,15 +826,14 @@ class _AnimatedActionButton extends StatelessWidget {
     required this.label,
     required this.color,
     required this.onTap,
-    this.onLongPress, // Added
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
-      onLongPress: onLongPress, // Wired up
+      onLongPress: onLongPress,
       child: Animate(
         effects: const [
           ScaleEffect(
@@ -825,17 +847,16 @@ class _AnimatedActionButton extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                color: KoalaColors.surface(context),
                 shape: BoxShape.circle,
+                boxShadow: KoalaColors.shadowSubtle,
               ),
-              child: Icon(icon, size: 32.sp, color: color),
+              child: Icon(icon, size: 28.sp, color: color),
             ),
-            SizedBox(height: 4.h),
+            SizedBox(height: 8.h),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
+              style: KoalaTypography.caption(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -851,19 +872,19 @@ class _TransactionsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Activité récente', style: theme.textTheme.titleLarge),
+          Text('Activité récente', style: KoalaTypography.heading3(context)),
           GestureDetector(
             onTap: () => showSearch(
               context: context,
               delegate: TransactionSearchDelegate(),
             ),
-            child: Icon(CupertinoIcons.search, size: 28.sp),
+            child: Icon(CupertinoIcons.search,
+                size: 24.sp, color: KoalaColors.text(context)),
           ),
         ],
       ),
@@ -872,16 +893,13 @@ class _TransactionsHeader extends StatelessWidget {
 }
 
 class _TransactionSliverList extends GetView<HomeController> {
-  // Cannot be const because SliverChildBuilderDelegate uses dynamic data
-  const _TransactionSliverList({super.key});
+  const _TransactionSliverList();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Obx(() {
       final transactions = controller.transactions.take(5).toList();
 
-      // Show empty state if no transactions
       if (transactions.isEmpty) {
         return SliverFillRemaining(
           hasScrollBody: false,
@@ -914,100 +932,230 @@ class _BudgetAlertsBanner extends GetView<HomeController> {
   const _BudgetAlertsBanner();
 
   String _formatAmount(double amount) {
-    return NumberFormat('#,###', 'fr_FR').format(amount.round());
+    return NumberFormat.compact(locale: 'fr_FR').format(amount.round());
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final FinancialContextService financialContextService =
         Get.find<FinancialContextService>();
 
     return Obx(() {
-      // Find any budget that is nearing or exceeded
       final budgetsInAlert = financialContextService.allBudgets.where((budget) {
         final spent = financialContextService.getSpentAmountForCategory(
             budget.categoryId, DateTime.now().year, DateTime.now().month);
         final percentage = (spent / (budget.amount == 0 ? 1 : budget.amount));
-        return percentage >= 0.8; // Nearing or exceeded 80%
+        return percentage >= 0.8;
       }).toList();
 
       if (budgetsInAlert.isEmpty) {
         return const SizedBox.shrink();
       }
 
-      // Display all budget alerts
       return Padding(
         padding: EdgeInsets.only(bottom: 16.h),
         child: Column(
-          children: budgetsInAlert.map((budget) {
-            final spent = financialContextService.getSpentAmountForCategory(
-                budget.categoryId, DateTime.now().year, DateTime.now().month);
-            final remaining = budget.amount - spent;
-            final category =
-                financialContextService.getCategoryById(budget.categoryId);
-
-            return Container(
-              margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
-              ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
               child: Row(
                 children: [
-                  Icon(CupertinoIcons.exclamationmark_triangle_fill,
-                      color: Colors.orange, size: 24.sp),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Budget Alerte: ${category?.name ?? 'Inconnu'}',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          remaining >= 0
-                              ? 'Il vous reste ${_formatAmount(remaining)} F'
-                              : 'Vous avez dépassé de ${_formatAmount(remaining.abs())} F',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.textTheme.bodyMedium?.color),
-                        ),
-                      ],
+                  Icon(
+                    CupertinoIcons.bell_fill,
+                    color: KoalaColors.warning,
+                    size: 18.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Alertes budget',
+                    style: KoalaTypography.heading4(context),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: KoalaColors.warning.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Text(
+                      '${budgetsInAlert.length}',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: KoalaColors.warning,
+                      ),
                     ),
                   ),
-                  Icon(CupertinoIcons.chevron_right,
-                      color: Colors.orange, size: 20.sp),
                 ],
               ),
-            );
-          }).toList(),
+            ),
+            SizedBox(
+              height: 100.h,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: 4.w),
+                itemCount: budgetsInAlert.length,
+                itemBuilder: (context, index) {
+                  final budget = budgetsInAlert[index];
+                  final spent =
+                      financialContextService.getSpentAmountForCategory(
+                          budget.categoryId,
+                          DateTime.now().year,
+                          DateTime.now().month);
+                  final remaining = budget.amount - spent;
+                  final percent =
+                      spent / (budget.amount == 0 ? 1 : budget.amount);
+                  final category = financialContextService
+                      .getCategoryById(budget.categoryId);
+
+                  final isExceeded = percent >= 1.0;
+                  final alertColor = isExceeded
+                      ? KoalaColors.destructive
+                      : KoalaColors.warning;
+
+                  return GestureDetector(
+                    onTap: () => Get.toNamed(Routes.budget),
+                    child: Container(
+                      width: 220.w,
+                      margin:
+                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isExceeded
+                              ? [
+                                  const Color(0xFFFF6B6B),
+                                  const Color(0xFFEE5A5A)
+                                ]
+                              : [
+                                  const Color(0xFFFFAB5E),
+                                  const Color(0xFFFF8C42)
+                                ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: alertColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            right: -10.w,
+                            top: -10.h,
+                            child: Opacity(
+                              opacity: 0.1,
+                              child: Icon(
+                                CupertinoIcons.chart_pie_fill,
+                                size: 60.sp,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.all(14.w),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      isExceeded
+                                          ? CupertinoIcons
+                                              .exclamationmark_triangle_fill
+                                          : CupertinoIcons
+                                              .exclamationmark_circle_fill,
+                                      color: Colors.white,
+                                      size: 16.sp,
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Expanded(
+                                      child: Text(
+                                        category?.name ?? 'Inconnu',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isExceeded
+                                          ? 'Dépassement: ${_formatAmount(remaining.abs())} F'
+                                          : 'Reste: ${_formatAmount(remaining)} F',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2.h),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8.w,
+                                        vertical: 2.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius:
+                                            BorderRadius.circular(8.r),
+                                      ),
+                                      child: Text(
+                                        '${(percent * 100).toInt()}% utilisé',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11.sp,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                      .animate(delay: (index * 100).ms)
+                      .fadeIn(duration: 400.ms)
+                      .slideX(begin: 0.1);
+                },
+              ),
+            ),
+          ],
         ),
-      );
+      ).animate().fadeIn().slideY(begin: 0.1);
     });
   }
 }
 
 class _GoalProgressMiniCards extends GetView<GoalsController> {
-  const _GoalProgressMiniCards({super.key});
+  const _GoalProgressMiniCards();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Obx(() {
       final activeGoals = controller.activeGoals;
       if (activeGoals.isEmpty) {
         return const SizedBox.shrink();
       }
 
-      // Display up to 3 active goals
       final goalsToShow = activeGoals.take(3).toList();
 
       return Padding(
@@ -1016,17 +1164,29 @@ class _GoalProgressMiniCards extends GetView<GoalsController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.w),
-              child: Text(
-                'Mes Objectifs',
-                style: theme.textTheme.titleLarge,
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Mes Objectifs',
+                    style: KoalaTypography.heading3(context),
+                  ),
+                  if (activeGoals.length > 3)
+                    GestureDetector(
+                      onTap: () => Get.toNamed(Routes.goals),
+                      child: Text('Voir tout',
+                          style: KoalaTypography.bodySmall(context)
+                              .copyWith(color: KoalaColors.primary)),
+                    ),
+                ],
               ),
             ),
-            SizedBox(height: 12.h),
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: goalsToShow.length,
+              padding: EdgeInsets.zero,
               itemBuilder: (context, index) {
                 final goal = goalsToShow[index];
                 return Padding(
@@ -1035,14 +1195,6 @@ class _GoalProgressMiniCards extends GetView<GoalsController> {
                 );
               },
             ),
-            if (activeGoals.length > 3)
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => Get.toNamed(Routes.goals),
-                  child: const Text('Voir tous les objectifs'),
-                ),
-              ),
           ],
         ),
       );
@@ -1051,7 +1203,7 @@ class _GoalProgressMiniCards extends GetView<GoalsController> {
 }
 
 class _UpcomingBillsWidget extends GetView<HomeController> {
-  const _UpcomingBillsWidget({super.key});
+  const _UpcomingBillsWidget();
 
   String _formatAmount(double amount) {
     return NumberFormat('#,###', 'fr_FR').format(amount.round());
@@ -1059,8 +1211,6 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final FinancialContextService financialContextService =
         Get.find<FinancialContextService>();
 
@@ -1073,14 +1223,12 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
               rt.nextDueDate.isBefore(now.add(const Duration(days: 7))))
           .toList();
 
-      final upcomingDebts = financialContextService.allDebts
-          .where((debt) {
-            final dueDate = debt.dueDate;
-            return dueDate != null &&
-                dueDate.isAfter(now) &&
-                dueDate.isBefore(now.add(const Duration(days: 7)));
-          })
-          .toList();
+      final upcomingDebts = financialContextService.allDebts.where((debt) {
+        final dueDate = debt.dueDate;
+        return dueDate != null &&
+            dueDate.isAfter(now) &&
+            dueDate.isBefore(now.add(const Duration(days: 7)));
+      }).toList();
 
       if (upcomingRecurringTransactions.isEmpty && upcomingDebts.isEmpty) {
         return const SizedBox.shrink();
@@ -1095,7 +1243,7 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
               padding: EdgeInsets.symmetric(horizontal: 8.w),
               child: Text(
                 'Factures à venir',
-                style: theme.textTheme.titleLarge,
+                style: KoalaTypography.heading3(context),
               ),
             ),
             SizedBox(height: 12.h),
@@ -1109,22 +1257,17 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
               final color = category != null
                   ? Color(category.colorValue)
                   : (rt.type == TransactionType.expense
-                      ? Colors.red
-                      : Colors.green);
+                      ? KoalaColors.destructive
+                      : KoalaColors.success);
 
               return Container(
                 margin: EdgeInsets.only(bottom: 8.h),
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: isDark ? theme.cardColor : Colors.white,
+                  color: KoalaColors.surface(context),
                   borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  boxShadow: KoalaColors.shadowSubtle,
+                  border: Border.all(color: KoalaColors.border(context)),
                 ),
                 child: Row(
                   children: [
@@ -1149,42 +1292,38 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                         children: [
                           Text(
                             rt.description,
-                            style: theme.textTheme.titleMedium,
+                            style: KoalaTypography.bodyMedium(context)
+                                .copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             'Due: ${DateFormat('dd MMM').format(rt.nextDueDate)}',
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey),
+                            style: KoalaTypography.caption(context),
                           ),
                         ],
                       ),
                     ),
                     Text(
-                      '${_formatAmount(rt.amount)}',
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      _formatAmount(rt.amount),
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                        fontWeight: FontWeight.bold,
                         color: rt.type == TransactionType.expense
-                            ? Colors.red
-                            : Colors.green,
+                            ? KoalaColors.destructive
+                            : KoalaColors.success,
                       ),
                     ),
                   ],
                 ),
               );
-            }).toList(),
+            }),
             ...upcomingDebts.map((debt) {
               return Container(
                 margin: EdgeInsets.only(bottom: 8.h),
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: isDark ? theme.cardColor : Colors.white,
+                  color: KoalaColors.surface(context),
                   borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  boxShadow: KoalaColors.shadowSubtle,
+                  border: Border.all(color: KoalaColors.border(context)),
                 ),
                 child: Row(
                   children: [
@@ -1192,12 +1331,12 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                       width: 40.w,
                       height: 40.w,
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: KoalaColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Center(
                         child: Icon(CupertinoIcons.person_2_fill,
-                            size: 20.sp, color: Colors.blue),
+                            size: 20.sp, color: KoalaColors.primary),
                       ),
                     ),
                     SizedBox(width: 12.w),
@@ -1207,29 +1346,31 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                         children: [
                           Text(
                             'Dette: ${debt.personName}',
-                            style: theme.textTheme.titleMedium,
+                            style: KoalaTypography.bodyMedium(context)
+                                .copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             'Due: ${DateFormat('dd MMM').format(debt.dueDate ?? DateTime.now())}',
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey),
+                            style: KoalaTypography.caption(context),
                           ),
                         ],
                       ),
                     ),
                     Text(
-                      '${_formatAmount(debt.minPayment)}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.blue,
+                      _formatAmount(debt.minPayment),
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: KoalaColors.primary,
                       ),
                     ),
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       );
     });
   }
 }
+
