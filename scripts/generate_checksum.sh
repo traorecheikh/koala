@@ -50,3 +50,4 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "version.json not found in current directory"
     fi
 fi
+
