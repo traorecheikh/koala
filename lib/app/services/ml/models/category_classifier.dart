@@ -6,8 +6,6 @@ import 'package:koaa/app/services/ml/feature_extractor.dart';
 import 'package:koaa/app/services/ml/model_store.dart';
 import 'package:ml_algo/ml_algo.dart';
 import 'package:ml_dataframe/ml_dataframe.dart';
-import 'package:ml_linalg/matrix.dart';
-import 'package:ml_linalg/vector.dart';
 
 /// ML-powered category classification for transactions
 /// Uses SoftmaxRegressor for multi-class classification with fallback to keywords
@@ -363,3 +361,4 @@ enum PredictionSource {
   keyword,  // From keyword matching
   fallback, // Default when nothing matches
 }
+
