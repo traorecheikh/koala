@@ -296,7 +296,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                               'Étape ${_currentStep + 1} sur 4',
                               style: KoalaTypography.caption(context).copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: KoalaColors.primary,
+                                color: KoalaColors.primaryUi(context),
                               ),
                             ),
                             SizedBox(height: KoalaSpacing.xs),
@@ -346,7 +346,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                             margin: EdgeInsets.only(right: index < 3 ? 8.w : 0),
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? theme.colorScheme.primary
+                                  ? KoalaColors.primaryUi(context)
                                   : KoalaColors.border(context),
                               borderRadius:
                                   BorderRadius.circular(KoalaRadius.xs),
@@ -412,7 +412,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                                 ),
                                 onPressed: _previousStep,
                                 child: Icon(CupertinoIcons.back,
-                                    color: KoalaColors.primary),
+                                    color: KoalaColors.primaryUi(context)),
                               ),
                             ),
                           ),
@@ -424,31 +424,17 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                               : 'Continuer vers l\'étape suivante',
                           child: SizedBox(
                             height: 56.h,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: KoalaColors.primary,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(KoalaRadius.md),
-                                ),
-                              ),
+                            child: KoalaButton(
+                              text:
+                                  _currentStep == 3 ? 'Terminer' : 'Continuer',
                               onPressed: _canContinue
                                   ? (_currentStep == 3 ? _submit : _nextStep)
-                                  : null,
-                              child: _loading
-                                  ? const CupertinoActivityIndicator(
-                                      color: Colors.white)
-                                  : Text(
-                                      _currentStep == 3
-                                          ? 'Terminer'
-                                          : 'Continuer',
-                                      style: TextStyle(
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
+                                  : () {}, // Disabled state handled by button or parent
+                              isLoading: _loading,
+                              backgroundColor: _canContinue
+                                  ? KoalaColors.primaryUi(context)
+                                  : KoalaColors.primaryUi(context)
+                                      .withOpacity(0.5),
                             ),
                           ),
                         ),
@@ -536,14 +522,10 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                     decoration: BoxDecoration(
                       color: KoalaColors.surface(context),
                       borderRadius: BorderRadius.circular(KoalaRadius.sm),
-                      boxShadow: [
-                        BoxShadow(
-                            color: KoalaColors.primary.withOpacity(0.05),
-                            blurRadius: 4),
-                      ],
+                      boxShadow: KoalaShadows.xs,
                     ),
                     child: Icon(CupertinoIcons.briefcase,
-                        color: KoalaColors.primary, size: 20.sp),
+                        color: KoalaColors.primaryUi(context), size: 20.sp),
                   ),
                   SizedBox(width: KoalaSpacing.lg),
                   Expanded(
@@ -552,22 +534,20 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                       children: [
                         Text(
                           job.name,
-                          style: TextStyle(
-                              fontSize: 16.sp, fontWeight: FontWeight.w600),
+                          style: KoalaTypography.bodyMedium(context)
+                              .copyWith(fontWeight: FontWeight.w600),
                         ),
                         SizedBox(height: KoalaSpacing.xs),
                         Text(
                           '${job.frequency.displayName} • FCFA ${_formatAmount(job.amount.toString())}',
-                          style: TextStyle(
-                              fontSize: 14.sp,
-                              color: KoalaColors.textSecondary(context)),
+                          style: KoalaTypography.caption(context),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
                     icon: Icon(CupertinoIcons.minus_circle,
-                        color: Colors.red.shade400),
+                        color: KoalaColors.destructive),
                     onPressed: () {
                       HapticFeedback.mediumImpact();
                       setState(() {
@@ -587,12 +567,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
             color: KoalaColors.surface(context),
             borderRadius: BorderRadius.circular(KoalaRadius.lg),
             border: Border.all(color: KoalaColors.border(context)),
-            boxShadow: [
-              BoxShadow(
-                  color: KoalaColors.primary.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4)),
-            ],
+            boxShadow: KoalaShadows.sm,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,7 +633,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                       style: TextStyle(
                           fontSize: 28.sp,
                           fontWeight: FontWeight.bold,
-                          color: KoalaColors.primary),
+                          color: KoalaColors.primaryUi(context)),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
                         suffixText: 'FCFA',
@@ -679,9 +654,9 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                     ),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: KoalaColors.primary,
+                        activeTrackColor: KoalaColors.primaryUi(context),
                         inactiveTrackColor: KoalaColors.border(context),
-                        thumbColor: KoalaColors.primary,
+                        thumbColor: KoalaColors.primaryUi(context),
                         trackHeight: 4.h,
                         thumbShape:
                             RoundSliderThumbShape(enabledThumbRadius: 10.r),
@@ -707,16 +682,12 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
               SizedBox(height: 20.h),
               SizedBox(
                 width: double.infinity,
-                height: 50.h,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: KoalaColors.primary,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(KoalaRadius.sm)),
-                  ),
-                  onPressed: _canAddJob() ? _addJob : null,
-                  child: const Text('Ajouter ce revenu',
-                      style: TextStyle(color: Colors.white)),
+                child: KoalaButton(
+                  text: 'Ajouter ce revenu',
+                  onPressed: _canAddJob() ? _addJob : () {},
+                  backgroundColor: _canAddJob()
+                      ? KoalaColors.primaryUi(context)
+                      : KoalaColors.primaryUi(context).withOpacity(0.5),
                 ),
               ),
             ],
