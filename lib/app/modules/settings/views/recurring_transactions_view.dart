@@ -38,6 +38,18 @@ class RecurringTransactionsView
           'Transactions récurrentes',
           style: KoalaTypography.heading3(context),
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              showAddRecurringTransactionDialog(context);
+            },
+            icon:
+                Icon(CupertinoIcons.add, color: KoalaColors.primaryUi(context)),
+            tooltip: 'Ajouter',
+          ),
+          SizedBox(width: KoalaSpacing.sm),
+        ],
       ),
       body: SafeArea(
         child: Obx(
@@ -65,16 +77,6 @@ class RecurringTransactionsView
                   )
                   .fadeIn(),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          HapticFeedback.lightImpact();
-          showAddRecurringTransactionDialog(context);
-        },
-        backgroundColor: KoalaColors.primaryUi(context),
-        elevation: 4,
-        tooltip: 'Ajouter une transaction récurrente',
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -274,5 +276,4 @@ class _TransactionListItem extends StatelessWidget {
     );
   }
 }
-
 
