@@ -39,12 +39,17 @@ class FinancialContextService extends GetxService {
   final List<StreamSubscription> _subscriptions = [];
   // GetX Workers for everAll
   final List<Worker> _workers = [];
+  final isInitialized = false.obs; // New: Tracks initial data loading completion
 
   @override
   void onInit() {
     super.onInit();
     _initListeners();
-    _loadAllData();
+    // New: Load data asynchronously and mark as initialized after completion
+    _loadAllData().then((_) {
+      isInitialized.value = true;
+      _logger.i('FinancialContextService initialized and all data loaded.');
+    });
   }
 
   @override
@@ -58,6 +63,25 @@ class FinancialContextService extends GetxService {
     }
     _workers.clear();
     super.onClose();
+  }
+
+  /// Manually clears all in-memory data.
+  /// Call this when resetting the app state without a full process restart.
+  void clearMemory() {
+    allTransactions.clear();
+    allJobs.clear();
+    allBudgets.clear();
+    allDebts.clear();
+    allGoals.clear();
+    allCategories.clear();
+    allRecurringTransactions.clear();
+    currentBalance.value = 0.0;
+    totalMonthlyIncome.value = 0.0;
+    totalMonthlyExpenses.value = 0.0;
+    totalOutstandingDebt.value = 0.0;
+    totalMonthlyDebtPayments.value = 0.0;
+    averageMonthlySavings.value = 0.0;
+    _logger.i('FinancialContextService memory cleared.');
   }
 
   void _initListeners() {
@@ -74,7 +98,8 @@ class FinancialContextService extends GetxService {
     _workers.add(everAll([allTransactions, allJobs, allBudgets, allDebts, allGoals, allRecurringTransactions], (_) => _recalculateMetrics()));
   }
 
-  void _loadAllData() {
+  Future<void> _loadAllData() async { // Changed to async Future<void>
+    _logger.i('FinancialContextService: Starting _loadAllData.');
     _loadTransactions();
     _loadJobs();
     _loadBudgets();
@@ -83,7 +108,8 @@ class FinancialContextService extends GetxService {
     _loadCategories();
     _loadRecurringTransactions();
     // Schedule metrics recalculation asynchronously
-    Future.microtask(() => _recalculateMetrics());
+    await Future.microtask(() => _recalculateMetrics()); // Await recalculation
+    _logger.i('FinancialContextService: _loadAllData completed.');
   }
 
   void _loadTransactions() => allTransactions.assignAll(Hive.box<LocalTransaction>('transactionBox').values.where((t) => !t.isHidden).toList());
@@ -200,7 +226,6 @@ class FinancialContextService extends GetxService {
       }
 
       currentBalance.value = balance;
-      _logger.i('Balance recalculated: $balance');
     });
   }
 
