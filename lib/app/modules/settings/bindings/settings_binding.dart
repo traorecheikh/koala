@@ -13,3 +13,4 @@ class SettingsBinding extends Bindings {
     );
   }
 }
+
