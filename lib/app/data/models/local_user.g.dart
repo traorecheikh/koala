@@ -52,3 +52,4 @@ class LocalUserAdapter extends TypeAdapter<LocalUser> {
           typeId == other.typeId;
 }
 
+
