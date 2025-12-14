@@ -2,7 +2,12 @@
 // DATA MODELS (Retained/Adapted)
 // ══════════════════════════════════════════════════════════════════════════
 
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
+import 'package:koaa/app/services/financial_context_service.dart';
+import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
+import 'package:koaa/app/services/ml/models/financial_health_scorer.dart';
 
 class ProactiveAlert {
   final String id;
@@ -31,7 +36,8 @@ class CategorySuggestion {
   final String? categoryName;
   final double confidence;
 
-  CategorySuggestion({this.categoryId, this.categoryName, required this.confidence});
+  CategorySuggestion(
+      {this.categoryId, this.categoryName, required this.confidence});
 }
 
 class CashFlowForecast {
@@ -60,14 +66,14 @@ enum RiskLevel { critical, high, medium, low, unknown }
 class SmartBudget {
   final double recommendedAmount;
   final double percentOfIncome;
-  
+
   SmartBudget(this.recommendedAmount, this.percentOfIncome);
 }
 
 class GoalFeasibility {
   final FeasibilityLevel feasibilityLevel;
   final double currentMonthlySavings;
-  
+
   GoalFeasibility(this.feasibilityLevel, this.currentMonthlySavings);
 }
 
@@ -112,8 +118,10 @@ class IntelligenceSummary {
 
   String get statusDescription {
     if (healthScore >= 80) return 'Vos finances sont en excellente santé !';
-    if (healthScore >= 60) return 'Vos finances vont bien, quelques points d\'attention.';
-    if (healthScore >= 40) return 'Surveillez vos dépenses, des ajustements sont nécessaires.';
+    if (healthScore >= 60)
+      return 'Vos finances vont bien, quelques points d\'attention.';
+    if (healthScore >= 40)
+      return 'Surveillez vos dépenses, des ajustements sont nécessaires.';
     return 'Situation critique, action immédiate recommandée.';
   }
 }
@@ -123,11 +131,21 @@ class IntelligenceService extends GetxService {
   final forecast = Rxn<CashFlowForecast>();
   final RxList<ProactiveAlert> highPriorityAlerts = <ProactiveAlert>[].obs;
 
-  late IntelligenceSummary _summary;
+  // Reactive health score
+  late Rx<IntelligenceSummary> _summary;
+
+  late FinancialContextService _financialContextService;
+  late FinancialHealthScorer _healthScorer;
+  late BehaviorProfiler _profiler;
+
+  final List<Worker> _workers = [];
+  bool _isCalculating = false;
 
   @override
   Future<void> onInit() async {
     super.onInit();
+
+    // Initialize summary with default values
     _summary = IntelligenceSummary(
       riskLevel: RiskLevel.unknown,
       criticalAlertsCount: 0,
@@ -137,21 +155,180 @@ class IntelligenceService extends GetxService {
       lowestPredictedBalance: 0.0,
       savingsRate: 0.0,
       topAlert: null,
-      healthScore: 100,
-    );
-    isLoading.value = false;
-    return;
+      healthScore: 50,
+    ).obs;
+
+    _financialContextService = Get.find<FinancialContextService>();
+    _healthScorer = FinancialHealthScorer();
+    _profiler = BehaviorProfiler();
+
+    // Listen to all financial data changes and recalculate
+    _workers.add(ever(_financialContextService.allTransactions,
+        (_) => _scheduleRecalculation()));
+    _workers.add(ever(
+        _financialContextService.allBudgets, (_) => _scheduleRecalculation()));
+    _workers.add(ever(
+        _financialContextService.allDebts, (_) => _scheduleRecalculation()));
+    _workers.add(ever(
+        _financialContextService.allGoals, (_) => _scheduleRecalculation()));
+    _workers.add(ever(_financialContextService.currentBalance,
+        (_) => _scheduleRecalculation()));
+
+    // Initial calculation
+    await _calculateHealthScore();
   }
 
-  IntelligenceSummary getSummary() => _summary;
+  @override
+  void onClose() {
+    for (var worker in _workers) {
+      worker.dispose();
+    }
+    _workers.clear();
+    super.onClose();
+  }
+
+  // Debounce recalculations to avoid excessive CPU usage
+  DateTime? _lastCalculation;
+  void _scheduleRecalculation() {
+    final now = DateTime.now();
+    if (_lastCalculation != null &&
+        now.difference(_lastCalculation!).inMilliseconds < 500) {
+      return; // Don't recalculate more than twice per second
+    }
+    _lastCalculation = now;
+    _calculateHealthScore();
+  }
+
+  Future<void> _calculateHealthScore() async {
+    if (_isCalculating) return;
+    _isCalculating = true;
+
+    try {
+      isLoading.value = true;
+
+      // Create a user profile from transactions
+      final transactions = _financialContextService.allTransactions.toList();
+      final profile = transactions.isNotEmpty
+          ? _profiler.createProfile(transactions)
+          : UserFinancialProfile(
+              personaType: 'balanced',
+              savingsRate: 0.0,
+              consistencyScore: 0.5,
+              categoryPreferences: {},
+              detectedPatterns: [],
+            );
+
+      // Calculate the actual health score
+      final healthScore = _healthScorer.calculateScore(
+        context: _financialContextService,
+        profile: profile,
+      );
+
+      // Calculate savings rate
+      final income = _financialContextService.totalMonthlyIncome.value;
+      final savings = _financialContextService.averageMonthlySavings.value;
+      final savingsRate = income > 0 ? (savings / income) * 100 : 0.0;
+
+      // Determine risk level from health score
+      RiskLevel riskLevel;
+      if (healthScore.totalScore >= 80) {
+        riskLevel = RiskLevel.low;
+      } else if (healthScore.totalScore >= 60) {
+        riskLevel = RiskLevel.medium;
+      } else if (healthScore.totalScore >= 40) {
+        riskLevel = RiskLevel.high;
+      } else {
+        riskLevel = RiskLevel.critical;
+      }
+
+      // Count penalty types
+      final criticalCount =
+          healthScore.penalties.where((p) => p.points >= 15).length;
+      final warningCount = healthScore.penalties
+          .where((p) => p.points >= 5 && p.points < 15)
+          .length;
+
+      // Create alerts from penalties
+      _generateAlertsFromPenalties(healthScore.penalties);
+
+      // Update the summary
+      _summary.value = IntelligenceSummary(
+        riskLevel: riskLevel,
+        criticalAlertsCount: criticalCount,
+        warningAlertsCount: warningCount,
+        positiveAlertsCount: healthScore.totalScore >= 80 ? 1 : 0,
+        predictedEndBalance: _financialContextService.currentBalance.value,
+        lowestPredictedBalance: _financialContextService.currentBalance.value -
+            _financialContextService.totalMonthlyExpenses.value,
+        savingsRate: savingsRate,
+        topAlert:
+            highPriorityAlerts.isNotEmpty ? highPriorityAlerts.first : null,
+        healthScore: healthScore.totalScore,
+      );
+    } catch (e) {
+      // On error, keep previous score
+      print('Error calculating health score: $e');
+    } finally {
+      isLoading.value = false;
+      _isCalculating = false;
+    }
+  }
+
+  void _generateAlertsFromPenalties(List<HealthPenalty> penalties) {
+    highPriorityAlerts.clear();
+
+    for (var penalty in penalties) {
+      AlertSeverity severity;
+      IconData icon;
+
+      if (penalty.points >= 15) {
+        severity = AlertSeverity.critical;
+        icon = CupertinoIcons.exclamationmark_triangle_fill;
+      } else if (penalty.points >= 10) {
+        severity = AlertSeverity.high;
+        icon = CupertinoIcons.exclamationmark_circle_fill;
+      } else {
+        severity = AlertSeverity.medium;
+        icon = CupertinoIcons.info_circle_fill;
+      }
+
+      highPriorityAlerts.add(ProactiveAlert(
+        id: 'penalty_${penalty.reason.hashCode}',
+        title: _getPenaltyTitle(penalty.reason),
+        message: penalty.reason,
+        severity: severity,
+        timestamp: DateTime.now(),
+        actionSuggestion: _getPenaltyAction(penalty.reason),
+        icon: icon,
+      ));
+    }
+  }
+
+  String _getPenaltyTitle(String reason) {
+    if (reason.contains('impulsive')) return 'Dépenses impulsives';
+    if (reason.contains('10 jours')) return 'Dépenses trop rapides';
+    if (reason.contains('Endettement')) return 'Endettement élevé';
+    if (reason.contains('Prêts')) return 'Risque de prêts';
+    if (reason.contains('revenu')) return 'Problème de revenus';
+    return 'Alerte financière';
+  }
+
+  String _getPenaltyAction(String reason) {
+    if (reason.contains('impulsive')) return 'Définir un budget strict';
+    if (reason.contains('10 jours')) return 'Planifier vos dépenses';
+    if (reason.contains('Endettement')) return 'Plan de remboursement';
+    if (reason.contains('Prêts')) return 'Suivre vos prêts';
+    return 'Voir les détails';
+  }
+
+  IntelligenceSummary getSummary() => _summary.value;
 
   Future<void> forceRefresh() async {
-    isLoading.value = true;
-    await Future.delayed(const Duration(milliseconds: 50));
-    isLoading.value = false;
+    await _calculateHealthScore();
   }
 
   void dismissAlert(String id) {
     highPriorityAlerts.removeWhere((a) => a.id == id);
   }
 }
+
