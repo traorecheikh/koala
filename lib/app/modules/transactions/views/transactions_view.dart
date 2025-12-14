@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/transactions/controllers/transactions_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
@@ -14,8 +17,8 @@ class TransactionsView extends GetView<TransactionsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: KoalaColors.background(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -33,9 +36,9 @@ class TransactionsView extends GetView<TransactionsController> {
 
                 return ListView.builder(
                   controller: controller.scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
                   ),
                   itemCount:
                       transactions.length + (controller.hasMore.value ? 1 : 0),
@@ -61,7 +64,6 @@ class TransactionsView extends GetView<TransactionsController> {
   }
 
   Widget _buildFloatingButtons(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -74,7 +76,7 @@ class TransactionsView extends GetView<TransactionsController> {
               HapticFeedback.mediumImpact();
               controller.clearFilters();
             },
-            backgroundColor: theme.colorScheme.error,
+            backgroundColor: KoalaColors.destructive,
             child: const Icon(CupertinoIcons.clear, color: Colors.white),
           ).animate().scale().fadeIn();
         }),
@@ -85,7 +87,7 @@ class TransactionsView extends GetView<TransactionsController> {
             HapticFeedback.lightImpact();
             _showFilterSheet(context);
           },
-          backgroundColor: theme.colorScheme.primary,
+          backgroundColor: KoalaColors.primaryUi(context),
           child: const Icon(
             CupertinoIcons.slider_horizontal_3,
             color: Colors.white,
@@ -98,10 +100,10 @@ class TransactionsView extends GetView<TransactionsController> {
   void _showFilterSheet(BuildContext context) {
     Get.bottomSheet(
       const _FilterBottomSheet(),
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: KoalaColors.surface(context),
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
     );
   }
@@ -112,16 +114,16 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final controller = Get.find<TransactionsController>();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(CupertinoIcons.back, size: 28),
+            icon: Icon(CupertinoIcons.back,
+                size: 24.sp, color: KoalaColors.text(context)),
             onPressed: () {
               HapticFeedback.lightImpact();
               NavigationHelper.safeBack();
@@ -131,21 +133,25 @@ class _Header extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                Text('All Transactions', style: theme.textTheme.titleLarge),
+                Text(
+                  'Toutes les transactions',
+                  style: KoalaTypography.heading3(context),
+                ),
                 Obx(() {
                   final count = controller.displayedTransactions.length;
                   final total = controller.transactions.length;
+                  final displayTotal = total > 0 ? total : 0;
                   return Text(
-                    '$total transaction${total != 1 ? 's' : ''}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.textTheme.bodySmall?.color?.withAlpha(153),
+                    '$displayTotal transaction${displayTotal != 1 ? 's' : ''}',
+                    style: KoalaTypography.caption(context).copyWith(
+                      color: KoalaColors.textSecondary(context),
                     ),
                   );
                 }),
               ],
             ),
           ),
-          const SizedBox(width: 48),
+          SizedBox(width: 48.w),
         ],
       ),
     );
@@ -157,29 +163,27 @@ class _SearchBar extends GetView<TransactionsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.colorScheme.outline.withAlpha(51)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(13),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: KoalaColors.surface(context),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: KoalaColors.border(context)),
+          boxShadow: KoalaColors.shadowSubtle,
         ),
         child: CupertinoSearchTextField(
           controller: controller.searchController,
-          placeholder: 'Search transactions...',
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          placeholder: 'Rechercher...',
+          placeholderStyle:
+              TextStyle(color: KoalaColors.textSecondary(context)),
+          style: KoalaTypography.bodyMedium(context),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
           decoration: const BoxDecoration(),
-          prefixIcon: const Icon(CupertinoIcons.search, size: 20),
-          suffixIcon: const Icon(CupertinoIcons.clear_circled_solid, size: 20),
+          prefixIcon: Icon(CupertinoIcons.search,
+              size: 20.sp, color: KoalaColors.textSecondary(context)),
+          suffixIcon: Icon(CupertinoIcons.clear_circled_solid,
+              size: 20.sp, color: KoalaColors.textSecondary(context)),
         ),
       ),
     ).animate().slideY(begin: -0.2, duration: 400.ms).fadeIn();
@@ -191,35 +195,33 @@ class _FilterChips extends GetView<TransactionsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Obx(
         () => Row(
           children: [
             _FilterChip(
-              label: 'All',
+              label: 'Tout',
               isSelected: controller.currentFilter.value == FilterType.all,
               onTap: () => controller.setFilter(FilterType.all),
               icon: CupertinoIcons.square_stack_3d_up,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             _FilterChip(
-              label: 'Income',
+              label: 'Revenus',
               isSelected: controller.currentFilter.value == FilterType.income,
               onTap: () => controller.setFilter(FilterType.income),
               icon: CupertinoIcons.arrow_down_circle,
-              color: theme.colorScheme.secondary,
+              color: KoalaColors.success,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             _FilterChip(
-              label: 'Expense',
+              label: 'Dépenses',
               isSelected: controller.currentFilter.value == FilterType.expense,
               onTap: () => controller.setFilter(FilterType.expense),
               icon: CupertinoIcons.arrow_up_circle,
-              color: theme.colorScheme.primary,
+              color: KoalaColors.destructive,
             ),
           ],
         ),
@@ -245,8 +247,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final chipColor = color ?? theme.colorScheme.primary;
+    final activeColor = color ?? KoalaColors.primaryUi(context);
 
     return GestureDetector(
       onTap: () {
@@ -256,16 +257,14 @@ class _FilterChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         decoration: BoxDecoration(
           color: isSelected
-              ? chipColor.withAlpha(25)
-              : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
+              ? activeColor.withOpacity(0.1)
+              : KoalaColors.surface(context),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: isSelected
-                ? chipColor
-                : theme.colorScheme.outline.withAlpha(51),
+            color: isSelected ? activeColor : KoalaColors.border(context),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -274,15 +273,18 @@ class _FilterChip extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: 18,
-              color: isSelected ? chipColor : theme.iconTheme.color,
+              size: 18.sp,
+              color:
+                  isSelected ? activeColor : KoalaColors.textSecondary(context),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: 6.w),
             Text(
               label,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: KoalaTypography.bodyMedium(context).copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? chipColor : null,
+                color: isSelected
+                    ? activeColor
+                    : KoalaColors.textSecondary(context),
               ),
             ),
           ],
@@ -297,31 +299,29 @@ class _ActiveFiltersBar extends GetView<TransactionsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Obx(() {
       if (!controller.hasActiveFilters) return const SizedBox.shrink();
 
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        padding: const EdgeInsets.all(12),
+        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
+          color: KoalaColors.primaryUi(context).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
           children: [
             Icon(
               CupertinoIcons.checkmark_shield,
-              size: 18,
-              color: theme.colorScheme.onPrimaryContainer,
+              size: 18.sp,
+              color: KoalaColors.primaryUi(context),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             Expanded(
               child: Text(
-                'Filters active',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer,
+                'Filtres actifs',
+                style: KoalaTypography.bodySmall(context).copyWith(
+                  color: KoalaColors.primaryUi(context),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -332,9 +332,9 @@ class _ActiveFiltersBar extends GetView<TransactionsController> {
                 controller.clearFilters();
               },
               child: Text(
-                'Clear All',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
+                'Tout effacer',
+                style: KoalaTypography.bodySmall(context).copyWith(
+                  color: KoalaColors.primaryUi(context),
                   fontWeight: FontWeight.w600,
                   decoration: TextDecoration.underline,
                 ),
@@ -358,140 +358,122 @@ class _EnhancedTransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isExpense = transaction.type == TransactionType.expense;
     final amountString = isExpense
         ? '- ${NumberFormat.currency(locale: 'fr_FR', symbol: '', decimalDigits: 0).format(transaction.amount)}'
         : '+ ${NumberFormat.currency(locale: 'fr_FR', symbol: '', decimalDigits: 0).format(transaction.amount)}';
 
-    final color = isExpense
-        ? theme.colorScheme.primary
-        : theme.colorScheme.secondary;
+    final color = isExpense ? KoalaColors.destructive : KoalaColors.success;
 
     final icon = isExpense
         ? CupertinoIcons.arrow_up_circle_fill
         : CupertinoIcons.arrow_down_circle_fill;
 
     return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: theme.colorScheme.outline.withAlpha(26),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(13),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () {
-                HapticFeedback.selectionClick();
-                // Could open transaction details
-              },
-              child: Padding(
-                padding: EdgeInsets.all(16.w),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 56.w,
-                      height: 56.w,
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(25),
-                        borderRadius: BorderRadius.circular(16),
+      margin: EdgeInsets.only(bottom: 12.h),
+      decoration: BoxDecoration(
+        color: KoalaColors.surface(context),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: KoalaColors.border(context),
+          width: 1,
+        ),
+        boxShadow: KoalaColors.shadowSubtle,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20.r),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            // Could open transaction details
+          },
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Row(
+              children: [
+                Container(
+                  width: 56.w,
+                  height: 56.w,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: Icon(icon, color: color, size: 28.sp),
+                ),
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        transaction.description,
+                        style: KoalaTypography.bodyLarge(context).copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      child: Icon(icon, color: color, size: 28.sp),
-                    ),
-                    SizedBox(width: 16.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      SizedBox(height: 4.h),
+                      Row(
                         children: [
-                          Text(
-                            transaction.description,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Icon(
+                            CupertinoIcons.tag,
+                            size: 14.sp,
+                            color: KoalaColors.textSecondary(context),
                           ),
-                          SizedBox(height: 4.h),
-                          Row(
-                            children: [
-                              Icon(
-                                CupertinoIcons.tag,
-                                size: 14,
-                                color: theme.textTheme.bodySmall?.color
-                                    ?.withAlpha(153),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                transaction.category?.displayName ??
-                                    'Uncategorized',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.textTheme.bodySmall?.color
-                                      ?.withAlpha(153),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Icon(
-                                CupertinoIcons.calendar,
-                                size: 14,
-                                color: theme.textTheme.bodySmall?.color
-                                    ?.withAlpha(153),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                DateFormat(
-                                  'dd MMM, yyyy',
-                                ).format(transaction.date),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.textTheme.bodySmall?.color
-                                      ?.withAlpha(153),
-                                ),
-                              ),
-                            ],
+                          SizedBox(width: 4.w),
+                          Text(
+                            transaction.category?.displayName ?? 'Non classé',
+                            style: KoalaTypography.caption(context).copyWith(
+                              color: KoalaColors.textSecondary(context),
+                            ),
+                          ),
+                          SizedBox(width: 12.w),
+                          Icon(
+                            CupertinoIcons.calendar,
+                            size: 14.sp,
+                            color: KoalaColors.textSecondary(context),
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            DateFormat('dd MMM, yyyy', 'fr_FR')
+                                .format(transaction.date),
+                            style: KoalaTypography.caption(context).copyWith(
+                              color: KoalaColors.textSecondary(context),
+                            ),
                           ),
                         ],
                       ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      amountString,
+                      style: KoalaTypography.heading3(context).copyWith(
+                        color: color,
+                        fontSize: 18.sp,
+                      ),
                     ),
-                    SizedBox(width: 12.w),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          amountString,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: color,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          'FCFA',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: color.withAlpha(153),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'FCFA',
+                      style: KoalaTypography.caption(context).copyWith(
+                        color: color.withOpacity(0.7),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
-        )
-        .animate()
-        .fadeIn(duration: 400.ms, delay: (index * 30).ms)
-        .slideX(
+        ),
+      ),
+    ).animate().fadeIn(duration: 400.ms, delay: (index * 30).ms).slideX(
           begin: -0.1,
           duration: 400.ms,
           delay: (index * 30).ms,
@@ -506,7 +488,7 @@ class _LoadingIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(24.w),
       child: Center(child: CupertinoActivityIndicator(radius: 14.r)),
     );
   }
@@ -517,69 +499,65 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final controller = Get.find<TransactionsController>();
 
     return Center(
-      child:
-          Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 120.w,
-                    height: 120.w,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      CupertinoIcons.search,
-                      size: 60.sp,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-                  Text(
-                    controller.hasActiveFilters
-                        ? 'No transactions found'
-                        : 'No transactions yet',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 48.0),
-                    child: Text(
-                      controller.hasActiveFilters
-                          ? 'Try adjusting your filters'
-                          : 'Start adding transactions to see them here',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.textTheme.bodySmall?.color?.withAlpha(153),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  if (controller.hasActiveFilters) ...[
-                    SizedBox(height: 24.h),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        HapticFeedback.mediumImpact();
-                        controller.clearFilters();
-                      },
-                      icon: const Icon(CupertinoIcons.clear),
-                      label: const Text('Clear Filters'),
-                    ),
-                  ],
-                ],
-              )
-              .animate()
-              .fadeIn(duration: 400.ms)
-              .scale(
-                begin: const Offset(0.9, 0.9),
-                duration: 400.ms,
-                curve: Curves.easeOutBack,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120.w,
+            height: 120.w,
+            decoration: BoxDecoration(
+              color: KoalaColors.surface(context),
+              shape: BoxShape.circle,
+              boxShadow: KoalaColors.shadowSubtle,
+            ),
+            child: Icon(
+              CupertinoIcons.search,
+              size: 60.sp,
+              color: KoalaColors.textSecondary(context),
+            ),
+          ),
+          SizedBox(height: 24.h),
+          Text(
+            controller.hasActiveFilters
+                ? 'Aucune transaction trouvée'
+                : 'Aucune transaction pour le moment',
+            style: KoalaTypography.heading3(context),
+          ),
+          SizedBox(height: 8.h),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48.0),
+            child: Text(
+              controller.hasActiveFilters
+                  ? 'Essayez d\'ajuster vos filtres'
+                  : 'Ajoutez des transactions pour les voir ici',
+              style: KoalaTypography.bodyMedium(context).copyWith(
+                color: KoalaColors.textSecondary(context),
               ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          if (controller.hasActiveFilters) ...[
+            SizedBox(height: 24.h),
+            SizedBox(
+              width: 200.w,
+              child: KoalaButton(
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  controller.clearFilters();
+                },
+                text: 'Effacer les filtres',
+              ),
+            ),
+          ],
+        ],
+      ).animate().fadeIn(duration: 400.ms).scale(
+            begin: const Offset(0.9, 0.9),
+            duration: 400.ms,
+            curve: Curves.easeOutBack,
+          ),
     );
   }
 }
@@ -589,8 +567,6 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Container(
       padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 40.h),
       child: Column(
@@ -600,9 +576,10 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Filter & Sort', style: theme.textTheme.titleLarge),
+              Text('Filtrer & Trier', style: KoalaTypography.heading3(context)),
               IconButton(
-                icon: const Icon(CupertinoIcons.xmark_circle_fill),
+                icon: Icon(CupertinoIcons.xmark_circle_fill,
+                    color: KoalaColors.textSecondary(context)),
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   NavigationHelper.safeBack();
@@ -613,17 +590,19 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
           SizedBox(height: 24.h),
 
           // Sort Options
-          Text('Sort By', style: theme.textTheme.titleMedium),
+          Text('Trier par',
+              style: KoalaTypography.bodyLarge(context)
+                  .copyWith(fontWeight: FontWeight.bold)),
           SizedBox(height: 12.h),
           Obx(
             () => Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _SortChip('Newest First', SortOption.dateNewest),
-                _SortChip('Oldest First', SortOption.dateOldest),
-                _SortChip('Highest Amount', SortOption.amountHighest),
-                _SortChip('Lowest Amount', SortOption.amountLowest),
+                _SortChip('Plus récents', SortOption.dateNewest),
+                _SortChip('Plus anciens', SortOption.dateOldest),
+                _SortChip('Montant le plus élevé', SortOption.amountHighest),
+                _SortChip('Montant le plus bas', SortOption.amountLowest),
                 _SortChip('A-Z', SortOption.description),
               ],
             ),
@@ -632,7 +611,9 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
           SizedBox(height: 24.h),
 
           // Date Range
-          Text('Date Range', style: theme.textTheme.titleMedium),
+          Text('Période',
+              style: KoalaTypography.bodyLarge(context)
+                  .copyWith(fontWeight: FontWeight.bold)),
           SizedBox(height: 12.h),
           Obx(() {
             final range = controller.dateRange.value;
@@ -647,17 +628,23 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
                 hasRange
                     ? CupertinoIcons.calendar_badge_minus
                     : CupertinoIcons.calendar,
+                color: KoalaColors.primaryUi(context),
               ),
               label: Text(
                 hasRange
-                    ? '${DateFormat('dd MMM').format(range.start)} - ${DateFormat('dd MMM').format(range.end)}'
-                    : 'Select Date Range',
+                    ? '${DateFormat('dd MMM', 'fr_FR').format(range.start)} - ${DateFormat('dd MMM', 'fr_FR').format(range.end)}'
+                    : 'Sélectionner une période',
+                style: KoalaTypography.bodyMedium(context)
+                    .copyWith(color: KoalaColors.primaryUi(context)),
               ),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16.w,
+                  vertical: 12.h,
                 ),
+                side: BorderSide(color: KoalaColors.primaryUi(context)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r)),
               ),
             );
           }),
@@ -668,23 +655,25 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: KoalaButton(
                   onPressed: () {
                     HapticFeedback.mediumImpact();
                     controller.clearFilters();
                     NavigationHelper.safeBack();
                   },
-                  child: const Text('Clear All'),
+                  text: 'Tout effacer',
+                  backgroundColor: KoalaColors.surface(context),
+                  textColor: KoalaColors.text(context),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12.w),
               Expanded(
-                child: ElevatedButton(
+                child: KoalaButton(
                   onPressed: () {
                     HapticFeedback.lightImpact();
                     NavigationHelper.safeBack();
                   },
-                  child: const Text('Apply'),
+                  text: 'Appliquer',
                 ),
               ),
             ],
@@ -700,6 +689,7 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       initialDateRange: controller.dateRange.value,
+      locale: const Locale('fr', 'FR'),
     );
 
     if (picked != null) {
@@ -716,7 +706,6 @@ class _SortChip extends GetView<TransactionsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isSelected = controller.currentSort.value == option;
 
     return FilterChip(
@@ -726,12 +715,22 @@ class _SortChip extends GetView<TransactionsController> {
         HapticFeedback.selectionClick();
         controller.setSort(option);
       },
-      selectedColor: theme.colorScheme.primary.withAlpha(51),
-      checkmarkColor: theme.colorScheme.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? theme.colorScheme.primary : null,
+      selectedColor: KoalaColors.primaryUi(context).withOpacity(0.1),
+      checkmarkColor: KoalaColors.primaryUi(context),
+      backgroundColor: KoalaColors.surface(context),
+      labelStyle: KoalaTypography.bodySmall(context).copyWith(
+        color: isSelected
+            ? KoalaColors.primaryUi(context)
+            : KoalaColors.text(context),
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
+      side: BorderSide(
+        color: isSelected
+            ? KoalaColors.primaryUi(context)
+            : KoalaColors.border(context),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
     );
   }
 }
+
