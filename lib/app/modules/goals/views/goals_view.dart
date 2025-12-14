@@ -4,11 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/modules/goals/controllers/goals_controller.dart';
 import 'package:koaa/app/modules/goals/views/widgets/goal_card.dart';
-import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/modules/goals/views/add_goal_view.dart';
@@ -18,11 +16,8 @@ class GoalsView extends GetView<GoalsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: KoalaColors.background(context),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -38,7 +33,14 @@ class GoalsView extends GetView<GoalsController> {
             Obx(() {
               if (controller.financialGoals.isEmpty) {
                 return SliverFillRemaining(
-                  child: _buildEmptyState(theme),
+                  hasScrollBody: false,
+                  child: const KoalaEmptyState(
+                    icon: CupertinoIcons.flag_fill,
+                    title: 'Pas encore d\'objectifs',
+                    message:
+                        'Définissez vos objectifs financiers et suivez vos progrès pour réaliser vos rêves.',
+                    buttonText: 'Créer un objectif',
+                  ).animate().fadeIn(duration: 400.ms),
                 );
               }
 
@@ -46,50 +48,13 @@ class GoalsView extends GetView<GoalsController> {
                 padding: EdgeInsets.symmetric(horizontal: 20.w),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    if (controller.activeGoals.isNotEmpty) ...[
-                      const _SectionHeader(title: 'ACTIFS'),
-                      ...controller.activeGoals.map((g) => Padding(
-                        padding: EdgeInsets.only(bottom: 16.h),
-                        child: GestureDetector(
-                          onTap: () => _showGoalDetailsBottomSheet(context, theme, g),
-                          child: GoalCard(goal: g),
-                        ),
-                      )),
-                      SizedBox(height: 16.h),
-                    ],
-                    if (controller.completedGoals.isNotEmpty) ...[
-                      const _SectionHeader(title: 'TERMINÉS'),
-                      ...controller.completedGoals.map((g) => Padding(
-                        padding: EdgeInsets.only(bottom: 16.h),
-                        child: GestureDetector(
-                          onTap: () => _showGoalDetailsBottomSheet(context, theme, g),
-                          child: GoalCard(goal: g),
-                        ),
-                      )),
-                      SizedBox(height: 16.h),
-                    ],
-                    if (controller.pausedGoals.isNotEmpty) ...[
-                      const _SectionHeader(title: 'EN PAUSE'),
-                      ...controller.pausedGoals.map((g) => Padding(
-                        padding: EdgeInsets.only(bottom: 16.h),
-                        child: GestureDetector(
-                          onTap: () => _showGoalDetailsBottomSheet(context, theme, g),
-                          child: GoalCard(goal: g),
-                        ),
-                      )),
-                      SizedBox(height: 16.h),
-                    ],
-                    if (controller.abandonedGoals.isNotEmpty) ...[
-                      const _SectionHeader(title: 'ABANDONNÉS'),
-                      ...controller.abandonedGoals.map((g) => Padding(
-                        padding: EdgeInsets.only(bottom: 16.h),
-                        child: GestureDetector(
-                          onTap: () => _showGoalDetailsBottomSheet(context, theme, g),
-                          child: GoalCard(goal: g),
-                        ),
-                      )),
-                      SizedBox(height: 32.h),
-                    ],
+                    _buildSection(context, 'ACTIFS', controller.activeGoals),
+                    _buildSection(
+                        context, 'TERMINÉS', controller.completedGoals),
+                    _buildSection(context, 'EN PAUSE', controller.pausedGoals),
+                    _buildSection(
+                        context, 'ABANDONNÉS', controller.abandonedGoals),
+                    SizedBox(height: 32.h),
                   ]),
                 ),
               );
@@ -97,6 +62,25 @@ class GoalsView extends GetView<GoalsController> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSection(
+      BuildContext context, String title, List<FinancialGoal> goals) {
+    if (goals.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: title),
+        ...goals.map((g) => Padding(
+              padding: EdgeInsets.only(bottom: 16.h),
+              child: GestureDetector(
+                onTap: () => _showGoalDetailsBottomSheet(context, g),
+                child: GoalCard(goal: g),
+              ),
+            )),
+        SizedBox(height: 16.h),
+      ],
     );
   }
 
@@ -108,88 +92,72 @@ class GoalsView extends GetView<GoalsController> {
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
-    return KoalaEmptyState(
-      icon: CupertinoIcons.flag_fill,
-      title: 'Pas encore d\'objectifs',
-      message: 'Définissez vos objectifs financiers et suivez vos progrès pour réaliser vos rêves.',
-      buttonText: 'Créer un objectif',
-      onButtonPressed: () => _openAddGoalSheet(),
-    );
-  }
-
-  void _showGoalDetailsBottomSheet(BuildContext context, ThemeData theme, FinancialGoal goal) {
-    final isDark = theme.brightness == Brightness.dark;
+  void _showGoalDetailsBottomSheet(BuildContext context, FinancialGoal goal) {
     Get.bottomSheet(
-      Container(
-        padding: EdgeInsets.all(24.w),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-        ),
+      KoalaBottomSheet(
+        title: goal.title,
         child: SingleChildScrollView(
+          padding: EdgeInsets.all(24.w),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    goal.title,
-                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  IconButton(
+                    icon: Icon(Icons.edit,
+                        color: KoalaColors.textSecondary(context)),
+                    onPressed: () {
+                      NavigationHelper.safeBack();
+                      _openAddGoalSheet(goal: goal);
+                    },
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () {
-                          NavigationHelper.safeBack();
-                          _openAddGoalSheet(goal: goal);
+                  IconButton(
+                    icon: const Icon(Icons.delete,
+                        color: KoalaColors.destructive),
+                    onPressed: () {
+                      NavigationHelper.safeBack();
+                      KoalaConfirmationDialog.show(
+                        context: context,
+                        title: 'Supprimer l\'objectif',
+                        message:
+                            'Êtes-vous sûr de vouloir supprimer "${goal.title}" ?',
+                        isDestructive: true,
+                        onConfirm: () async {
+                          await controller.deleteGoal(goal.id);
                         },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          NavigationHelper.safeBack();
-                          KoalaConfirmationDialog.show(
-                            context: context,
-                            title: 'Supprimer l\'objectif',
-                            message: 'Êtes-vous sûr de vouloir supprimer "${goal.title}" ?',
-                            isDestructive: true,
-                            onConfirm: () async {
-                              await controller.deleteGoal(goal.id);
-                            },
-                          );
-                        },
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
               if (goal.description != null && goal.description!.isNotEmpty) ...[
-                SizedBox(height: 8.h),
-                Text(goal.description!, style: theme.textTheme.bodyMedium),
+                Text(goal.description!,
+                    style: KoalaTypography.bodyMedium(context)),
+                SizedBox(height: 16.h),
               ],
-              SizedBox(height: 16.h),
-              _buildDetailRow('Statut', _goalStatusToString(goal.status), theme),
-              _buildDetailRow('Type', _goalTypeToString(goal.type), theme),
-              _buildDetailRow('Montant cible', 'FCFA ${goal.targetAmount}', theme),
-              _buildDetailRow('Montant actuel', 'FCFA ${goal.currentAmount}', theme),
-              _buildDetailRow('Progression', '${goal.progressPercentage.toStringAsFixed(1)}%', theme),
+              _buildDetailRow(
+                  context, 'Statut', _goalStatusToString(goal.status)),
+              _buildDetailRow(context, 'Type', _goalTypeToString(goal.type)),
+              _buildDetailRow(
+                  context, 'Montant cible', 'FCFA ${goal.targetAmount}'),
+              _buildDetailRow(
+                  context, 'Montant actuel', 'FCFA ${goal.currentAmount}'),
+              _buildDetailRow(context, 'Progression',
+                  '${goal.progressPercentage.toStringAsFixed(1)}%'),
               if (goal.targetDate != null)
-                _buildDetailRow('Date cible',
-                    '${goal.targetDate!.day}/${goal.targetDate!.month}/${goal.targetDate!.year}', theme),
+                _buildDetailRow(context, 'Date cible',
+                    '${goal.targetDate!.day}/${goal.targetDate!.month}/${goal.targetDate!.year}'),
               if (goal.completedAt != null)
-                _buildDetailRow('Terminé le',
-                    '${goal.completedAt!.day}/${goal.completedAt!.month}/${goal.completedAt!.year}', theme),
+                _buildDetailRow(context, 'Terminé le',
+                    '${goal.completedAt!.day}/${goal.completedAt!.month}/${goal.completedAt!.year}'),
               SizedBox(height: 24.h),
               if (goal.status == GoalStatus.active)
                 _buildGoalActionButton(
-                  theme,
+                  context,
                   'Marquer comme terminé',
                   Icons.check_circle_outline,
-                  Colors.green,
+                  KoalaColors.success,
                   () {
                     controller.setGoalStatus(goal.id, GoalStatus.completed);
                     NavigationHelper.safeBack();
@@ -197,7 +165,7 @@ class GoalsView extends GetView<GoalsController> {
                 ),
               if (goal.status == GoalStatus.completed)
                 _buildGoalActionButton(
-                  theme,
+                  context,
                   'Réactiver l\'objectif',
                   Icons.replay,
                   Colors.blue,
@@ -206,25 +174,32 @@ class GoalsView extends GetView<GoalsController> {
                     NavigationHelper.safeBack();
                   },
                 ),
-              if (goal.status == GoalStatus.active || goal.status == GoalStatus.paused)
+              if (goal.status == GoalStatus.active ||
+                  goal.status == GoalStatus.paused)
                 _buildGoalActionButton(
-                  theme,
-                  goal.status == GoalStatus.active ? 'Mettre en pause' : 'Reprendre',
-                  goal.status == GoalStatus.active ? Icons.pause_circle_outline : Icons.play_circle_outline,
-                  Colors.orange,
+                  context,
+                  goal.status == GoalStatus.active
+                      ? 'Mettre en pause'
+                      : 'Reprendre',
+                  goal.status == GoalStatus.active
+                      ? Icons.pause_circle_outline
+                      : Icons.play_circle_outline,
+                  KoalaColors.warning,
                   () {
                     controller.setGoalStatus(
                       goal.id,
-                      goal.status == GoalStatus.active ? GoalStatus.paused : GoalStatus.active,
+                      goal.status == GoalStatus.active
+                          ? GoalStatus.paused
+                          : GoalStatus.active,
                     );
                     NavigationHelper.safeBack();
                   },
                 ),
               _buildGoalActionButton(
-                theme,
+                context,
                 'Abandonner l\'objectif',
                 Icons.cancel_outlined,
-                Colors.red,
+                KoalaColors.destructive,
                 () {
                   controller.setGoalStatus(goal.id, GoalStatus.abandoned);
                   NavigationHelper.safeBack();
@@ -235,10 +210,11 @@ class GoalsView extends GetView<GoalsController> {
           ),
         ),
       ),
+      isScrollControlled: true,
     );
   }
 
-  Widget _buildDetailRow(String label, String value, ThemeData theme) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4.h),
       child: Row(
@@ -246,33 +222,27 @@ class GoalsView extends GetView<GoalsController> {
         children: [
           Text(
             label,
-            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+            style: KoalaTypography.bodyLarge(context)
+                .copyWith(fontWeight: FontWeight.w500),
           ),
           Text(
             value,
-            style: theme.textTheme.bodyLarge,
+            style: KoalaTypography.bodyLarge(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGoalActionButton(
-      ThemeData theme, String text, IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildGoalActionButton(BuildContext context, String text,
+      IconData icon, Color color, VoidCallback onPressed) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8.h),
-      child: ElevatedButton.icon(
+      child: KoalaButton(
+        text: text,
         onPressed: onPressed,
-        icon: Icon(icon),
-        label: Text(text),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          minimumSize: Size(double.infinity, 48.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-        ),
+        backgroundColor: color,
+        icon: icon,
       ),
     );
   }
@@ -311,33 +281,32 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: 24.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: Icon(CupertinoIcons.back, size: 28, color: theme.iconTheme.color),
+            icon: Icon(CupertinoIcons.back,
+                size: 28, color: KoalaColors.text(context)),
             onPressed: () => NavigationHelper.safeBack(),
             padding: EdgeInsets.zero,
           ).animate().fadeIn().slideX(begin: -0.1),
           Text(
             'Mes Objectifs',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 20.sp,
-            ),
+            style: KoalaTypography.heading3(context),
           ).animate().fadeIn(),
           GestureDetector(
             onTap: onAddTap,
             child: Container(
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
-                color: theme.brightness == Brightness.dark ? Colors.white.withOpacity(0.1) : Colors.grey.shade200,
+                color: KoalaColors.surface(context),
                 borderRadius: BorderRadius.circular(14.r),
+                boxShadow: KoalaColors.shadowSubtle,
               ),
-              child: Icon(CupertinoIcons.add, size: 20.sp, color: theme.textTheme.bodyLarge?.color),
+              child: Icon(CupertinoIcons.add,
+                  size: 20.sp, color: KoalaColors.text(context)),
             ),
           ).animate().fadeIn().slideX(begin: 0.1),
         ],
@@ -357,10 +326,9 @@ class _SectionHeader extends StatelessWidget {
       padding: EdgeInsets.only(bottom: 12.h, left: 4.w, top: 12.h),
       child: Text(
         title,
-        style: TextStyle(
+        style: KoalaTypography.caption(context).copyWith(
           fontSize: 12.sp,
           fontWeight: FontWeight.w800,
-          color: Colors.grey.shade500,
           letterSpacing: 1.5,
           fontFamily: 'Poppins',
         ),
@@ -368,3 +336,4 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
