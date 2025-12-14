@@ -1,6 +1,4 @@
-import 'package:flutter/cupertino.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:uuid/uuid.dart';
 
 part 'local_transaction.g.dart';
@@ -367,3 +365,4 @@ class LocalTransaction extends HiveObject {
     );
   }
 }
+
