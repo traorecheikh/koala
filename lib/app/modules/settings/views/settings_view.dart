@@ -3,6 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
 import 'package:koaa/app/modules/settings/widgets/edit_profile_dialog.dart';
@@ -11,6 +12,7 @@ import 'package:koaa/app/modules/settings/views/privacy_policy_view.dart';
 import 'package:koaa/app/modules/settings/views/terms_view.dart';
 import 'package:koaa/app/services/notification_service.dart';
 
+import 'package:koaa/app/routes/app_pages.dart';
 import '../controllers/settings_controller.dart';
 
 class SettingsView extends GetView<SettingsController> {
@@ -18,23 +20,21 @@ class SettingsView extends GetView<SettingsController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: KoalaColors.background(context),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             CupertinoIcons.back,
-            color: theme.textTheme.bodyLarge?.color,
+            color: KoalaColors.text(context),
           ),
           onPressed: () => NavigationHelper.safeBack(),
         ),
         title: Text(
-          'Paramètres', // Translated from 'Settings'
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          'Paramètres',
+          style: KoalaTypography.heading3(context),
         ),
         centerTitle: true,
       ),
@@ -43,15 +43,16 @@ class SettingsView extends GetView<SettingsController> {
         children: [
           _buildSettingsSection(
             context,
-            title: 'Apparence', // Translated from 'Appearance'
+            title: 'Apparence',
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.moon_fill,
-                title: 'Mode sombre', // Translated from 'Dark Mode'
+                title: 'Mode sombre',
                 trailing: Obx(
                   () => CupertinoSwitch(
                     value: controller.isDarkMode.value,
+                    activeColor: KoalaColors.primaryUi(context),
                     onChanged: controller.toggleTheme,
                   ),
                 ),
@@ -59,52 +60,65 @@ class SettingsView extends GetView<SettingsController> {
             ],
           ),
           const SizedBox(height: 16),
-          ListTile(
-            leading: Icon(
-              CupertinoIcons.cloud_download,
-              color: theme.colorScheme.primary,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: controller.checkForUpdates,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.cloud_download,
+                      color: KoalaColors.primaryUi(context),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Vérifier les mises à jour',
+                      style: KoalaTypography.bodyMedium(context)
+                          .copyWith(color: KoalaColors.primaryUi(context)),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            title: Text(
-              'Vérifier les mises à jour',
-              style: theme.textTheme.bodyLarge,
-            ),
-            onTap: controller.checkForUpdates,
           ),
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Intelligence Artificielle', // New section
+            title: 'Intelligence Artificielle',
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.sparkles,
                 title: 'Mon Profil Financier',
-                onTap: () => Get.toNamed('/persona'), // Use named route
+                iconColor: KoalaColors.accent,
+                onTap: () => Get.toNamed(Routes.persona),
               ),
             ],
           ),
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Compte', // Translated from 'Account'
+            title: 'Compte',
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.person_alt_circle_fill,
-                title: 'Profil', // Translated from 'Profile'
+                title: 'Profil',
                 onTap: () => showEditProfileDialog(context),
               ),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.lock_fill,
-                title: 'Sécurité', // Translated from 'Security'
-                onTap: () {},
+                title: 'Sécurité',
+                onTap: () => NavigationHelper.toNamed(Routes.securitySettings),
               ),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.repeat,
-                title:
-                    'Transactions récurrentes', // Translated from 'Recurring Transactions'
+                title: 'Transactions récurrentes',
                 onTap: () => Get.to(() => const RecurringTransactionsView()),
               ),
             ],
@@ -112,7 +126,7 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Notifications', // Translated from 'Notifications'
+            title: 'Notifications',
             children: [
               _buildSettingsItem(
                 context,
@@ -123,7 +137,8 @@ class SettingsView extends GetView<SettingsController> {
                   await NotificationService.showNotification(
                     id: 12345,
                     title: 'Test de Notification',
-                    body: 'Ceci est un test pour vérifier que les notifications fonctionnent.',
+                    body:
+                        'Ceci est un test pour vérifier que les notifications fonctionnent.',
                   );
                 },
               ),
@@ -132,20 +147,18 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Confidentialité', // Translated from 'Privacy'
+            title: 'Confidentialité',
             children: [
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.hand_raised_fill,
-                title:
-                    'Politique de confidentialité', // Translated from 'Privacy Policy'
+                title: 'Politique de confidentialité',
                 onTap: () => Get.to(() => const PrivacyPolicyView()),
               ),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.doc_text_fill,
-                title:
-                    'Conditions d\'utilisation', // Translated from 'Terms of Service'
+                title: 'Conditions d\'utilisation',
                 onTap: () => Get.to(() => const TermsView()),
               ),
             ],
@@ -159,9 +172,19 @@ class SettingsView extends GetView<SettingsController> {
                 context,
                 icon: CupertinoIcons.trash_fill,
                 title: 'Réinitialiser l\'application',
+                iconColor: KoalaColors.destructive,
+                textColor: KoalaColors.destructive,
                 onTap: () => showResetAppSheet(context),
               ),
             ],
+          ),
+          const SizedBox(height: 32),
+          Center(
+            child: Text(
+              'Version 1.0.0',
+              style: KoalaTypography.caption(context)
+                  .copyWith(color: KoalaColors.textSecondary(context)),
+            ),
           ),
           const SizedBox(height: 32),
         ],
@@ -174,7 +197,6 @@ class SettingsView extends GetView<SettingsController> {
     required String title,
     required List<Widget> children,
   }) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -182,29 +204,34 @@ class SettingsView extends GetView<SettingsController> {
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           child: Text(
             title,
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: KoalaTypography.bodySmall(context).copyWith(
               fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
+              color: KoalaColors.primaryUi(context),
             ),
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
+            color: KoalaColors.surface(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: KoalaColors.border(context)),
+            boxShadow: KoalaColors.shadowSubtle,
           ),
+          clipBehavior: Clip.hardEdge,
           child: Column(
-            children: children.map((item) {
+            children: children.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
               return Column(
                 children: [
                   item,
-                  if (item != children.last)
+                  if (index != children.length - 1)
                     Divider(
-                      height: 0,
+                      height: 1,
                       indent: 16,
                       endIndent: 16,
-                      color: theme.dividerColor.withOpacity(0.1),
+                      color: KoalaColors.border(context),
                     ),
                 ],
               );
@@ -221,27 +248,44 @@ class SettingsView extends GetView<SettingsController> {
     required String title,
     Widget? trailing,
     VoidCallback? onTap,
+    Color? iconColor,
+    Color? textColor,
   }) {
-    final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Icon(icon, color: theme.colorScheme.onSurface, size: 24),
-            const SizedBox(width: 16),
-            Expanded(child: Text(title, style: theme.textTheme.bodyLarge)),
-            if (trailing != null) trailing,
-            if (onTap != null && trailing == null)
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
               Icon(
-                CupertinoIcons.forward,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
+                icon,
+                color: iconColor ?? KoalaColors.text(context),
                 size: 20,
               ),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: KoalaTypography.bodyMedium(context).copyWith(
+                    color: textColor ?? KoalaColors.text(context),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (trailing != null) trailing,
+              if (onTap != null && trailing == null)
+                Icon(
+                  CupertinoIcons.chevron_right,
+                  color: KoalaColors.textSecondary(context).withOpacity(0.5),
+                  size: 16,
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
