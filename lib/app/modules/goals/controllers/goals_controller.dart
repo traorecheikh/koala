@@ -5,7 +5,6 @@ import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/events/financial_events_service.dart';
-import 'package:uuid/uuid.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
 class GoalsController extends GetxController {
@@ -232,3 +231,4 @@ class GoalsController extends GetxController {
     financialGoals.clear();
   }
 }
+
