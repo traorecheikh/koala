@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/core/design_system.dart';
+import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
+import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
@@ -17,116 +19,182 @@ class DiscoverPersonaView extends StatefulWidget {
 
 class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
   bool _isRevealed = false;
+  String _loadingStatus = 'Initialisation...';
+  double _progress = 0.0;
+  UserFinancialProfile? _profile;
+  bool _isAnalyzing = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAnalysis();
+  }
+
+  Future<void> _startAnalysis() async {
+    try {
+      final engine = Get.find<KoalaMLEngine>();
+      final contextService = Get.find<FinancialContextService>();
+
+      // Artificial delay steps for UX "Smartness"
+      _updateStatus(
+          'Analyse de ${contextService.allTransactions.length} transactions...',
+          0.2);
+      await Future.delayed(300.ms);
+
+      _updateStatus('Calcul des taux d\'épargne...', 0.4);
+      // Trigger real analysis
+      await engine.runFullAnalysis(contextService.allTransactions, []);
+      await Future.delayed(300.ms);
+
+      _updateStatus('Détection des habitudes...', 0.6);
+      await Future.delayed(500.ms);
+
+      _updateStatus('Classification du profil...', 0.8);
+      await Future.delayed(200.ms);
+
+      _updateStatus('Finalisation...', 1.0);
+
+      if (mounted) {
+        setState(() {
+          _profile = engine.currentUserProfile;
+          _isAnalyzing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _profile = UserFinancialProfile(
+              personaType: FinancialPersona.planner.name,
+              savingsRate: 0,
+              consistencyScore: 0,
+              categoryPreferences: {},
+              detectedPatterns: []);
+          _isAnalyzing = false;
+        });
+      }
+    }
+  }
+
+  void _updateStatus(String status, double progress) {
+    if (mounted) {
+      setState(() {
+        _loadingStatus = status;
+        _progress = progress;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<FinancialPersona?>(
-        future: _getPersona(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CupertinoActivityIndicator());
-          }
-
-          final persona = snapshot.data!;
-
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 600),
-            child: !_isRevealed
-                ? _buildRevealScreen(persona)
-                : _buildPersonaDetails(persona),
-          );
-        },
+      backgroundColor: KoalaColors.background(context),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        child: (_isRevealed && _profile != null)
+            ? _buildPersonaDetails(_profile!)
+            : _buildRevealScreen(isAnalyzing: _isAnalyzing),
       ),
     );
   }
 
-  Future<FinancialPersona?> _getPersona() async {
-    try {
-      await Future.delayed(const Duration(milliseconds: 1500));
-      final engine = Get.find<KoalaMLEngine>();
-      final profile = engine.currentUserProfile;
-
-      if (profile != null) {
-        return FinancialPersona.values.firstWhere(
-          (e) => e.name == profile.personaType,
-          orElse: () => FinancialPersona.planner,
-        );
-      }
-      return FinancialPersona.planner;
-    } catch (e) {
-      return FinancialPersona.planner;
-    }
-  }
-
-  Widget _buildRevealScreen(FinancialPersona persona) {
+  Widget _buildRevealScreen({required bool isAnalyzing}) {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF1E3A5F), const Color(0xFF2D3250)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
+      color: KoalaColors.background(context),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            CupertinoIcons.sparkles,
-            size: 80.sp,
-            color: Colors.white.withOpacity(0.9),
+          // Smart Minimal Pulse
+          Container(
+            padding: EdgeInsets.all(32.w),
+            decoration: BoxDecoration(
+              color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isAnalyzing
+                  ? CupertinoIcons.gear_alt_fill
+                  : CupertinoIcons.waveform_circle_fill,
+              size: 64.sp,
+              color: KoalaColors.primaryUi(context),
+            )
+                .animate(
+                  onPlay: (controller) => controller.repeat(),
+                )
+                .rotate(duration: 2000.ms, begin: 0, end: isAnalyzing ? 1 : 0),
           )
               .animate(onPlay: (controller) => controller.repeat(reverse: true))
               .scale(
-                begin: const Offset(0.9, 0.9),
-                end: const Offset(1.1, 1.1),
-                duration: 1500.ms,
+                begin: const Offset(0.95, 0.95),
+                end: const Offset(1.05, 1.05),
+                duration: 2000.ms,
               ),
-          SizedBox(height: 32.h),
+          SizedBox(height: 40.h),
+
+          // Typographic Header
           Text(
-            'Analyse de vos habitudes...',
-            style: KoalaTypography.heading2(context).copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w300,
-              letterSpacing: 0.5,
+            isAnalyzing ? 'INTELLIGENCE ARTIFICIELLE' : 'ANALYSE TERMINÉE',
+            style: KoalaTypography.caption(context).copyWith(
+              letterSpacing: 4,
+              fontWeight: FontWeight.bold,
             ),
-          ).animate().fadeIn(duration: 800.ms).slideY(begin: 0.2, end: 0),
+          ).animate().fadeIn(duration: 800.ms),
           SizedBox(height: 16.h),
-          Text(
-            'L\'IA de Koala étudie vos transactions\npour découvrir votre profil unique.',
-            textAlign: TextAlign.center,
-            style: KoalaTypography.bodyMedium(context).copyWith(
-              color: Colors.white60,
-              height: 1.5,
-            ),
-          ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2, end: 0),
-          SizedBox(height: 60.h),
-          CupertinoButton(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30.r),
-            padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 16.h),
+
+          AnimatedSwitcher(
+            duration: 300.ms,
             child: Text(
-              'Révéler mon profil',
-              style: KoalaTypography.bodyLarge(context).copyWith(
-                color: const Color(0xFF1E3A5F),
-                fontWeight: FontWeight.w600,
+              isAnalyzing
+                  ? _loadingStatus
+                  : 'Votre profil financier\nest prêt.',
+              key: ValueKey(_loadingStatus),
+              textAlign: TextAlign.center,
+              style: KoalaTypography.heading2(context).copyWith(
+                height: 1.3,
               ),
             ),
-            onPressed: () => setState(() => _isRevealed = true),
-          ).animate().fadeIn(delay: 1000.ms).scale(),
+          ),
+
+          SizedBox(height: 60.h),
+
+          // Action Button
+          if (!isAnalyzing)
+            SizedBox(
+              width: 200.w,
+              child: KoalaButton(
+                text: 'Révéler',
+                onPressed: () => setState(() => _isRevealed = true),
+              ),
+            ).animate().fadeIn(delay: 200.ms).scale(),
+
+          if (isAnalyzing)
+            SizedBox(
+              width: 100.w,
+              child: LinearProgressIndicator(
+                value: _progress,
+                backgroundColor: KoalaColors.border(context),
+                color: KoalaColors.primaryUi(context),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            )
         ],
       ),
     );
   }
 
-  Widget _buildPersonaDetails(FinancialPersona persona) {
-    final info = _getPersonaInfo(persona);
+  Widget _buildPersonaDetails(UserFinancialProfile profile) {
+    final persona = FinancialPersona.values.firstWhere(
+        (e) => e.name == profile.personaType,
+        orElse: () => FinancialPersona.planner);
+
+    final info = _getPersonaInfo(persona, profile);
+    final primaryColor = KoalaColors.primaryUi(context);
+
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: KoalaColors.background(context),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
@@ -135,194 +203,245 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           ),
           onPressed: () => NavigationHelper.safeBack(),
         ),
+        title: Text('Mon Profil', style: KoalaTypography.heading3(context)),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 40.h),
+        padding: EdgeInsets.fromLTRB(20.w, 10.h, 20.w, 40.h),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Hero Card
-            Center(
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 24.w),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [const Color(0xFF4A6C9B), const Color(0xFF2E3B55)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(32.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF4A6C9B).withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+            // 1. Big Persona Card (Bento Style)
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 32.h, horizontal: 24.w),
+              decoration: BoxDecoration(
+                color: KoalaColors.surface(context),
+                borderRadius: BorderRadius.circular(KoalaRadius.xl),
+                border: Border.all(color: KoalaColors.border(context)),
+                boxShadow: KoalaShadows.sm,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(20.w),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(20.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1,
-                        ),
+                    child: Icon(
+                      info.icon,
+                      size: 48.sp,
+                      color: primaryColor,
+                    ),
+                  )
+                      .animate()
+                      .scale(duration: 600.ms, curve: Curves.easeOutBack),
+                  SizedBox(height: 24.h),
+                  Text(
+                    info.title,
+                    style: KoalaTypography.heading1(context).copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ).animate().fadeIn().slideY(begin: 0.2, end: 0),
+                  SizedBox(height: 8.h),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: KoalaColors.background(context),
+                      borderRadius: BorderRadius.circular(KoalaRadius.full),
+                      border: Border.all(color: KoalaColors.border(context)),
+                    ),
+                    child: Text(
+                      info.tagline,
+                      style: KoalaTypography.caption(context).copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: KoalaColors.textSecondary(context),
                       ),
-                      child: Icon(
-                        info.icon,
-                        size: 56.sp,
-                        color: Colors.white,
-                      ),
-                    ).animate().scale(
-                          duration: 600.ms,
-                          curve: Curves.easeOutBack,
-                        ),
-                    SizedBox(height: 24.h),
-                    Text(
-                      info.title,
-                      style: KoalaTypography.heading1(context).copyWith(
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                      ),
-                    ).animate().fadeIn().slideY(begin: 0.2, end: 0),
-                    SizedBox(height: 8.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 6.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Text(
-                        info.tagline,
-                        style: KoalaTypography.bodyMedium(context).copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ).animate().fadeIn(delay: 200.ms),
-                  ],
-                ),
+                    ),
+                  ).animate().fadeIn(delay: 200.ms),
+                  SizedBox(height: 24.h),
+                  Text(
+                    info.description,
+                    style: KoalaTypography.bodyMedium(context).copyWith(
+                      height: 1.6,
+                      color: KoalaColors.textSecondary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ).animate().fadeIn(delay: 300.ms),
+                ],
               ),
-            ).animate().slideY(begin: 0.1, end: 0, duration: 600.ms),
+            ).animate().slideY(begin: 0.05, end: 0, duration: 500.ms),
 
-            SizedBox(height: 40.h),
+            SizedBox(height: 24.h),
 
-            // Description
-            Text(
-              'Analyse',
-              style: KoalaTypography.caption(context).copyWith(
-                fontWeight: FontWeight.w600,
-                color: KoalaColors.textSecondary(context),
-                letterSpacing: 1,
-              ),
-            ).animate().fadeIn(delay: 300.ms),
+            // 2. Bento Grid: Super-Pouvoirs
+            _buildBentoSectionHeader('Vos Smart Insights',
+                    CupertinoIcons.bolt_fill, KoalaColors.success)
+                .animate()
+                .fadeIn(delay: 400.ms),
             SizedBox(height: 12.h),
-            Text(
-              info.description,
-              style: KoalaTypography.bodyLarge(context).copyWith(
-                height: 1.6,
-                color: KoalaColors.text(context),
-              ),
-            ).animate().fadeIn(delay: 400.ms),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 12.h,
+              crossAxisSpacing: 12.w,
+              childAspectRatio: 1.3,
+              children: info.strengths.asMap().entries.map((entry) {
+                return _buildSmallBentoCard(
+                  entry.value,
+                  delay: 500 + (entry.key * 100),
+                  icon: CupertinoIcons.checkmark_circle_fill,
+                  accentColor: KoalaColors.success,
+                );
+              }).toList(),
+            ),
 
-            SizedBox(height: 32.h),
+            SizedBox(height: 24.h),
 
-            // Strengths Section
-            _buildSectionHeader('Vos Super-Pouvoirs', CupertinoIcons.bolt_fill)
+            // 3. Bento Grid: Pistes d'Amélioration
+            _buildBentoSectionHeader('Recommandations IA',
+                    CupertinoIcons.lightbulb_fill, KoalaColors.warning)
                 .animate()
-                .fadeIn(delay: 500.ms),
-            SizedBox(height: 16.h),
-            ...info.strengths.asMap().entries.map(
-                  (entry) => _buildListItem(
-                    entry.value,
-                    delay: 600 + (entry.key * 100),
-                    icon: CupertinoIcons.check_mark_circled_solid,
-                    iconColor: KoalaColors.success,
-                  ),
-                ),
-
-            SizedBox(height: 32.h),
-
-            // Tips Section
-            _buildSectionHeader(
-                    'Pistes d\'Amélioration', CupertinoIcons.lightbulb_fill)
-                .animate()
-                .fadeIn(delay: 800.ms),
-            SizedBox(height: 16.h),
-            ...info.tips.asMap().entries.map(
-                  (entry) => _buildListItem(
-                    entry.value,
-                    delay: 900 + (entry.key * 100),
-                    icon: CupertinoIcons.arrow_up_right_circle_fill,
-                    iconColor: KoalaColors.warning,
-                  ),
-                ),
+                .fadeIn(delay: 700.ms),
+            SizedBox(height: 12.h),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 1, // Full width for tips to allow more text
+              mainAxisSpacing: 12.h,
+              crossAxisSpacing: 12.w,
+              childAspectRatio: 3.5, // Wider aspect ratio for list-like cards
+              children: info.tips.asMap().entries.map((entry) {
+                return _buildWideBentoCard(
+                  entry.value,
+                  delay: 800 + (entry.key * 100),
+                  icon: CupertinoIcons.arrow_up_right_circle_fill,
+                  accentColor: KoalaColors.warning,
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildBentoSectionHeader(String title, IconData icon, Color color) {
     return Row(
       children: [
-        Icon(icon, size: 20.sp, color: KoalaColors.primaryUi(context)),
+        Icon(icon, size: 18.sp, color: color),
         SizedBox(width: 8.w),
         Text(
           title,
-          style: KoalaTypography.heading3(context),
+          style: KoalaTypography.label(context),
         ),
       ],
     );
   }
 
-  Widget _buildListItem(
-    String text, {
-    required int delay,
-    required IconData icon,
-    required Color iconColor,
-  }) {
+  Widget _buildSmallBentoCard(String text,
+      {required int delay,
+      required IconData icon,
+      required Color accentColor}) {
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: KoalaColors.shadowSubtle,
-        border: Border.all(
-          color: KoalaColors.border(context),
-        ),
-      ),
-      child: Row(
+          color: KoalaColors.surface(context),
+          borderRadius: BorderRadius.circular(KoalaRadius.lg),
+          border: Border.all(color: KoalaColors.border(context)),
+          boxShadow: KoalaShadows.xs,
+          // Small accent line at top
+          gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [
+                0.02,
+                0.02
+              ],
+              colors: [
+                accentColor.withValues(alpha: 0.5),
+                KoalaColors.surface(context)
+              ])),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.only(top: 2.h),
-            child: Icon(icon, size: 20.sp, color: iconColor),
-          ),
-          SizedBox(width: 16.w),
+          // Icon(icon, size: 24.sp, color: accentColor),
+          // Spacer(),
           Expanded(
             child: Text(
               text,
-              style: KoalaTypography.bodyMedium(context).copyWith(
-                height: 1.4,
+              style: KoalaTypography.bodySmall(context).copyWith(
+                fontWeight: FontWeight.w500,
+                height: 1.3,
               ),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
-    ).animate().fadeIn(delay: delay.ms).slideX(begin: 0.1, end: 0);
+    ).animate().fadeIn(delay: delay.ms).scale(begin: const Offset(0.9, 0.9));
   }
 
-  _PersonaInfo _getPersonaInfo(FinancialPersona persona) {
+  Widget _buildWideBentoCard(String text,
+      {required int delay,
+      required IconData icon,
+      required Color accentColor}) {
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: KoalaColors.surface(context),
+        borderRadius: BorderRadius.circular(KoalaRadius.lg),
+        boxShadow: KoalaShadows.xs,
+        border: Border.all(color: KoalaColors.border(context)),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 4.w, color: accentColor),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        text,
+                        style: KoalaTypography.bodyMedium(context).copyWith(
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Icon(icon,
+                        size: 24.sp, color: accentColor.withValues(alpha: 0.5)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: delay.ms).slideX(begin: 0.05, end: 0);
+  }
+
+  _PersonaInfo _getPersonaInfo(
+      FinancialPersona persona, UserFinancialProfile profile) {
+    // Dynamic Data Injection
+    final savingsPct = (profile.savingsRate * 100).toStringAsFixed(0);
+    final topCategory = profile.categoryPreferences.isNotEmpty
+        ? profile.categoryPreferences.entries
+            .reduce((a, b) => a.value > b.value ? a : b)
+            .key
+        : 'Divers';
+
     switch (persona) {
       case FinancialPersona.saver:
         return _PersonaInfo(
@@ -330,15 +449,16 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           tagline: 'Sécurité & Vision Long Terme',
           icon: CupertinoIcons.checkmark_shield_fill,
           description:
-              'Votre profil indique une excellente discipline financière. Vous privilégiez la sécurité et réfléchissez avant chaque dépense. Votre fonds d\'urgence est probablement votre plus grande fierté.',
+              'Votre discipline est impressionnante. Avec un taux d\'épargne de $savingsPct%, vous bâtissez une sécurité durable.',
           strengths: [
-            'Discipline de fer face aux achats impulsifs',
-            'Forte résilience face aux imprévus',
-            'Vision claire de vos objectifs futurs',
+            'Vous épargnez $savingsPct% de vos revenus chaque mois.',
+            'Votre dépense principale ($topCategory) est maîtrisée.',
+            'Vision claire et résilience forte.',
+            'Gestion prudente des risques.'
           ],
           tips: [
             'Votre argent dort peut-être trop. Pensez à investir pour battre l\'inflation.',
-            'N\'oubliez pas de vivre ! Allouez un budget "plaisir" sans culpabilité.',
+            'Allouez un budget "plaisir" pour ne pas vous priver totalement.',
           ],
         );
       case FinancialPersona.spender:
@@ -347,15 +467,16 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           tagline: 'Expériences & Instant Présent',
           icon: CupertinoIcons.gift_fill,
           description:
-              'Pour vous, l\'argent est un moyen de vivre des expériences et de faire plaisir. Vous êtes généreux et profitez de la vie, parfois au détriment de votre sécurité financière future.',
+              'Vous croquez la vie à pleines dents ! Vos dépenses en "$topCategory" montrent que vous valorisez l\'expérience.',
           strengths: [
-            'Générosité naturelle envers vos proches',
-            'Optimisme et capacité à profiter de la vie',
-            'Investissement dans des expériences mémorables',
+            'Vous soutenez l\'économie par vos choix.',
+            'Optimisme et générosité naturels.',
+            'Vous savez vous faire plaisir.',
+            'Aucun regret sur vos achats.'
           ],
           tips: [
-            'Adoptez la règle 50/30/20 pour sécuriser votre avenir sans arrêter de vivre.',
-            'Automatisez votre épargne dès le jour de paie pour ne pas la dépenser.',
+            'Visez d\'augmenter votre épargne (actuellement $savingsPct%) vers 10-20%.',
+            'Automatisez un virement vers un compte épargne dès le jour de paie.',
           ],
         );
       case FinancialPersona.planner:
@@ -364,15 +485,16 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           tagline: 'Organisation & Contrôle',
           icon: CupertinoIcons.map_fill,
           description:
-              'Vos finances sont un mécanisme bien huilé. Vous savez exactement où va chaque franc et vous avez un plan pour tout. L\'imprévu est votre seul véritable ennemi.',
+              'Tout est sous contrôle. Votre taux d\'épargne de $savingsPct% et vos dépenses régulières montrent une grande maîtrise.',
           strengths: [
-            'Maîtrise totale de votre cash-flow',
-            'Clarté sur vos objectifs financiers',
-            'Capacité à optimiser chaque dépense',
+            'Cash-flow parfaitement maîtrisé.',
+            'Objectifs financiers clairs.',
+            'Vous anticipez chaque dépense.',
+            'Pas de surprise en fin de mois.'
           ],
           tips: [
-            'Laissez un peu de place à l\'imprévu pour réduire votre stress.',
-            'Vérifiez si votre plan rigoureux correspond toujours à vos envies de vie actuelles.',
+            'Relâchez parfois la pression, l\'imprévu a du bon.',
+            'Vérifiez si vottre plan correspond toujours à vos envies de vie.',
           ],
         );
       case FinancialPersona.survival:
@@ -381,15 +503,16 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           tagline: 'Courage & Priorités',
           icon: CupertinoIcons.heart_fill,
           description:
-              'Vous gérez des flux tendus avec courage. Votre priorité actuelle est de couvrir les besoins essentiels. Chaque décision financière est un arbitrage important.',
+              'Vous gérez un budget serré avec courage. Chaque choix compte, et vous priorisez l\'essentiel.',
           strengths: [
-            'Capacité exceptionnelle à prioriser l\'essentiel',
-            'Débrouillardise pour trouver des solutions',
-            'Grande résilience face aux défis quotidiens',
+            'Capacité à prioriser l\'essentiel.',
+            'Grande débrouillardise quotidienne.',
+            'Vous savez faire beaucoup avec peu.',
+            'Résilience exemplaire.'
           ],
           tips: [
-            'Concentrez-vous sur la constitution d\'un micro-fonds de secours (20.000F).',
-            'Cherchez à stabiliser ou augmenter vos revenus avant de couper davantage.',
+            'Concentrez-vous sur la création d\'un micro-fonds de secours (20.000F).',
+            'Analysez vos dépenses en "$topCategory" pour trouver des économies.',
           ],
         );
       case FinancialPersona.fluctuator:
@@ -398,15 +521,16 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
           tagline: 'Adaptabilité & Réactivité',
           icon: CupertinoIcons.graph_circle_fill,
           description:
-              'Vos revenus ou dépenses font les montagnes russes. Vous avez développé une capacité unique à jongler entre les périodes d\'abondance et les périodes de vaches maigres.',
+              'Vos finances sont dynamiques. Vous savez jongler entre les mois fastes et les périodes creuses.',
           strengths: [
-            'Adaptabilité rapide aux changements de situation',
-            'Réactivité face aux opportunités',
-            'Capacité à vivre avec peu quand il le faut',
+            'Adaptabilité face aux changements.',
+            'Réactivité immédiate.',
+            'Vous savez réduire la voilure si besoin.',
+            'Gestion agile du budget.'
           ],
           tips: [
-            'Lissez votre budget : mettez de côté les mois fastes pour couvrir les mois creux.',
-            'Basez votre train de vie sur votre revenu minimum, jamais sur la moyenne.',
+            'Lissez votre budget en mettant de côté quand tout va bien.',
+            'Basez votre train de vie sur votre revenu minimum observé.',
           ],
         );
     }
@@ -430,5 +554,4 @@ class _PersonaInfo {
     required this.tips,
   });
 }
-
 
