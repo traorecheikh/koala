@@ -174,3 +174,4 @@ class TransactionHistoryEntry {
 }
 
 enum HistoryAction { added, deleted, modified }
+
