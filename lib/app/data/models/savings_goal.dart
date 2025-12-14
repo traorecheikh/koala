@@ -44,3 +44,4 @@ class SavingsGoal extends HiveObject {
   }
 }
 
+
