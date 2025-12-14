@@ -50,3 +50,4 @@ String? decryptContactQr(String encryptedBase64) {
   }
 }
 
+
