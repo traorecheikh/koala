@@ -255,3 +255,4 @@ class TransactionCategoryAdapter extends TypeAdapter<TransactionCategory> {
           typeId == other.typeId;
 }
 
+
