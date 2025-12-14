@@ -130,3 +130,4 @@ class FinancialEventsService extends GetxService {
     super.onClose();
   }
 }
+
