@@ -87,3 +87,4 @@ class CelebrationService extends GetxService {
   }
 }
 
+
