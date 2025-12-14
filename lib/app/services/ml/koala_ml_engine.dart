@@ -33,12 +33,12 @@ class KoalaMLEngine extends GetxService {
   late final GoalOptimizer goalOptimizer;
   late final SimulatorEngine simulatorEngine;
   late final BudgetSuggester budgetSuggester;
-  
+
   late final FinancialContextService _financialContextService; // Injected
 
   // Cached state
   UserFinancialProfile? _currentUserProfile;
-  List<SpendingAnomaly> _recentAnomalies = [];
+  final List<SpendingAnomaly> _recentAnomalies = [];
   ForecastResult? _currentForecast;
   FinancialHealthScore? _currentHealth;
 
@@ -50,7 +50,7 @@ class KoalaMLEngine extends GetxService {
 
   Future<KoalaMLEngine> init(HiveAesCipher? cipher) async {
     await modelStore.init(cipher); // Pass the cipher here
-    
+
     // Inject FinancialContextService (assumed to be initialized before MLEngine)
     _financialContextService = Get.find<FinancialContextService>();
 
@@ -62,25 +62,29 @@ class KoalaMLEngine extends GetxService {
     healthScorer = FinancialHealthScorer();
     insightGenerator = InsightGenerator(behaviorProfiler);
     goalOptimizer = GoalOptimizer(timeSeriesEngine);
-    simulatorEngine = SimulatorEngine(timeSeriesEngine, _financialContextService);
+    simulatorEngine =
+        SimulatorEngine(timeSeriesEngine, _financialContextService);
     budgetSuggester = BudgetSuggester();
 
     _currentUserProfile = modelStore.getUserProfile();
-    
+
     return this;
   }
 
   /// Run full analysis pipeline (e.g. on startup or background)
-  Future<void> runFullAnalysis(List<LocalTransaction> allTransactions, List<SavingsGoal> goals) async {
+  Future<void> runFullAnalysis(
+      List<LocalTransaction> allTransactions, List<SavingsGoal> goals) async {
     if (allTransactions.isEmpty) return;
 
     // Serialize transactions for background compute
-    final serialized = allTransactions.map((t) => {
-      'id': t.id,
-      'amount': t.amount,
-      'type': t.type.toString(),
-      'date': t.date.toIso8601String(),
-    }).toList();
+    final serialized = allTransactions
+        .map((t) => {
+              'id': t.id,
+              'amount': t.amount,
+              'type': t.type.toString(),
+              'date': t.date.toIso8601String(),
+            })
+        .toList();
 
     // Run lightweight analysis in background isolate to avoid UI jank
     try {
@@ -93,11 +97,21 @@ class KoalaMLEngine extends GetxService {
       );
 
       // Apply returned summary to internal state (on main isolate)
-      _currentForecast = ForecastResult(result['predictedEndBalance'] as double);
-      _currentHealth = FinancialHealthScore(score: result['healthScore'] as int);
+      _currentForecast = ForecastResult(
+        forecasts: [],
+        lowestBalance: (result['predictedEndBalance'] as num).toDouble(),
+        daysUntilZero: null,
+        riskLevel: ForecastRiskLevel.low,
+      );
+      _currentHealth = FinancialHealthScore(
+        totalScore: result['healthScore'] as int,
+        factors: [],
+        penalties: [],
+        calculatedAt: DateTime.now(),
+      );
 
       // Kick off heavier model training asynchronously on main isolate but non-blocking
-      unawaited(Future(() async {
+      (() async {
         try {
           await categoryClassifier.train(allTransactions);
           await timeSeriesEngine.train(allTransactions);
@@ -113,7 +127,7 @@ class KoalaMLEngine extends GetxService {
         } catch (e) {
           // Log and continue; heavy work may fail silently
         }
-      }()));
+      })();
     } catch (e) {
       // Fallback to previous synchronous path if compute fails
       await categoryClassifier.train(allTransactions);
@@ -128,25 +142,31 @@ class KoalaMLEngine extends GetxService {
         await modelStore.savePattern(p);
       }
 
-      _currentHealth = FinancialHealthScore(score: 100);
+      _currentHealth = FinancialHealthScore(
+          totalScore: 100,
+          factors: [],
+          penalties: [],
+          calculatedAt: DateTime.now());
       double currentBalance = _financialContextService.currentBalance.value;
       _currentForecast = timeSeriesEngine.predict(currentBalance, 30);
     }
   }
 
   /// Process a new transaction (real-time)
-  Future<void> onTransactionAdded(LocalTransaction transaction, List<LocalTransaction> history) async {
+  Future<void> onTransactionAdded(
+      LocalTransaction transaction, List<LocalTransaction> history) async {
     // 1. Categorize if needed (handled by UI usually, but we can suggest)
-    
+
     // 2. Check Anomaly
-    final anomalies = anomalyDetector.detectAnomalies([transaction], history, _currentUserProfile);
+    final anomalies = anomalyDetector
+        .detectAnomalies([transaction], history, _currentUserProfile);
     if (anomalies.isNotEmpty) {
       _recentAnomalies.addAll(anomalies);
       // Trigger notification?
     }
 
     // 3. Update patterns incrementally? (Skip for now, wait for full analysis)
-    
+
     // 4. Update classifier
     categoryClassifier.learnFromTransaction(transaction);
   }
@@ -154,7 +174,7 @@ class KoalaMLEngine extends GetxService {
   /// Get simplified insights for UI
   List<MLInsight> getInsights() {
     if (_currentUserProfile == null || _currentHealth == null) return [];
-    
+
     return insightGenerator.generateInsights(
       profile: _currentUserProfile!,
       patterns: modelStore.getAllPatterns(),
@@ -174,7 +194,9 @@ class KoalaMLEngine extends GetxService {
   ForecastResult? get currentForecast => _currentForecast;
   UserFinancialProfile? get currentUserProfile => _currentUserProfile;
 
-  double suggestBudgetForCategory(String categoryId, List<LocalTransaction> history) {
+  double suggestBudgetForCategory(
+      String categoryId, List<LocalTransaction> history) {
     return budgetSuggester.suggestBudgetForCategory(categoryId, history);
   }
 }
+
