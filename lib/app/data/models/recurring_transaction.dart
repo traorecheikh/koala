@@ -100,3 +100,4 @@ class RecurringTransaction extends HiveObject {
     return false;
   }
 }
+
