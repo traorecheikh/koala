@@ -22,13 +22,17 @@ class UserFinancialProfileAdapter extends TypeAdapter<UserFinancialProfile> {
       consistencyScore: (fields[2] as num).toDouble(),
       categoryPreferences: (fields[3] as Map).cast<String, double>(),
       detectedPatterns: (fields[4] as List).cast<String>(),
+      weekendRatio: fields[5] == null ? 0.0 : (fields[5] as num).toDouble(),
+      nightRatio: fields[6] == null ? 0.0 : (fields[6] as num).toDouble(),
+      dominantCategory: fields[7] == null ? 'Autre' : fields[7] as String,
+      averageAmount: fields[8] == null ? 0.0 : (fields[8] as num).toDouble(),
     );
   }
 
   @override
   void write(BinaryWriter writer, UserFinancialProfile obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.personaType)
       ..writeByte(1)
@@ -38,7 +42,15 @@ class UserFinancialProfileAdapter extends TypeAdapter<UserFinancialProfile> {
       ..writeByte(3)
       ..write(obj.categoryPreferences)
       ..writeByte(4)
-      ..write(obj.detectedPatterns);
+      ..write(obj.detectedPatterns)
+      ..writeByte(5)
+      ..write(obj.weekendRatio)
+      ..writeByte(6)
+      ..write(obj.nightRatio)
+      ..writeByte(7)
+      ..write(obj.dominantCategory)
+      ..writeByte(8)
+      ..write(obj.averageAmount);
   }
 
   @override
@@ -51,5 +63,4 @@ class UserFinancialProfileAdapter extends TypeAdapter<UserFinancialProfile> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
 
