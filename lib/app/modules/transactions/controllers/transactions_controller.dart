@@ -136,3 +136,4 @@ class TransactionsController extends GetxController {
            searchController.text.isNotEmpty;
   }
 }
+
