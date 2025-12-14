@@ -212,7 +212,7 @@ class CategoriesController extends GetxController {
                 onValueChanged: (value) {
                   // State management inside dialog would need StatefulBuilder or Getx
                   // For simplicity, just logic here
-                  selectedType = value!;
+                  selectedType = value;
                 },
               ),
               const Spacer(),
