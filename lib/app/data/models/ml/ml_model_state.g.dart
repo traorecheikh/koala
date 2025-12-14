@@ -52,4 +52,3 @@ class MLModelStateAdapter extends TypeAdapter<MLModelState> {
           typeId == other.typeId;
 }
 
-
