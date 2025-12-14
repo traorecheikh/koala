@@ -27,3 +27,4 @@ class UserFinancialProfile extends HiveObject {
     required this.detectedPatterns,
   });
 }
+
