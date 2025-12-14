@@ -64,3 +64,4 @@ Map<String, dynamic> _analyzeTransactions(Map payload) {
 // compute() requires a top-level or static function, so expose a wrapper
 Map<String, dynamic> analyzeTransactions(Map payload) => _analyzeTransactions(payload);
 
+
