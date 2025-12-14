@@ -20,3 +20,4 @@ class HomeBinding extends Bindings {
     Get.lazyPut<SimulatorController>(() => SimulatorController());
   }
 }
+
