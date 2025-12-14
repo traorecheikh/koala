@@ -54,3 +54,4 @@ class Budget extends HiveObject {
     );
   }
 }
+
