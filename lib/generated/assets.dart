@@ -10,3 +10,4 @@ class Assets {
   static const String imgOm = 'assets/img/om.png';
   static const String imgWave = 'assets/img/wave.png';
 }
+
