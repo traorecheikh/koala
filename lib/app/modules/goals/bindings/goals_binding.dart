@@ -10,3 +10,4 @@ class GoalsBinding extends Bindings {
   }
 }
 
+
