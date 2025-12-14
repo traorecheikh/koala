@@ -43,12 +43,14 @@ class _RechargeSheetState extends State<_RechargeSheet> {
 
     if (mounted) {
       NavigationHelper.safeBack();
-      // TODO: Navigate to specific payment method flow
+      // Payment integration - show info message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Redirection vers $_selectedMethod...'),
-          backgroundColor: Colors.black87,
+          content: Text(
+              'Intégration $_selectedMethod bientôt disponible. Rechargez via l\'application $_selectedMethod.'),
+          backgroundColor: const Color(0xFF2A2A3E),
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -126,12 +128,12 @@ class _RechargeSheetState extends State<_RechargeSheet> {
               child: Column(
                 children: [
                   _PaymentMethodTile(
-                        method: 'wave',
-                        title: 'Wave',
-                        subtitle: 'Paiement mobile Wave',
-                        isSelected: _selectedMethod == 'wave',
-                        onTap: () => _selectMethod('wave'),
-                      )
+                    method: 'wave',
+                    title: 'Wave',
+                    subtitle: 'Paiement mobile Wave',
+                    isSelected: _selectedMethod == 'wave',
+                    onTap: () => _selectMethod('wave'),
+                  )
                       .animate()
                       .slideX(
                         begin: -0.2,
@@ -144,12 +146,12 @@ class _RechargeSheetState extends State<_RechargeSheet> {
                   SizedBox(height: 12.h),
 
                   _PaymentMethodTile(
-                        method: 'orange',
-                        title: 'Orange Money',
-                        subtitle: 'Paiement mobile Orange',
-                        isSelected: _selectedMethod == 'orange',
-                        onTap: () => _selectMethod('orange'),
-                      )
+                    method: 'orange',
+                    title: 'Orange Money',
+                    subtitle: 'Paiement mobile Orange',
+                    isSelected: _selectedMethod == 'orange',
+                    onTap: () => _selectMethod('orange'),
+                  )
                       .animate()
                       .slideX(
                         begin: -0.2,
@@ -162,12 +164,12 @@ class _RechargeSheetState extends State<_RechargeSheet> {
                   SizedBox(height: 12.h),
 
                   _PaymentMethodTile(
-                        method: 'free',
-                        title: 'Free Money',
-                        subtitle: 'Paiement mobile Free',
-                        isSelected: _selectedMethod == 'free',
-                        onTap: () => _selectMethod('free'),
-                      )
+                    method: 'free',
+                    title: 'Free Money',
+                    subtitle: 'Paiement mobile Free',
+                    isSelected: _selectedMethod == 'free',
+                    onTap: () => _selectMethod('free'),
+                  )
                       .animate()
                       .slideX(
                         begin: -0.2,
@@ -227,11 +229,11 @@ class _RechargeSheetState extends State<_RechargeSheet> {
                       ),
                     ),
                   ).animate().slideY(
-                    begin: 0.3,
-                    duration: 500.ms,
-                    delay: 500.ms,
-                    curve: Curves.easeOutQuart,
-                  ),
+                        begin: 0.3,
+                        duration: 500.ms,
+                        delay: 500.ms,
+                        curve: Curves.easeOutQuart,
+                      ),
 
                   SizedBox(height: 24.h),
                 ],
@@ -403,3 +405,4 @@ class _PaymentMethodTileState extends State<_PaymentMethodTile> {
     }
   }
 }
+
