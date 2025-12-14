@@ -27,3 +27,4 @@ class MLModelState extends HiveObject {
     required this.validationScore,
   });
 }
+
