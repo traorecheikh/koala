@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
+import 'package:koaa/app/routes/app_pages.dart';
+import 'package:intl/intl.dart';
 
 /// A comprehensive financial health dashboard widget
 /// Shows health score, alerts, and quick forecasts
@@ -47,9 +50,9 @@ class FinancialHealthWidget extends StatelessWidget {
       height: 120.h,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: KoalaColors.border(context)),
       ),
       child: Center(
         child: Column(
@@ -58,15 +61,14 @@ class FinancialHealthWidget extends StatelessWidget {
             SizedBox(
               width: 24.w,
               height: 24.w,
-              child: const CircularProgressIndicator(strokeWidth: 2),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: KoalaColors.primary),
             ),
             SizedBox(height: 8.h),
             Text(
               'Analyse en cours...',
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey,
-              ),
+              style: KoalaTypography.bodySmall(context)
+                  .copyWith(color: KoalaColors.textSecondary(context)),
             ),
           ],
         ),
@@ -83,33 +85,25 @@ class _HealthScoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     Color scoreColor;
     if (summary.healthScore >= 80) {
-      scoreColor = Colors.green;
+      scoreColor = KoalaColors.success;
     } else if (summary.healthScore >= 60) {
-      scoreColor = Colors.amber;
+      scoreColor = KoalaColors.warning; // Used as Amber roughly
     } else if (summary.healthScore >= 40) {
-      scoreColor = Colors.orange;
+      scoreColor = const Color(
+          0xFFFFCC00); // Yellow/Amber manually if warning is too orange
     } else {
-      scoreColor = Colors.red;
+      scoreColor = KoalaColors.destructive;
     }
 
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1B1E) : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: KoalaColors.border(context)),
+        boxShadow: KoalaColors.shadowSubtle,
       ),
       child: Row(
         children: [
@@ -127,10 +121,9 @@ class _HealthScoreCard extends StatelessWidget {
               children: [
                 Text(
                   'Santé Financière',
-                  style: TextStyle(
-                    fontSize: 14.sp,
+                  style: KoalaTypography.bodySmall(context).copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey,
+                    color: KoalaColors.textSecondary(context),
                   ),
                 ),
                 SizedBox(height: 4.h),
@@ -138,25 +131,20 @@ class _HealthScoreCard extends StatelessWidget {
                   children: [
                     Text(
                       summary.statusText,
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+                      style: KoalaTypography.heading2(context),
                     ),
                     SizedBox(width: 8.w),
                     Text(
                       summary.statusEmoji,
-                      style: TextStyle(fontSize: 18.sp),
+                      style: TextStyle(fontSize: 22.sp),
                     ),
                   ],
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   summary.statusDescription,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: isDark ? Colors.white54 : Colors.black45,
+                  style: KoalaTypography.caption(context).copyWith(
+                    color: KoalaColors.textSecondary(context),
                     height: 1.3,
                   ),
                   maxLines: 2,
@@ -167,10 +155,10 @@ class _HealthScoreCard extends StatelessWidget {
         ],
       ),
     ).animate().scale(
-      begin: const Offset(0.95, 0.95),
-      duration: 400.ms,
-      curve: Curves.easeOutBack,
-    );
+          begin: const Offset(0.95, 0.95),
+          duration: 400.ms,
+          curve: Curves.easeOutBack,
+        );
   }
 }
 
@@ -230,11 +218,7 @@ class _AnimatedHealthScore extends StatelessWidget {
             builder: (context, value, _) {
               return Text(
                 '$value',
-                style: TextStyle(
-                  fontSize: 22.sp,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+                style: KoalaTypography.heading3(context).copyWith(color: color),
               );
             },
           ),
@@ -297,16 +281,13 @@ class _AlertsSection extends StatelessWidget {
             children: [
               Icon(
                 CupertinoIcons.bell_fill,
-                color: Colors.orange,
+                color: KoalaColors.warning,
                 size: 20.sp,
               ),
               SizedBox(width: 8.w),
               Text(
                 'Alertes',
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: KoalaTypography.heading3(context),
               ),
             ],
           ),
@@ -325,40 +306,31 @@ class _AlertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     Color alertColor;
     switch (alert.severity) {
       case AlertSeverity.critical:
-        alertColor = Colors.red;
+        alertColor = KoalaColors.destructive;
         break;
       case AlertSeverity.high:
-        alertColor = Colors.orange;
+        alertColor = KoalaColors.warning; // Orange for high
         break;
       case AlertSeverity.medium:
-        alertColor = Colors.amber;
+        alertColor = const Color(0xFFFFCC00); // Amber/Yellow
         break;
       case AlertSeverity.positive:
-        alertColor = Colors.green;
+        alertColor = KoalaColors.success;
         break;
       default:
-        alertColor = Colors.blue;
+        alertColor = KoalaColors.accent;
     }
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1B1E) : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade100),
+        boxShadow: KoalaColors.shadowSubtle,
+        border: Border.all(color: KoalaColors.border(context)),
       ),
       clipBehavior: Clip.hardEdge,
       child: Container(
@@ -383,20 +355,19 @@ class _AlertCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     alert.title,
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
+                    style: KoalaTypography.bodyMedium(context)
+                        .copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
                 SizedBox(width: 8.w),
                 InkWell(
-                  onTap: () => Get.find<IntelligenceService>().dismissAlert(alert.id),
+                  onTap: () =>
+                      Get.find<IntelligenceService>().dismissAlert(alert.id),
                   borderRadius: BorderRadius.circular(12.r),
                   child: Padding(
                     padding: EdgeInsets.all(4.w),
-                    child: Icon(CupertinoIcons.xmark, size: 18.sp, color: Colors.grey),
+                    child: Icon(CupertinoIcons.xmark,
+                        size: 18.sp, color: KoalaColors.textSecondary(context)),
                   ),
                 ),
               ],
@@ -404,9 +375,8 @@ class _AlertCard extends StatelessWidget {
             SizedBox(height: 8.h),
             Text(
               alert.message,
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: isDark ? Colors.white70 : Colors.black54,
+              style: KoalaTypography.bodySmall(context).copyWith(
+                color: KoalaColors.textSecondary(context),
                 height: 1.4,
               ),
             ),
@@ -414,13 +384,31 @@ class _AlertCard extends StatelessWidget {
               SizedBox(height: 12.h),
               GestureDetector(
                 onTap: () {
-                  // TODO: Implement specific fix actions
-                  Get.snackbar('Action', 'Applying fix: ${alert.actionSuggestion}');
+                  // Navigate to relevant screen based on action
+                  final action = alert.actionSuggestion.toLowerCase();
+                  if (action.contains('budget') ||
+                      action.contains('dépenses') ||
+                      action.contains('strict')) {
+                    Get.toNamed(Routes.budget);
+                  } else if (action.contains('dette') ||
+                      action.contains('remboursement')) {
+                    Get.toNamed(Routes.debt);
+                  } else if (action.contains('objectif')) {
+                    Get.toNamed(Routes.goals);
+                  } else if (action.contains('prêts') ||
+                      action.contains('suivre')) {
+                    Get.toNamed(Routes.debt);
+                  } else if (action.contains('planifier')) {
+                    Get.toNamed(Routes.budget);
+                  } else {
+                    Get.toNamed(Routes.analytics);
+                  }
                 },
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
+                    color: KoalaColors.background(context),
                     borderRadius: BorderRadius.circular(8.r),
                     border: Border.all(color: alertColor.withOpacity(0.2)),
                   ),
@@ -435,14 +423,14 @@ class _AlertCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           alert.actionSuggestion,
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                            fontWeight: FontWeight.w500,
+                          style: KoalaTypography.caption(context).copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      Icon(CupertinoIcons.chevron_right, size: 14.sp, color: Colors.grey),
+                      Icon(CupertinoIcons.chevron_right,
+                          size: 14.sp,
+                          color: KoalaColors.textSecondary(context)),
                     ],
                   ),
                 ),
@@ -463,25 +451,18 @@ class _ForecastSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final summary = forecast.summary;
 
     final isPositive = summary.endBalance > 0;
-    final trendColor = isPositive ? Colors.green : Colors.red;
+    final trendColor =
+        isPositive ? KoalaColors.success : KoalaColors.destructive;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1B1E) : Colors.white,
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(24.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade100),
+        boxShadow: KoalaColors.shadowSubtle,
+        border: Border.all(color: KoalaColors.border(context)),
       ),
       clipBehavior: Clip.hardEdge,
       child: Padding(
@@ -494,23 +475,19 @@ class _ForecastSummaryCard extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(8.w),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: KoalaColors.accent.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     CupertinoIcons.chart_bar_alt_fill,
-                    color: Colors.blue,
+                    color: KoalaColors.accent,
                     size: 18.sp,
                   ),
                 ),
                 SizedBox(width: 12.w),
                 Text(
                   'Prévision 30 jours',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
+                  style: KoalaTypography.heading3(context),
                 ),
               ],
             ),
@@ -520,26 +497,29 @@ class _ForecastSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _ForecastMetric(
                     label: 'Solde prévu',
-                    value: '${summary.endBalance.toStringAsFixed(0)} F',
+                    value:
+                        '${NumberFormat.compact(locale: "fr_FR").format(summary.endBalance)} F',
+                    // Compact format for space
                     color: trendColor,
                     icon: isPositive
                         ? CupertinoIcons.arrow_up_right
                         : CupertinoIcons.arrow_down_right,
-                    isDark: isDark,
                   ),
                 ),
                 Container(
                   width: 1,
                   height: 40.h,
-                  color: isDark ? Colors.white10 : Colors.grey.shade200,
+                  color: KoalaColors.border(context),
                 ),
                 Expanded(
                   child: _ForecastMetric(
                     label: 'Point bas',
-                    value: '${summary.lowestBalance.toStringAsFixed(0)} F',
-                    color: summary.lowestBalance < 0 ? Colors.red : Colors.grey,
+                    value:
+                        '${NumberFormat.compact(locale: "fr_FR").format(summary.lowestBalance)} F',
+                    color: summary.lowestBalance < 0
+                        ? KoalaColors.destructive
+                        : KoalaColors.textSecondary(context),
                     icon: CupertinoIcons.arrow_down,
-                    isDark: isDark,
                   ),
                 ),
               ],
@@ -556,14 +536,12 @@ class _ForecastMetric extends StatelessWidget {
   final String value;
   final Color color;
   final IconData icon;
-  final bool isDark;
 
   const _ForecastMetric({
     required this.label,
     required this.value,
     required this.color,
     required this.icon,
-    required this.isDark,
   });
 
   @override
@@ -573,11 +551,8 @@ class _ForecastMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: isDark ? Colors.white54 : Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
+          style: KoalaTypography.caption(context)
+              .copyWith(color: KoalaColors.textSecondary(context)),
         ),
         SizedBox(height: 8.h),
         Row(
@@ -587,11 +562,7 @@ class _ForecastMetric extends StatelessWidget {
             SizedBox(width: 6.w),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
+              style: KoalaTypography.heading3(context),
             ),
           ],
         ),
@@ -599,3 +570,4 @@ class _ForecastMetric extends StatelessWidget {
     );
   }
 }
+
