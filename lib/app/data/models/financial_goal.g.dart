@@ -127,3 +127,4 @@ class GoalMilestoneAdapter extends TypeAdapter<GoalMilestone> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
