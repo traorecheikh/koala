@@ -9,6 +9,7 @@ import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/modules/settings/views/persona/persona_definitions.dart';
 
 class DiscoverPersonaView extends StatefulWidget {
   const DiscoverPersonaView({super.key});
@@ -184,12 +185,13 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
   }
 
   Widget _buildPersonaDetails(UserFinancialProfile profile) {
-    final persona = FinancialPersona.values.firstWhere(
-        (e) => e.name == profile.personaType,
-        orElse: () => FinancialPersona.planner);
+    // Dynamic Classification
+    final definition = PersonaDefinitions.classify(profile);
+    final primaryColor = definition.color(context);
 
-    final info = _getPersonaInfo(persona, profile);
-    final primaryColor = KoalaColors.primaryUi(context);
+    // Get dynamic text
+    final strengths = definition.strengths(profile);
+    final tips = definition.tips(profile);
 
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
@@ -229,7 +231,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      info.icon,
+                      definition.icon,
                       size: 48.sp,
                       color: primaryColor,
                     ),
@@ -238,7 +240,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
                       .scale(duration: 600.ms, curve: Curves.easeOutBack),
                   SizedBox(height: 24.h),
                   Text(
-                    info.title,
+                    definition.title,
                     style: KoalaTypography.heading1(context).copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -257,7 +259,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
                       border: Border.all(color: KoalaColors.border(context)),
                     ),
                     child: Text(
-                      info.tagline,
+                      definition.tagline,
                       style: KoalaTypography.caption(context).copyWith(
                         fontWeight: FontWeight.w600,
                         color: KoalaColors.textSecondary(context),
@@ -266,7 +268,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
                   ).animate().fadeIn(delay: 200.ms),
                   SizedBox(height: 24.h),
                   Text(
-                    info.description,
+                    definition.description,
                     style: KoalaTypography.bodyMedium(context).copyWith(
                       height: 1.6,
                       color: KoalaColors.textSecondary(context),
@@ -292,7 +294,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
               mainAxisSpacing: 12.h,
               crossAxisSpacing: 12.w,
               childAspectRatio: 1.3,
-              children: info.strengths.asMap().entries.map((entry) {
+              children: strengths.asMap().entries.map((entry) {
                 return _buildSmallBentoCard(
                   entry.value,
                   delay: 500 + (entry.key * 100),
@@ -317,7 +319,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
               mainAxisSpacing: 12.h,
               crossAxisSpacing: 12.w,
               childAspectRatio: 3.5, // Wider aspect ratio for list-like cards
-              children: info.tips.asMap().entries.map((entry) {
+              children: tips.asMap().entries.map((entry) {
                 return _buildWideBentoCard(
                   entry.value,
                   delay: 800 + (entry.key * 100),
@@ -431,127 +433,4 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
       ),
     ).animate().fadeIn(delay: delay.ms).slideX(begin: 0.05, end: 0);
   }
-
-  _PersonaInfo _getPersonaInfo(
-      FinancialPersona persona, UserFinancialProfile profile) {
-    // Dynamic Data Injection
-    final savingsPct = (profile.savingsRate * 100).toStringAsFixed(0);
-    final topCategory = profile.categoryPreferences.isNotEmpty
-        ? profile.categoryPreferences.entries
-            .reduce((a, b) => a.value > b.value ? a : b)
-            .key
-        : 'Divers';
-
-    switch (persona) {
-      case FinancialPersona.saver:
-        return _PersonaInfo(
-          title: 'L\'Écureuil Avisé',
-          tagline: 'Sécurité & Vision Long Terme',
-          icon: CupertinoIcons.checkmark_shield_fill,
-          description:
-              'Votre discipline est impressionnante. Avec un taux d\'épargne de $savingsPct%, vous bâtissez une sécurité durable.',
-          strengths: [
-            'Vous épargnez $savingsPct% de vos revenus chaque mois.',
-            'Votre dépense principale ($topCategory) est maîtrisée.',
-            'Vision claire et résilience forte.',
-            'Gestion prudente des risques.'
-          ],
-          tips: [
-            'Votre argent dort peut-être trop. Pensez à investir pour battre l\'inflation.',
-            'Allouez un budget "plaisir" pour ne pas vous priver totalement.',
-          ],
-        );
-      case FinancialPersona.spender:
-        return _PersonaInfo(
-          title: 'Le Bon Vivant',
-          tagline: 'Expériences & Instant Présent',
-          icon: CupertinoIcons.gift_fill,
-          description:
-              'Vous croquez la vie à pleines dents ! Vos dépenses en "$topCategory" montrent que vous valorisez l\'expérience.',
-          strengths: [
-            'Vous soutenez l\'économie par vos choix.',
-            'Optimisme et générosité naturels.',
-            'Vous savez vous faire plaisir.',
-            'Aucun regret sur vos achats.'
-          ],
-          tips: [
-            'Visez d\'augmenter votre épargne (actuellement $savingsPct%) vers 10-20%.',
-            'Automatisez un virement vers un compte épargne dès le jour de paie.',
-          ],
-        );
-      case FinancialPersona.planner:
-        return _PersonaInfo(
-          title: 'Le Stratège',
-          tagline: 'Organisation & Contrôle',
-          icon: CupertinoIcons.map_fill,
-          description:
-              'Tout est sous contrôle. Votre taux d\'épargne de $savingsPct% et vos dépenses régulières montrent une grande maîtrise.',
-          strengths: [
-            'Cash-flow parfaitement maîtrisé.',
-            'Objectifs financiers clairs.',
-            'Vous anticipez chaque dépense.',
-            'Pas de surprise en fin de mois.'
-          ],
-          tips: [
-            'Relâchez parfois la pression, l\'imprévu a du bon.',
-            'Vérifiez si vottre plan correspond toujours à vos envies de vie.',
-          ],
-        );
-      case FinancialPersona.survival:
-        return _PersonaInfo(
-          title: 'Le Résilient',
-          tagline: 'Courage & Priorités',
-          icon: CupertinoIcons.heart_fill,
-          description:
-              'Vous gérez un budget serré avec courage. Chaque choix compte, et vous priorisez l\'essentiel.',
-          strengths: [
-            'Capacité à prioriser l\'essentiel.',
-            'Grande débrouillardise quotidienne.',
-            'Vous savez faire beaucoup avec peu.',
-            'Résilience exemplaire.'
-          ],
-          tips: [
-            'Concentrez-vous sur la création d\'un micro-fonds de secours (20.000F).',
-            'Analysez vos dépenses en "$topCategory" pour trouver des économies.',
-          ],
-        );
-      case FinancialPersona.fluctuator:
-        return _PersonaInfo(
-          title: 'L\'Acrobate',
-          tagline: 'Adaptabilité & Réactivité',
-          icon: CupertinoIcons.graph_circle_fill,
-          description:
-              'Vos finances sont dynamiques. Vous savez jongler entre les mois fastes et les périodes creuses.',
-          strengths: [
-            'Adaptabilité face aux changements.',
-            'Réactivité immédiate.',
-            'Vous savez réduire la voilure si besoin.',
-            'Gestion agile du budget.'
-          ],
-          tips: [
-            'Lissez votre budget en mettant de côté quand tout va bien.',
-            'Basez votre train de vie sur votre revenu minimum observé.',
-          ],
-        );
-    }
-  }
 }
-
-class _PersonaInfo {
-  final String title;
-  final String tagline;
-  final IconData icon;
-  final String description;
-  final List<String> strengths;
-  final List<String> tips;
-
-  _PersonaInfo({
-    required this.title,
-    required this.tagline,
-    required this.icon,
-    required this.description,
-    required this.strengths,
-    required this.tips,
-  });
-}
-
