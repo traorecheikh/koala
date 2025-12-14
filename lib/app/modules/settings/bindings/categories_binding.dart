@@ -10,3 +10,4 @@ class CategoriesBinding extends Bindings {
     );
   }
 }
+
