@@ -31,3 +31,4 @@ class BudgetSuggester {
     return (averageMonthlySpending * 1.1).roundToDouble();
   }
 }
+
