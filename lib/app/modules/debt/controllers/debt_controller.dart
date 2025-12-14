@@ -170,3 +170,4 @@ class DebtController extends GetxController {
   // double calculateInterestSavings(Debt debt, double newMonthlyPayment) { ... }
 }
 
+
