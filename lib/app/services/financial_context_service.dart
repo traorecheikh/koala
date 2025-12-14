@@ -374,3 +374,4 @@ class FinancialContextService extends GetxService {
     return allDebts.where((debt) => !debt.isPaidOff).toList();
   }
 }
+
