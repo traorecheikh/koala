@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
@@ -20,40 +23,40 @@ class RecurringTransactionsView
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: KoalaColors.background(context),
         elevation: 0,
         centerTitle: false,
         leading: IconButton(
-          icon: const Icon(CupertinoIcons.back, color: Colors.black),
+          icon: Icon(CupertinoIcons.back, color: KoalaColors.text(context)),
           onPressed: () => NavigationHelper.safeBack(),
+          tooltip: 'Retour',
         ),
         title: Text(
           'Transactions récurrentes',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: KoalaTypography.heading3(context),
         ),
       ),
       body: SafeArea(
         child: Obx(
           () => controller.recurringTransactions.isEmpty
-              ? _buildEmptyState(theme)
+              ? _buildEmptyState(context)
               : ListView.separated(
-                    padding: EdgeInsets.all(20.w),
-                    itemCount: controller.recurringTransactions.length,
-                    separatorBuilder: (context, index) => SizedBox(height: 12.h),
-                    itemBuilder: (context, index) {
-                      final transaction =
-                          controller.recurringTransactions[index];
-                      return _TransactionListItem(
-                        transaction: transaction,
-                      );
-                    },
-                  )
+                  key: const PageStorageKey('recurring_transactions_list'),
+                  padding: EdgeInsets.all(KoalaSpacing.xl),
+                  itemCount: controller.recurringTransactions.length,
+                  separatorBuilder: (context, index) =>
+                      SizedBox(height: KoalaSpacing.md),
+                  itemBuilder: (context, index) {
+                    final transaction = controller.recurringTransactions[index];
+                    return _TransactionListItem(
+                      key: ValueKey(transaction.id),
+                      transaction: transaction,
+                    );
+                  },
+                )
                   .animate()
                   .slideY(
                     begin: 0.1,
@@ -68,50 +71,25 @@ class RecurringTransactionsView
           HapticFeedback.lightImpact();
           showAddRecurringTransactionDialog(context);
         },
-        backgroundColor: Colors.black,
+        backgroundColor: KoalaColors.primaryUi(context),
         elevation: 4,
+        tooltip: 'Ajouter une transaction récurrente',
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(24.w),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              CupertinoIcons.repeat,
-              size: 48.sp,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          SizedBox(height: 24.h),
-          Text(
-            'Aucune récurrence',
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade800,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Vos abonnements et factures apparaîtront ici',
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: Colors.grey.shade500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+  Widget _buildEmptyState(BuildContext context) {
+    return KoalaEmptyState(
+      title: 'Aucune récurrence',
+      message:
+          'Ajoutez vos abonnements et factures récurrentes pour un meilleur suivi',
+      icon: CupertinoIcons.repeat,
+      buttonText: 'Ajouter une transaction',
+      onButtonPressed: () {
+        HapticFeedback.lightImpact();
+        showAddRecurringTransactionDialog(context);
+      },
     );
   }
 }
@@ -119,20 +97,32 @@ class RecurringTransactionsView
 class _TransactionListItem extends StatelessWidget {
   final RecurringTransaction transaction;
 
-  const _TransactionListItem({required this.transaction});
+  const _TransactionListItem({super.key, required this.transaction});
 
   String _getNextPaymentDate() {
     final now = DateTime.now();
-    DateTime nextDate;
-    
+
     if (transaction.frequency == Frequency.monthly) {
-       nextDate = DateTime(now.year, now.month, transaction.dayOfMonth);
-       if (nextDate.isBefore(now)) {
-         nextDate = DateTime(now.year, now.month + 1, transaction.dayOfMonth);
-       }
-       return 'Prochain : ${DateFormat('dd MMM', 'fr_FR').format(nextDate)}';
+      try {
+        DateTime nextDate =
+            DateTime(now.year, now.month, transaction.dayOfMonth);
+
+        if (nextDate.isBefore(now)) {
+          final nextMonth = now.month == 12 ? 1 : now.month + 1;
+          final nextYear = now.month == 12 ? now.year + 1 : now.year;
+          final lastDayOfMonth = DateTime(nextYear, nextMonth + 1, 0).day;
+          final validDay = transaction.dayOfMonth > lastDayOfMonth
+              ? lastDayOfMonth
+              : transaction.dayOfMonth;
+
+          nextDate = DateTime(nextYear, nextMonth, validDay);
+        }
+
+        return 'Prochain : ${DateFormat('dd MMM', 'fr_FR').format(nextDate)}';
+      } catch (e) {
+        return 'Mensuel';
+      }
     } else if (transaction.frequency == Frequency.weekly) {
-      // Simplified weekly logic
       return 'Hebdomadaire';
     } else {
       return 'Quotidien';
@@ -141,138 +131,142 @@ class _TransactionListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categoriesController = Get.find<CategoriesController>();
-    
+    CategoriesController? categoriesController;
+    try {
+      categoriesController = Get.find<CategoriesController>();
+    } catch (e) {
+      // Ignore
+    }
+
     String amountPrefix = '';
-    Color amountColor = Colors.black;
+    Color amountColor;
     String iconKey = 'other';
     Color iconColor = Colors.grey;
 
-    try {
-      if (transaction.type == TransactionType.expense) {
-        amountPrefix = '-';
-        amountColor = Colors.orange.shade800;
-        iconColor = Colors.orange;
-      } else {
-        amountPrefix = '+';
-        amountColor = Colors.green.shade700;
-        iconColor = Colors.green;
-      }
+    if (transaction.type == TransactionType.expense) {
+      amountPrefix = '-';
+      amountColor = KoalaColors.destructive; // Standardized
+      iconColor = KoalaColors.destructive;
+    } else {
+      amountPrefix = '+';
+      amountColor = KoalaColors.success; // Standardized
+      iconColor = KoalaColors.success;
+    }
 
-      if (transaction.categoryId != null) {
-        final cat = categoriesController.categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
+    if (transaction.categoryId != null && categoriesController != null) {
+      try {
+        final cat = categoriesController.categories.firstWhereOrNull(
+          (c) => c.id == transaction.categoryId,
+        );
         if (cat != null) {
           iconKey = cat.icon;
           iconColor = Color(cat.colorValue);
         }
-      } else {
-         iconKey = transaction.category.iconKey;
+      } catch (e) {
+        // Ignore
       }
-    } catch (e) {
-      // Fallback
+    } else {
+      iconKey = transaction.category.iconKey;
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16.r),
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            showAddRecurringTransactionDialog(context, transaction: transaction);
-          },
-          borderRadius: BorderRadius.circular(16.r),
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Row(
-              children: [
-                Container(
-                  width: 48.w,
-                  height: 48.w,
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Center(
-                    child: CategoryIcon(
-                      iconKey: iconKey,
-                      size: 24.sp,
-                      color: iconColor,
+    final typeText =
+        transaction.type == TransactionType.expense ? 'Dépense' : 'Revenu';
+    final semanticLabel =
+        '$typeText récurrente: ${transaction.description}, ${amountPrefix}${NumberFormat('#,###', 'fr_FR').format(transaction.amount)} FCFA, ${_getNextPaymentDate()}';
+
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      child: Container(
+        decoration: BoxDecoration(
+          color: KoalaColors.surface(context),
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          boxShadow: KoalaColors.shadowSubtle, // Standardized
+          border: Border.all(color: KoalaColors.border(context)),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              showAddRecurringTransactionDialog(context,
+                  transaction: transaction);
+            },
+            borderRadius: BorderRadius.circular(KoalaRadius.md),
+            child: Padding(
+              padding: EdgeInsets.all(KoalaSpacing.lg),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48.w,
+                    height: 48.w,
+                    decoration: BoxDecoration(
+                      color: iconColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                    ),
+                    child: Center(
+                      child: CategoryIcon(
+                        iconKey: iconKey,
+                        size: 24.sp,
+                        color: iconColor,
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  SizedBox(width: KoalaSpacing.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          transaction.description,
+                          style: KoalaTypography.bodyMedium(context).copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: KoalaSpacing.xs),
+                        Row(
+                          children: [
+                            Icon(
+                              CupertinoIcons.calendar,
+                              size: 12.sp,
+                              color: KoalaColors.textSecondary(context),
+                            ),
+                            SizedBox(width: KoalaSpacing.xs),
+                            Text(
+                              _getNextPaymentDate(),
+                              style: KoalaTypography.caption(context).copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        transaction.description,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                        '$amountPrefix${NumberFormat('#,###', 'fr_FR').format(transaction.amount)}',
+                        style: KoalaTypography.bodyMedium(context).copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: amountColor,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4.h),
-                      Row(
-                        children: [
-                          Icon(
-                            CupertinoIcons.calendar,
-                            size: 12.sp,
-                            color: Colors.grey.shade500,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            _getNextPaymentDate(),
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Colors.grey.shade500,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      SizedBox(height: KoalaSpacing.xs),
+                      Text(
+                        'FCFA',
+                        style: KoalaTypography.caption(context).copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$amountPrefix${NumberFormat('#,###', 'fr_FR').format(transaction.amount)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16.sp,
-                        color: amountColor,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'FCFA',
-                      style: TextStyle(
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -280,3 +274,4 @@ class _TransactionListItem extends StatelessWidget {
     );
   }
 }
+
