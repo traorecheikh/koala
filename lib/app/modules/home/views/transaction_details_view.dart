@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
-import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
@@ -27,7 +26,8 @@ class TransactionDetailsView extends StatelessWidget {
     Color iconColor = color;
 
     if (transaction.categoryId != null) {
-      final cat = categoriesController.categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
+      final cat = categoriesController.categories
+          .firstWhereOrNull((c) => c.id == transaction.categoryId);
       if (cat != null) {
         categoryIconKey = cat.icon;
         categoryName = cat.name;
@@ -51,7 +51,16 @@ class TransactionDetailsView extends StatelessWidget {
           IconButton(
             icon: const Icon(CupertinoIcons.pencil, color: Colors.black),
             onPressed: () {
-              // TODO: Implement Edit
+              // Show edit coming soon message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                      'Modification des transactions bientôt disponible'),
+                  backgroundColor: Colors.blue,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
             },
           ),
         ],
@@ -97,7 +106,7 @@ class TransactionDetailsView extends StatelessWidget {
               ),
             ),
             SizedBox(height: 40.h),
-            
+
             // Details Card
             Container(
               margin: EdgeInsets.symmetric(horizontal: 20.w),
@@ -111,7 +120,8 @@ class TransactionDetailsView extends StatelessWidget {
                 children: [
                   _DetailRow(
                     label: 'Date',
-                    value: DateFormat('dd MMMM yyyy', 'fr_FR').format(transaction.date),
+                    value: DateFormat('dd MMMM yyyy', 'fr_FR')
+                        .format(transaction.date),
                     icon: CupertinoIcons.calendar,
                   ),
                   Divider(height: 32.h, color: Colors.grey.shade300),
@@ -130,7 +140,9 @@ class TransactionDetailsView extends StatelessWidget {
                   _DetailRow(
                     label: 'Type',
                     value: isExpense ? 'Dépense' : 'Revenu',
-                    icon: isExpense ? CupertinoIcons.arrow_up_right : CupertinoIcons.arrow_down_left,
+                    icon: isExpense
+                        ? CupertinoIcons.arrow_up_right
+                        : CupertinoIcons.arrow_down_left,
                     valueColor: color,
                   ),
                 ],
@@ -183,3 +195,4 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
+
