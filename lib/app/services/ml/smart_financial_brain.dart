@@ -363,7 +363,8 @@ class SmartFinancialBrain extends GetxService {
           .where((t) =>
               t.type == TransactionType.expense &&
               t.categoryId == budget.categoryId &&
-              t.date.isAfter(monthStart))
+              t.date.isAfter(monthStart) &&
+              !t.isCatchUp) // Skip catch-up transactions
           .fold(0.0, (sum, t) => sum + t.amount);
 
       final usagePercent =
