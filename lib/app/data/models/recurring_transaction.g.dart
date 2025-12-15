@@ -108,4 +108,3 @@ class FrequencyAdapter extends TypeAdapter<Frequency> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
