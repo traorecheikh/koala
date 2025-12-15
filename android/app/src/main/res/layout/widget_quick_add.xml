@@ -4,82 +4,23 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="12dp"
+    android:gravity="center"
     android:background="@drawable/widget_background_dark">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Ajouter"
+        android:text="➕ Ajouter"
         android:textColor="#FFFFFF"
-        android:textSize="12sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
-    <!-- Quick Action Buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
-
-        <!-- Expense Button -->
-        <LinearLayout
-            android:id="@+id/btn_expense"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="8dp"
-            android:background="@drawable/widget_button_expense">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/arrow_up_float"
-                android:contentDescription="Dépense" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Dépense"
-                android:textColor="#FFFFFF"
-                android:textSize="10sp" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="8dp"
-            android:layout_height="1dp" />
-
-        <!-- Income Button -->
-        <LinearLayout
-            android:id="@+id/btn_income"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="8dp"
-            android:background="@drawable/widget_button_income">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/arrow_down_float"
-                android:contentDescription="Revenu" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Revenu"
-                android:textColor="#FFFFFF"
-                android:textSize="10sp" />
-        </LinearLayout>
-
-    </LinearLayout>
+        android:layout_marginTop="4dp"
+        android:text="Depense / Revenu"
+        android:textColor="#888888"
+        android:textSize="10sp" />
 
 </LinearLayout>
