@@ -17,6 +17,7 @@ import 'package:logger/logger.dart';
 import 'dart:math';
 import 'dart:async'; // Added import for StreamSubscription
 import 'package:koaa/app/services/widget_service.dart';
+import 'package:koaa/app/services/changelog_service.dart';
 
 enum QuickActionType {
   goals,
@@ -118,6 +119,11 @@ class HomeController extends GetxController {
     _workers.add(ever(_financialContextService.allTransactions, (_) {
       _debounceTransactionUpdate?.call();
     }));
+
+    // Show what's new popup if version changed (after 1s delay)
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      ChangelogService.showWhatsNewIfNeeded(Get.context!);
+    });
     _workers.add(ever(
         _financialContextService.currentBalance, (_) => calculateBalance()));
 
@@ -148,6 +154,8 @@ class HomeController extends GetxController {
     } else {
       final transactionsCopy = List<LocalTransaction>.from(
           allTransactions.where((t) => !t.isHidden));
+      // FIX: Sort by date (newest first) to ensure proper ordering
+      transactionsCopy.sort((a, b) => b.date.compareTo(a.date));
       transactions.assignAll(transactionsCopy);
     }
     _rebuildTransactionCache(); // Update cache on transaction changes
@@ -415,7 +423,7 @@ class HomeController extends GetxController {
         'Transaction saved to Hive with ID: ${transaction.id}, linkedJobId: ${transaction.linkedJobId}');
     _logger.d('TransactionBox now has ${transactionBox.length} items');
     _financialEventsService.emitTransactionAdded(transaction);
-    
+
     // Update home screen widgets
     WidgetService.updateAllWidgets();
   }
