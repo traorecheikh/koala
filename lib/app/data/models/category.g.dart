@@ -54,4 +54,3 @@ class CategoryAdapter extends TypeAdapter<Category> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
