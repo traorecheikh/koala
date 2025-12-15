@@ -33,6 +33,7 @@ import 'package:koaa/app/services/celebration_service.dart';
 import 'package:koaa/app/services/encryption_service.dart';
 import 'package:koaa/app/services/security_service.dart';
 import 'package:koaa/app/services/widget_service.dart';
+import 'package:koaa/app/services/changelog_service.dart';
 
 import 'app/routes/app_pages.dart';
 
@@ -94,6 +95,9 @@ void main() async {
   // Run data migrations
   final migrationService = DataMigrationService();
   await migrationService.runMigrations();
+
+  // Initialize ChangelogService for version tracking
+  await ChangelogService.init();
 
   // Initialize FinancialContextService
   Get.put<FinancialContextService>(FinancialContextService(), permanent: true);
