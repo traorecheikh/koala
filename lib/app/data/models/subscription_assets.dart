@@ -6,6 +6,7 @@ class SubscriptionService {
   final String category; // entertainment, ai, cloud, music, fitness, etc.
   final double defaultMonthlyPrice; // in FCFA
   final String fallbackIcon; // CupertinoIcons key
+  final bool needsWhiteBackground; // For transparent logos like Claude, Disney
 
   const SubscriptionService({
     required this.id,
@@ -14,6 +15,7 @@ class SubscriptionService {
     required this.category,
     required this.defaultMonthlyPrice,
     required this.fallbackIcon,
+    this.needsWhiteBackground = false,
   });
 }
 
@@ -45,15 +47,16 @@ class SubscriptionAssets {
       name: 'Disney+',
       logoAsset: 'disney.png',
       category: 'entertainment',
-      defaultMonthlyPrice: 4000,
+      defaultMonthlyPrice: 6000,
       fallbackIcon: 'star_fill',
+      needsWhiteBackground: true,
     ),
     SubscriptionService(
       id: 'youtube',
       name: 'YouTube Premium',
       logoAsset: 'youtube.png',
       category: 'entertainment',
-      defaultMonthlyPrice: 4500,
+      defaultMonthlyPrice: 5500,
       fallbackIcon: 'play_fill',
     ),
 
@@ -69,7 +72,7 @@ class SubscriptionAssets {
     SubscriptionService(
       id: 'apple_music',
       name: 'Apple Music',
-      logoAsset: null,
+      logoAsset: 'apple_music.png',
       category: 'music',
       defaultMonthlyPrice: 3000,
       fallbackIcon: 'music_note_2',
@@ -81,7 +84,7 @@ class SubscriptionAssets {
       name: 'ChatGPT Plus',
       logoAsset: 'chatgpt.png',
       category: 'ai',
-      defaultMonthlyPrice: 12000,
+      defaultMonthlyPrice: 11500,
       fallbackIcon: 'bubble_left_fill',
     ),
     SubscriptionService(
@@ -89,15 +92,16 @@ class SubscriptionAssets {
       name: 'Claude Pro',
       logoAsset: 'claude.png',
       category: 'ai',
-      defaultMonthlyPrice: 12000,
+      defaultMonthlyPrice: 11500,
       fallbackIcon: 'text_bubble_fill',
+      needsWhiteBackground: true,
     ),
     SubscriptionService(
       id: 'gemini',
       name: 'Gemini Advanced',
       logoAsset: 'gemini.png',
       category: 'ai',
-      defaultMonthlyPrice: 12000,
+      defaultMonthlyPrice: 11500,
       fallbackIcon: 'sparkles',
     ),
 
@@ -107,51 +111,11 @@ class SubscriptionAssets {
       name: 'iCloud+',
       logoAsset: 'icloud.png',
       category: 'cloud',
-      defaultMonthlyPrice: 1500,
+      defaultMonthlyPrice: 700,
       fallbackIcon: 'cloud_fill',
-    ),
-    SubscriptionService(
-      id: 'google_one',
-      name: 'Google One',
-      logoAsset: null,
-      category: 'cloud',
-      defaultMonthlyPrice: 2000,
-      fallbackIcon: 'cloud',
     ),
 
     // Other
-    SubscriptionService(
-      id: 'amazon_prime',
-      name: 'Amazon Prime',
-      logoAsset: null,
-      category: 'shopping',
-      defaultMonthlyPrice: 3500,
-      fallbackIcon: 'bag_fill',
-    ),
-    SubscriptionService(
-      id: 'canva',
-      name: 'Canva Pro',
-      logoAsset: null,
-      category: 'design',
-      defaultMonthlyPrice: 6000,
-      fallbackIcon: 'paintbrush_fill',
-    ),
-    SubscriptionService(
-      id: 'vpn',
-      name: 'VPN',
-      logoAsset: null,
-      category: 'security',
-      defaultMonthlyPrice: 5000,
-      fallbackIcon: 'shield_fill',
-    ),
-    SubscriptionService(
-      id: 'gym',
-      name: 'Salle de sport',
-      logoAsset: null,
-      category: 'fitness',
-      defaultMonthlyPrice: 20000,
-      fallbackIcon: 'sportscourt_fill',
-    ),
     SubscriptionService(
       id: 'custom',
       name: 'Autre',
