@@ -26,6 +26,7 @@ enum QuickActionType {
   categories,
   settings,
   intelligence,
+  challenges,
 }
 
 class HomeController extends GetxController {
@@ -415,6 +416,76 @@ class HomeController extends GetxController {
     _financialEventsService.emitTransactionAdded(transaction);
   }
 
+  /// Add catch-up transactions for users who install the app mid-month.
+  /// These transactions are SPREAD across the days from the 1st to yesterday
+  /// to avoid skewing daily spending patterns and behavior analytics.
+  Future<void> addCatchUpTransactions(
+      Map<String, double> categorySpending) async {
+    if (categorySpending.isEmpty) return;
+
+    final now = DateTime.now();
+    final firstOfMonth = DateTime(now.year, now.month, 1);
+    final yesterday = now.subtract(const Duration(days: 1));
+
+    // Calculate number of days to spread transactions across
+    final daysToSpread = yesterday.difference(firstOfMonth).inDays + 1;
+
+    // If we're on the 1st or 2nd, just use today's date
+    if (daysToSpread <= 1) {
+      for (final entry in categorySpending.entries) {
+        if (entry.value <= 0) continue;
+        final transaction = LocalTransaction(
+          id: const Uuid().v4(),
+          amount: entry.value,
+          description: 'Rattrapage du mois',
+          date: firstOfMonth,
+          type: TransactionType.expense,
+          categoryId: entry.key,
+          category: null,
+          isCatchUp: true,
+        );
+        await addTransaction(transaction);
+      }
+      return;
+    }
+
+    _logger.i(
+        'Spreading ${categorySpending.length} catch-up categories across $daysToSpread days');
+
+    for (final entry in categorySpending.entries) {
+      final categoryId = entry.key;
+      final totalAmount = entry.value;
+
+      if (totalAmount <= 0) continue;
+
+      // Determine how many transactions to create (1 per 2-3 days, max 10)
+      int numTransactions = (daysToSpread / 2).ceil().clamp(1, 10);
+      final amountPerTransaction = totalAmount / numTransactions;
+
+      // Create transactions spread across the period
+      for (int i = 0; i < numTransactions; i++) {
+        // Calculate the day offset for this transaction
+        final dayOffset = (daysToSpread * i / numTransactions).round();
+        final transactionDate = firstOfMonth.add(Duration(days: dayOffset));
+
+        final transaction = LocalTransaction(
+          id: const Uuid().v4(),
+          amount: amountPerTransaction,
+          description: 'Rattrapage',
+          date: transactionDate,
+          type: TransactionType.expense,
+          categoryId: categoryId,
+          category: null,
+          isCatchUp: true,
+        );
+
+        await addTransaction(transaction);
+      }
+    }
+
+    _logger.i('Catch-up transactions distributed successfully');
+  }
+
   Future<void> deleteTransaction(LocalTransaction transaction) async {
     // Soft delete: Mark as hidden but keep in database for calculations
     transaction.isHidden = true;
@@ -748,5 +819,3 @@ class HomeController extends GetxController {
     }
   }
 }
-
-
