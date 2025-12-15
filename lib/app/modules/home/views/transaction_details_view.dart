@@ -41,6 +41,7 @@ class TransactionDetailsView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
@@ -195,5 +196,3 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
-
-
