@@ -22,13 +22,15 @@ class LocalUserAdapter extends TypeAdapter<LocalUser> {
       payday: (fields[2] as num).toInt(),
       age: (fields[3] as num).toInt(),
       budgetingType: fields[4] as String,
+      firstLaunchDate: fields[5] as DateTime?,
+      hasCompletedCatchUp: fields[6] == null ? false : fields[6] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, LocalUser obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.fullName)
       ..writeByte(1)
@@ -38,7 +40,11 @@ class LocalUserAdapter extends TypeAdapter<LocalUser> {
       ..writeByte(3)
       ..write(obj.age)
       ..writeByte(4)
-      ..write(obj.budgetingType);
+      ..write(obj.budgetingType)
+      ..writeByte(5)
+      ..write(obj.firstLaunchDate)
+      ..writeByte(6)
+      ..write(obj.hasCompletedCatchUp);
   }
 
   @override
@@ -51,4 +57,3 @@ class LocalUserAdapter extends TypeAdapter<LocalUser> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
