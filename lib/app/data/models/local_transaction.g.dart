@@ -29,13 +29,14 @@ class LocalTransactionAdapter extends TypeAdapter<LocalTransaction> {
       linkedDebtId: fields[9] as String?,
       linkedRecurringId: fields[10] as String?,
       linkedJobId: fields[11] as String?,
+      isCatchUp: fields[12] == null ? false : fields[12] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, LocalTransaction obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.amount)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class LocalTransactionAdapter extends TypeAdapter<LocalTransaction> {
       ..writeByte(10)
       ..write(obj.linkedRecurringId)
       ..writeByte(11)
-      ..write(obj.linkedJobId);
+      ..write(obj.linkedJobId)
+      ..writeByte(12)
+      ..write(obj.isCatchUp);
   }
 
   @override
@@ -254,4 +257,3 @@ class TransactionCategoryAdapter extends TypeAdapter<TransactionCategory> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
