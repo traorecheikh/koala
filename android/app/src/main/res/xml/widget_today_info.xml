@@ -7,4 +7,5 @@
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"
     android:previewImage="@mipmap/ic_launcher"
-    android:description="@string/app_name" />
+    android:label="@string/widget_today_name"
+    android:description="@string/widget_today_desc" />
