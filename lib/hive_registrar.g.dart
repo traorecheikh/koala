@@ -5,6 +5,7 @@
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/category.dart';
+import 'package:koaa/app/data/models/challenge.dart';
 import 'package:koaa/app/data/models/debt.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/data/models/job.dart';
@@ -18,8 +19,12 @@ import 'package:koaa/app/data/models/savings_goal.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
+    registerAdapter(BadgeAdapter());
     registerAdapter(BudgetAdapter());
     registerAdapter(CategoryAdapter());
+    registerAdapter(ChallengeAdapter());
+    registerAdapter(ChallengeDifficultyAdapter());
+    registerAdapter(ChallengeTypeAdapter());
     registerAdapter(DebtAdapter());
     registerAdapter(DebtTypeAdapter());
     registerAdapter(FinancialGoalAdapter());
@@ -35,14 +40,20 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(SavingsGoalAdapter());
     registerAdapter(TransactionCategoryAdapter());
     registerAdapter(TransactionTypeAdapter());
+    registerAdapter(UserBadgeAdapter());
+    registerAdapter(UserChallengeAdapter());
     registerAdapter(UserFinancialProfileAdapter());
   }
 }
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
+    registerAdapter(BadgeAdapter());
     registerAdapter(BudgetAdapter());
     registerAdapter(CategoryAdapter());
+    registerAdapter(ChallengeAdapter());
+    registerAdapter(ChallengeDifficultyAdapter());
+    registerAdapter(ChallengeTypeAdapter());
     registerAdapter(DebtAdapter());
     registerAdapter(DebtTypeAdapter());
     registerAdapter(FinancialGoalAdapter());
@@ -58,8 +69,8 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(SavingsGoalAdapter());
     registerAdapter(TransactionCategoryAdapter());
     registerAdapter(TransactionTypeAdapter());
+    registerAdapter(UserBadgeAdapter());
+    registerAdapter(UserChallengeAdapter());
     registerAdapter(UserFinancialProfileAdapter());
   }
 }
-
-
