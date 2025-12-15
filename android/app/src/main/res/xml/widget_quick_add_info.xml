@@ -7,4 +7,5 @@
     android:resizeMode="none"
     android:widgetCategory="home_screen"
     android:previewImage="@mipmap/ic_launcher"
-    android:description="@string/app_name" />
+    android:label="@string/widget_quick_add_name"
+    android:description="@string/widget_quick_add_desc" />
