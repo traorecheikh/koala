@@ -463,6 +463,8 @@ class _QuickActions extends GetView<HomeController> {
         return CupertinoIcons.settings_solid;
       case QuickActionType.intelligence:
         return CupertinoIcons.sparkles;
+      case QuickActionType.challenges:
+        return CupertinoIcons.flame_fill;
     }
   }
 
@@ -484,6 +486,8 @@ class _QuickActions extends GetView<HomeController> {
         return 'Param.';
       case QuickActionType.intelligence:
         return 'IA';
+      case QuickActionType.challenges:
+        return 'Défis';
     }
   }
 
@@ -506,6 +510,8 @@ class _QuickActions extends GetView<HomeController> {
         return KoalaColors.textSecondary(context);
       case QuickActionType.intelligence:
         return const Color(0xFF64D2FF); // Cyan/Blue
+      case QuickActionType.challenges:
+        return const Color(0xFFFF9500); // Orange/Fire
     }
   }
 
@@ -534,6 +540,9 @@ class _QuickActions extends GetView<HomeController> {
         break;
       case QuickActionType.intelligence:
         Get.toNamed(Routes.intelligence);
+        break;
+      case QuickActionType.challenges:
+        Get.toNamed(Routes.challenges);
         break;
     }
   }
@@ -738,6 +747,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return CupertinoIcons.settings_solid;
       case QuickActionType.intelligence:
         return CupertinoIcons.sparkles;
+      case QuickActionType.challenges:
+        return CupertinoIcons.flame_fill;
     }
   }
 
@@ -759,6 +770,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return 'Param.';
       case QuickActionType.intelligence:
         return 'IA';
+      case QuickActionType.challenges:
+        return 'Défis';
     }
   }
 
@@ -780,6 +793,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return KoalaColors.textSecondary(context);
       case QuickActionType.intelligence:
         return const Color(0xFF64D2FF);
+      case QuickActionType.challenges:
+        return const Color(0xFFFF9500);
     }
   }
 
@@ -808,6 +823,9 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         break;
       case QuickActionType.intelligence:
         Get.toNamed(Routes.intelligence);
+        break;
+      case QuickActionType.challenges:
+        Get.toNamed(Routes.challenges);
         break;
     }
   }
@@ -1373,5 +1391,3 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
     });
   }
 }
-
-
