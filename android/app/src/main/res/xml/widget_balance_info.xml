@@ -7,4 +7,5 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:previewImage="@mipmap/ic_launcher"
-    android:description="@string/app_name" />
+    android:label="@string/widget_balance_name"
+    android:description="@string/widget_balance_desc" />
