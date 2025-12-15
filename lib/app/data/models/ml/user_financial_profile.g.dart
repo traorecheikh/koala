@@ -63,4 +63,3 @@ class UserFinancialProfileAdapter extends TypeAdapter<UserFinancialProfile> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-
