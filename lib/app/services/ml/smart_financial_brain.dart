@@ -433,7 +433,8 @@ class SmartFinancialBrain extends GetxService {
   ) {
     final now = DateTime.now();
     final dayOfMonth = now.day;
-    final daysRemaining = DateTime(now.year, now.month + 1, 0).day - dayOfMonth;
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final daysRemaining = daysInMonth - dayOfMonth;
 
     // Calculate average daily spending
     final monthStart = DateTime(now.year, now.month, 1);
@@ -444,27 +445,47 @@ class SmartFinancialBrain extends GetxService {
     final avgDailySpending =
         dayOfMonth > 0 ? thisMonthExpenses / dayOfMonth : 0;
 
-    // Predict month-end balance
+    // Predict upcoming spending
     final predictedSpendingRemaining = avgDailySpending * daysRemaining;
+
+    // Upcoming debt payments
     final upcomingDebtPayments = debts
         .where((d) => !d.isPaidOff && d.createdAt.day > dayOfMonth)
         .fold(0.0, (sum, d) => sum + d.minPayment);
 
-    final predictedMonthEnd =
-        balance - predictedSpendingRemaining - upcomingDebtPayments;
+    // FIX: Calculate UPCOMING INCOME from jobs before month end
+    double upcomingIncome = 0;
+    for (final job in _context.allJobs) {
+      if (!job.isActive) continue;
+      final payDay = job.paymentDate.day;
+      // If payday is after today but within this month, add it
+      if (payDay > dayOfMonth && payDay <= daysInMonth) {
+        upcomingIncome += job.amount;
+      }
+    }
+
+    // Month-end prediction NOW includes upcoming salary
+    final predictedMonthEnd = balance +
+        upcomingIncome -
+        predictedSpendingRemaining -
+        upcomingDebtPayments;
 
     // Days until broke (if spending continues at current rate)
     int? daysUntilBroke;
     if (avgDailySpending > 0 && balance > 0) {
-      daysUntilBroke = (balance / avgDailySpending).floor();
+      // Factor in upcoming income for more accurate "broke" calculation
+      final effectiveBalance = balance + upcomingIncome;
+      daysUntilBroke = (effectiveBalance / avgDailySpending).floor();
     }
 
     // Calculate safe daily spending allowance
-    // Use predicted remaining spending + upcoming debt as 'costs'
-
     final safeBuffer = monthlyIncome * 0.10; // Keep 10% buffer
+    final effectiveBalanceForSafe = balance + upcomingIncome;
     final safeDailySpending = daysRemaining > 0
-        ? max(0, (balance - upcomingDebtPayments - safeBuffer) / daysRemaining)
+        ? max(
+            0,
+            (effectiveBalanceForSafe - upcomingDebtPayments - safeBuffer) /
+                daysRemaining)
         : 0;
 
     return CashFlowPrediction(
@@ -476,6 +497,7 @@ class SmartFinancialBrain extends GetxService {
       upcomingDebtPayments: upcomingDebtPayments,
       daysRemainingInMonth: daysRemaining,
       willSurviveMonth: predictedMonthEnd > 0,
+      upcomingIncome: upcomingIncome, // Added field
     );
   }
 
@@ -899,6 +921,7 @@ class CashFlowPrediction {
   final double safeDailySpending;
   final int? daysUntilBroke;
   final double upcomingDebtPayments;
+  final double upcomingIncome; // New: upcoming salary/income
   final int daysRemainingInMonth;
   final bool willSurviveMonth;
 
@@ -909,6 +932,7 @@ class CashFlowPrediction {
     required this.safeDailySpending,
     this.daysUntilBroke,
     required this.upcomingDebtPayments,
+    this.upcomingIncome = 0,
     required this.daysRemainingInMonth,
     required this.willSurviveMonth,
   });
@@ -919,6 +943,7 @@ class CashFlowPrediction {
         avgDailySpending: 0,
         safeDailySpending: 0,
         upcomingDebtPayments: 0,
+        upcomingIncome: 0,
         daysRemainingInMonth: 30,
         willSurviveMonth: true,
       );
