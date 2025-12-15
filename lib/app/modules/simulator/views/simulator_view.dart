@@ -20,6 +20,7 @@ class SimulatorView extends GetView<SimulatorController> {
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -501,5 +502,3 @@ class _MetricCard extends StatelessWidget {
     ).animate().fadeIn(delay: delay.ms).slideY(begin: 0.1);
   }
 }
-
-
