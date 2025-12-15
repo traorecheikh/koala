@@ -18,6 +18,7 @@ abstract class Routes {
   static const simulator = _Paths.simulator;
   static const goals = _Paths.goals;
   static const intelligence = _Paths.intelligence;
+  static const challenges = _Paths.challenges;
 }
 
 abstract class _Paths {
@@ -37,6 +38,5 @@ abstract class _Paths {
   static const simulator = '/simulator';
   static const goals = '/goals';
   static const intelligence = '/intelligence';
+  static const challenges = '/challenges';
 }
-
-
