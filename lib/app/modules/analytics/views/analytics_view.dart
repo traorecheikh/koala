@@ -46,6 +46,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: Icon(CupertinoIcons.back, color: KoalaColors.text(context)),
           onPressed: () => NavigationHelper.safeBack(),
@@ -1384,4 +1385,3 @@ class _AnalyticsViewState extends State<AnalyticsView>
     );
   }
 }
-
