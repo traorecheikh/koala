@@ -13,6 +13,7 @@ class CategoriesView extends GetView<CategoriesController> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
@@ -49,4 +50,3 @@ class CategoriesView extends GetView<CategoriesController> {
     );
   }
 }
-
