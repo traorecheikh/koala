@@ -96,6 +96,13 @@ class SettingsView extends GetView<SettingsController> {
                 iconColor: KoalaColors.accent,
                 onTap: () => Get.toNamed(Routes.persona),
               ),
+              _buildSettingsItem(
+                context,
+                icon: CupertinoIcons.flame_fill,
+                title: 'Défis & Badges',
+                iconColor: const Color(0xFFFF9500),
+                onTap: () => Get.toNamed(Routes.challenges),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -288,5 +295,3 @@ class SettingsView extends GetView<SettingsController> {
     );
   }
 }
-
-
