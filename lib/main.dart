@@ -32,6 +32,7 @@ import 'package:koaa/app/services/events/financial_events_service.dart';
 import 'package:koaa/app/services/celebration_service.dart';
 import 'package:koaa/app/services/encryption_service.dart';
 import 'package:koaa/app/services/security_service.dart';
+import 'package:koaa/app/services/widget_service.dart';
 
 import 'app/routes/app_pages.dart';
 
@@ -124,6 +125,10 @@ void main() async {
 
   // Initialize SecurityService
   Get.put<SecurityService>(SecurityService(), permanent: true);
+
+  // Initialize Widget Service for home screen widgets
+  await WidgetService.initialize();
+  WidgetService.updateAllWidgets();
 
   Get.lazyPut<CategoriesController>(
     () => CategoriesController(),
