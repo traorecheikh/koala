@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Koala</string>
+    
+    <!-- Widget Names -->
+    <string name="widget_balance_name">Solde Koala</string>
+    <string name="widget_quick_add_name">Ajout Rapide</string>
+    <string name="widget_today_name">Depenses Jour</string>
+    <string name="widget_streak_name">Serie Koala</string>
+    <string name="widget_weekly_name">Semaine</string>
+    <string name="widget_budget_name">Budget</string>
+    <string name="widget_goal_name">Objectif</string>
+    
+    <!-- Widget Descriptions -->
+    <string name="widget_balance_desc">Affiche votre solde actuel</string>
+    <string name="widget_quick_add_desc">Ajouter rapidement</string>
+    <string name="widget_today_desc">Depenses du jour</string>
+    <string name="widget_streak_desc">Votre serie en cours</string>
+    <string name="widget_weekly_desc">Depenses de la semaine</string>
+    <string name="widget_budget_desc">Progression du budget</string>
+    <string name="widget_goal_desc">Progression objectif</string>
+</resources>
