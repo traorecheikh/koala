@@ -16,6 +16,7 @@ class SecuritySettingsView extends GetView<SecuritySettingsController> {
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: KoalaColors.background(context),
         elevation: 0,
         leading: IconButton(
