@@ -26,6 +26,7 @@ class RecurringTransactionsView
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: KoalaColors.background(context),
         elevation: 0,
         centerTitle: false,
@@ -276,4 +277,3 @@ class _TransactionListItem extends StatelessWidget {
     );
   }
 }
-
