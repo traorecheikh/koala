@@ -5,12 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
-import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
+import 'package:koaa/app/modules/settings/views/subscriptions_view.dart';
 import 'package:koaa/app/modules/settings/widgets/edit_profile_dialog.dart';
 import 'package:koaa/app/modules/settings/widgets/reset_app_sheet.dart';
 import 'package:koaa/app/modules/settings/views/privacy_policy_view.dart';
 import 'package:koaa/app/modules/settings/views/terms_view.dart';
 import 'package:koaa/app/services/notification_service.dart';
+import 'package:koaa/app/services/changelog_service.dart';
 
 import 'package:koaa/app/routes/app_pages.dart';
 import '../controllers/settings_controller.dart';
@@ -23,6 +24,7 @@ class SettingsView extends GetView<SettingsController> {
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: KoalaColors.background(context),
         elevation: 0,
         leading: IconButton(
@@ -124,9 +126,10 @@ class SettingsView extends GetView<SettingsController> {
               ),
               _buildSettingsItem(
                 context,
-                icon: CupertinoIcons.repeat,
-                title: 'Transactions récurrentes',
-                onTap: () => Get.to(() => const RecurringTransactionsView()),
+                icon: CupertinoIcons.creditcard_fill,
+                title: 'Abonnements',
+                iconColor: const Color(0xFFFF6B6B),
+                onTap: () => Get.to(() => const SubscriptionsView()),
               ),
             ],
           ),
@@ -186,11 +189,26 @@ class SettingsView extends GetView<SettingsController> {
             ],
           ),
           const SizedBox(height: 32),
-          Center(
-            child: Text(
-              'Version 1.0.0',
-              style: KoalaTypography.caption(context)
-                  .copyWith(color: KoalaColors.textSecondary(context)),
+          GestureDetector(
+            onTap: () => ChangelogService.showWhatsNewDialog(context),
+            child: Column(
+              children: [
+                Text(
+                  ChangelogService.versionString,
+                  style: KoalaTypography.bodyMedium(context).copyWith(
+                    color: KoalaColors.textSecondary(context),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Voir les nouveautés',
+                  style: KoalaTypography.caption(context).copyWith(
+                    color: KoalaColors.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 32),
