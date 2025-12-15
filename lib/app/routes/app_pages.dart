@@ -18,6 +18,8 @@ import 'package:koaa/app/modules/simulator/views/simulator_view.dart';
 import 'package:koaa/app/modules/goals/views/goals_view.dart';
 import 'package:koaa/app/modules/goals/bindings/goals_binding.dart';
 import 'package:koaa/app/modules/intelligence/views/intelligence_view.dart';
+import 'package:koaa/app/modules/challenges/views/challenges_view.dart';
+import 'package:koaa/app/modules/challenges/bindings/challenges_binding.dart';
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -108,7 +110,11 @@ class AppPages {
       page: () => const IntelligenceView(),
       transition: Transition.cupertino,
     ),
+    GetPage(
+      name: _Paths.challenges,
+      page: () => const ChallengesView(),
+      binding: ChallengesBinding(),
+      transition: Transition.cupertino,
+    ),
   ];
 }
-
-
