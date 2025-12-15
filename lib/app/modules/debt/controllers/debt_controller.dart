@@ -21,9 +21,10 @@ class DebtController extends GetxController {
     super.onInit();
     _financialContextService = Get.find<FinancialContextService>();
     _financialEventsService = Get.find<FinancialEventsService>();
-    
+
     // Listen to changes from FinancialContextService and store worker
-    _workers.add(ever(_financialContextService.allDebts, (_) => debts.assignAll(_financialContextService.allDebts)));
+    _workers.add(ever(_financialContextService.allDebts,
+        (_) => debts.assignAll(_financialContextService.allDebts)));
 
     // Initial load from context service
     debts.assignAll(_financialContextService.allDebts);
@@ -45,9 +46,12 @@ class DebtController extends GetxController {
     DateTime? dueDate,
     double? minPayment,
   }) async {
-    final box = Hive.box<Debt>('debtBox');
+    final debtBox = Hive.box<Debt>('debtBox');
+    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
+
+    final debtId = const Uuid().v4();
     final debt = Debt(
-      id: const Uuid().v4(),
+      id: debtId,
       personName: personName,
       originalAmount: amount,
       remainingAmount: amount,
@@ -56,7 +60,30 @@ class DebtController extends GetxController {
       createdAt: DateTime.now(),
       minPayment: minPayment ?? 0.0,
     );
-    await box.put(debt.id, debt);
+
+    // Create transaction to reflect the money movement
+    // Borrowed: I received money (income)
+    // Lent: I gave money (expense)
+    final tx = LocalTransaction(
+      id: const Uuid().v4(),
+      amount: amount,
+      description: type == DebtType.borrowed
+          ? 'Emprunt: $personName'
+          : 'Prêt: $personName',
+      date: DateTime.now(),
+      type: type == DebtType.borrowed
+          ? TransactionType.income
+          : TransactionType.expense,
+      categoryId: null,
+      linkedDebtId: debtId,
+    );
+
+    // Save both debt and transaction
+    await debtBox.put(debt.id, debt);
+    await transactionBox.put(tx.id, tx);
+
+    // Emit transaction event to update balance
+    _financialEventsService.emitTransactionAdded(tx);
   }
 
   Future<void> updateDebt(Debt updatedDebt) async {
@@ -82,7 +109,9 @@ class DebtController extends GetxController {
       amount: amount,
       description: 'Remboursement: ${debt.personName}',
       date: DateTime.now(),
-      type: debt.type == DebtType.lent ? TransactionType.income : TransactionType.expense,
+      type: debt.type == DebtType.lent
+          ? TransactionType.income
+          : TransactionType.expense,
       categoryId: null, // Could be 'Debt' category if added
       linkedDebtId: debt.id, // Link transaction to debt
     );
@@ -92,11 +121,13 @@ class DebtController extends GetxController {
     debt.remainingAmount -= amount;
     if (debt.remainingAmount < 0) debt.remainingAmount = 0;
     // Add transaction ID to debt's transactionIds list
-    final updatedDebt = debt.copyWith(transactionIds: [...debt.transactionIds, tx.id]);
+    final updatedDebt =
+        debt.copyWith(transactionIds: [...debt.transactionIds, tx.id]);
     await updateDebt(updatedDebt);
 
     // 3. Emit events
-    _financialEventsService.emit(TransactionEvent(FinancialEventType.transactionAdded, tx));
+    _financialEventsService
+        .emit(TransactionEvent(FinancialEventType.transactionAdded, tx));
     if (updatedDebt.remainingAmount <= 0) {
       _financialEventsService.emitDebtPaidOff(updatedDebt);
     }
@@ -106,17 +137,22 @@ class DebtController extends GetxController {
 
   // Total debt, monthly obligations, projected payoff date
   Map<String, dynamic> getDebtImpact() {
-    final totalOutstandingDebt = _financialContextService.totalOutstandingDebt.value;
-    final totalMonthlyDebtPayments = _financialContextService.totalMonthlyDebtPayments.value;
-    final debtsToConsider = debts.where((d) => !d.isPaidOff && d.type == DebtType.borrowed).toList();
+    final totalOutstandingDebt =
+        _financialContextService.totalOutstandingDebt.value;
+    final totalMonthlyDebtPayments =
+        _financialContextService.totalMonthlyDebtPayments.value;
+    final debtsToConsider = debts
+        .where((d) => !d.isPaidOff && d.type == DebtType.borrowed)
+        .toList();
 
     DateTime? projectedPayoffDate;
     if (totalOutstandingDebt > 0 && totalMonthlyDebtPayments > 0) {
       // Simple approximation: assuming current monthly payments continue
       final monthsToPayoff = totalOutstandingDebt / totalMonthlyDebtPayments;
-      projectedPayoffDate = DateTime.now().add(Duration(days: (monthsToPayoff * 30).round()));
+      projectedPayoffDate =
+          DateTime.now().add(Duration(days: (monthsToPayoff * 30).round()));
     }
-    
+
     return {
       'totalOutstandingDebt': totalOutstandingDebt,
       'totalMonthlyDebtPayments': totalMonthlyDebtPayments,
@@ -135,7 +171,9 @@ class DebtController extends GetxController {
       linkedDebtId: debt.id,
     );
     await goalsController.addGoal(newGoal);
-    _financialEventsService.emit(GoalEvent(FinancialEventType.goalMilestoneReached, newGoal)); // Assuming goal creation is a milestone
+    _financialEventsService.emit(GoalEvent(
+        FinancialEventType.goalMilestoneReached,
+        newGoal)); // Assuming goal creation is a milestone
   }
 
   // Use simulator for payoff scenarios (placeholder for now, actual simulation logic in SimulatorEngine)
@@ -147,18 +185,21 @@ class DebtController extends GetxController {
 
     double currentRemaining = debt.remainingAmount;
     int months = 0;
-    while (currentRemaining > 0 && months < 1200) { // Max 100 years to prevent infinite loop
+    while (currentRemaining > 0 && months < 1200) {
+      // Max 100 years to prevent infinite loop
       currentRemaining -= monthlyPayment;
       months++;
     }
 
-    final projectedPayoffDate = DateTime.now().add(Duration(days: (months * 30).round())); // Approximate
+    final projectedPayoffDate = DateTime.now()
+        .add(Duration(days: (months * 30).round())); // Approximate
     // A more accurate simulation would factor in interest and actual payment schedule
 
     return {
       'monthsToPayoff': months,
       'projectedPayoffDate': projectedPayoffDate,
-      'totalAmountPaid': debt.originalAmount, // Simplified, doesn't include future interest
+      'totalAmountPaid':
+          debt.originalAmount, // Simplified, doesn't include future interest
       // 'interestSavings': calculateInterestSavings(), // Requires interest rate and original payment plan
     };
   }
@@ -169,5 +210,3 @@ class DebtController extends GetxController {
   // Interest savings calculations
   // double calculateInterestSavings(Debt debt, double newMonthlyPayment) { ... }
 }
-
-
