@@ -11,8 +11,9 @@ class SecurityService extends GetxService with WidgetsBindingObserver {
   // Track if we are currently authenticating to avoid loop
   bool _isAuthenticating = false;
 
-  // Track if the app was just paused
-  bool _wasPaused = false;
+  // Track pause time to detect if phone was actually locked (not just app switch)
+  DateTime? _pausedAt;
+  static const _lockThresholdSeconds = 60; // Only lock if paused > 60 seconds
 
   @override
   void onInit() {
@@ -43,12 +44,16 @@ class SecurityService extends GetxService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _wasPaused = true;
+      _pausedAt = DateTime.now();
     } else if (state == AppLifecycleState.resumed) {
-      if (_wasPaused && isAuthEnabled.value) {
-        _wasPaused = false;
-        requestAuthentication();
+      if (_pausedAt != null && isAuthEnabled.value) {
+        final pauseDuration = DateTime.now().difference(_pausedAt!).inSeconds;
+        // Only lock if paused for > 60 seconds (phone was likely locked)
+        if (pauseDuration > _lockThresholdSeconds) {
+          requestAuthentication();
+        }
       }
+      _pausedAt = null;
     }
   }
 
