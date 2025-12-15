@@ -13,6 +13,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/data/models/challenge.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
@@ -84,6 +85,10 @@ void main() async {
   // Non-sensitive boxes without encryption for better performance
   await Hive.openBox<Category>('categoryBox');
   await Hive.openBox('settingsBox');
+
+  // Challenge system boxes
+  await Hive.openBox<UserChallenge>('userChallengeBox');
+  await Hive.openBox<UserBadge>('userBadgeBox');
 
   // Run data migrations
   final migrationService = DataMigrationService();
@@ -187,5 +192,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
