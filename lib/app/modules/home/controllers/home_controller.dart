@@ -16,6 +16,7 @@ import 'package:uuid/uuid.dart';
 import 'package:logger/logger.dart';
 import 'dart:math';
 import 'dart:async'; // Added import for StreamSubscription
+import 'package:koaa/app/services/widget_service.dart';
 
 enum QuickActionType {
   goals,
@@ -414,6 +415,9 @@ class HomeController extends GetxController {
         'Transaction saved to Hive with ID: ${transaction.id}, linkedJobId: ${transaction.linkedJobId}');
     _logger.d('TransactionBox now has ${transactionBox.length} items');
     _financialEventsService.emitTransactionAdded(transaction);
+    
+    // Update home screen widgets
+    WidgetService.updateAllWidgets();
   }
 
   /// Add catch-up transactions for users who install the app mid-month.
