@@ -209,11 +209,11 @@ extension TransactionCategoryExtension on TransactionCategory {
         return 'other';
     }
   }
-  
+
   // Return the key directly for use with CategoryIcon
   String get icon => iconKey;
 
-  // REMOVED: IconData get iconData => ... 
+  // REMOVED: IconData get iconData => ...
   // We should stop using IconData directly for categories.
 
   bool get isIncome {
@@ -299,6 +299,9 @@ class LocalTransaction extends HiveObject {
   @HiveField(11)
   String? linkedJobId; // Links back to original job
 
+  @HiveField(12)
+  bool isCatchUp; // Flag for catch-up transactions to skip budget warnings
+
   LocalTransaction({
     String? id,
     required this.amount,
@@ -312,11 +315,12 @@ class LocalTransaction extends HiveObject {
     this.linkedDebtId,
     this.linkedRecurringId,
     this.linkedJobId,
+    this.isCatchUp = false,
   })  : id = id ?? const Uuid().v4(),
         category = category ??
-           (type == TransactionType.income
-               ? TransactionCategory.otherIncome
-               : TransactionCategory.otherExpense);
+            (type == TransactionType.income
+                ? TransactionCategory.otherIncome
+                : TransactionCategory.otherExpense);
 
   Map<String, dynamic> toJson() {
     return {
@@ -332,6 +336,7 @@ class LocalTransaction extends HiveObject {
       'linkedDebtId': linkedDebtId,
       'linkedRecurringId': linkedRecurringId,
       'linkedJobId': linkedJobId,
+      'isCatchUp': isCatchUp,
     };
   }
 
@@ -348,6 +353,7 @@ class LocalTransaction extends HiveObject {
     String? linkedDebtId,
     String? linkedRecurringId,
     String? linkedJobId,
+    bool? isCatchUp,
   }) {
     return LocalTransaction(
       id: id ?? this.id,
@@ -362,8 +368,7 @@ class LocalTransaction extends HiveObject {
       linkedDebtId: linkedDebtId ?? this.linkedDebtId,
       linkedRecurringId: linkedRecurringId ?? this.linkedRecurringId,
       linkedJobId: linkedJobId ?? this.linkedJobId,
+      isCatchUp: isCatchUp ?? this.isCatchUp,
     );
   }
 }
-
-
