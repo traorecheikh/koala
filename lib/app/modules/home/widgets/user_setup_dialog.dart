@@ -9,7 +9,10 @@ import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_user.dart';
+import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
+import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:uuid/uuid.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/core/design_system.dart';
@@ -77,6 +80,19 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   bool _loading = false;
   int _currentStep = 0;
 
+  // Catch-up spending state (categoryId -> amount)
+  final Map<String, double> _catchUpSpending = {};
+  final Map<String, TextEditingController> _catchUpControllers = {};
+
+  // Check if we should show the catch-up step (day > 5 of month)
+  bool get _shouldShowCatchUpStep => DateTime.now().day > 5;
+
+  // Total steps: 4 if no catch-up, 5 if catch-up shown
+  int get _totalSteps => _shouldShowCatchUpStep ? 5 : 4;
+
+  // The final step index (for submit check)
+  int get _lastStepIndex => _totalSteps - 1;
+
   @override
   void initState() {
     super.initState();
@@ -118,6 +134,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         return age != null && age > 0 && age <= 120;
       case 3:
         return true;
+      case 4: // Catch-up step (only if _shouldShowCatchUpStep)
+        return true; // Always allow continuing (catch-up is optional)
       default:
         return false;
     }
@@ -127,7 +145,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     if (!_canContinue) return;
     HapticFeedback.lightImpact();
     setState(() {
-      if (_currentStep < 3) {
+      if (_currentStep < _lastStepIndex) {
         _currentStep++;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           switch (_currentStep) {
@@ -189,12 +207,19 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         payday: defaultPayday,
         age: int.parse(_ageController.text),
         budgetingType: _budgetingType,
+        firstLaunchDate: DateTime.now(),
+        hasCompletedCatchUp: _shouldShowCatchUpStep,
       );
 
       homeController.user.value = newUser;
 
       // Generate initial transactions based on new jobs
       await homeController.generateJobIncomeTransactions();
+
+      // Add catch-up transactions if user entered any
+      if (_catchUpSpending.isNotEmpty) {
+        await homeController.addCatchUpTransactions(_catchUpSpending);
+      }
 
       if (mounted) {
         NavigationHelper.safeBack();
@@ -223,6 +248,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         return 'Votre profil';
       case 3:
         return 'Votre budget';
+      case 4:
+        return 'Rattrapage du mois';
       default:
         return 'Configuration';
     }
@@ -238,6 +265,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         return 'Quelques informations supplémentaires.';
       case 3:
         return 'Choisissez votre méthode de budgétisation.';
+      case 4:
+        return 'Combien avez-vous dépensé ce mois avant aujourd\'hui ?';
       default:
         return '';
     }
@@ -332,18 +361,20 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
 
                 // Enhanced Progress Indicator
                 Semantics(
-                  label: 'Progression: étape ${_currentStep + 1} sur 4',
+                  label:
+                      'Progression: étape ${_currentStep + 1} sur $_totalSteps',
                   readOnly: true,
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: KoalaSpacing.xl),
                     child: Row(
-                      children: List.generate(4, (index) {
+                      children: List.generate(_totalSteps, (index) {
                         final isActive = index <= _currentStep;
                         return Expanded(
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             height: 4.h,
-                            margin: EdgeInsets.only(right: index < 3 ? 8.w : 0),
+                            margin: EdgeInsets.only(
+                                right: index < _totalSteps - 1 ? 8.w : 0),
                             decoration: BoxDecoration(
                               color: isActive
                                   ? KoalaColors.primaryUi(context)
@@ -419,16 +450,19 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                         ),
                       Expanded(
                         child: Tooltip(
-                          message: _currentStep == 3
+                          message: _currentStep == _lastStepIndex
                               ? 'Terminer la configuration'
                               : 'Continuer vers l\'étape suivante',
                           child: SizedBox(
                             height: 56.h,
                             child: KoalaButton(
-                              text:
-                                  _currentStep == 3 ? 'Terminer' : 'Continuer',
+                              text: _currentStep == _lastStepIndex
+                                  ? 'Terminer'
+                                  : 'Continuer',
                               onPressed: _canContinue
-                                  ? (_currentStep == 3 ? _submit : _nextStep)
+                                  ? (_currentStep == _lastStepIndex
+                                      ? _submit
+                                      : _nextStep)
                                   : () {}, // Disabled state handled by button or parent
                               isLoading: _loading,
                               backgroundColor: _canContinue
@@ -460,6 +494,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         return _buildAgeStep();
       case 3:
         return _buildBudgetingTypeStep();
+      case 4:
+        return _buildCatchUpStep();
       default:
         return const SizedBox.shrink();
     }
@@ -853,6 +889,176 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     );
   }
 
+  Widget _buildCatchUpStep() {
+    // START with hardcoded defaults - guarantees categories are always available
+    List<Category> expenseCategories = [
+      TransactionCategory.food,
+      TransactionCategory.transport,
+      TransactionCategory.shopping,
+      TransactionCategory.bills,
+      TransactionCategory.groceries,
+      TransactionCategory.entertainment,
+      TransactionCategory.health,
+      TransactionCategory.subscriptions,
+    ].asMap().entries.map((entry) {
+      final cat = entry.value;
+      final color = Colors.primaries[entry.key % Colors.primaries.length];
+      return Category(
+        id: cat.name,
+        name: cat.displayName,
+        icon: cat.iconKey,
+        colorValue: color.value,
+        type: TransactionType.expense,
+        isDefault: true,
+      );
+    }).toList();
+
+    // TRY to load from Hive if available (better IDs for matching later)
+    try {
+      if (Hive.isBoxOpen('categoryBox')) {
+        final categoryBox = Hive.box<Category>('categoryBox');
+        if (categoryBox.isNotEmpty) {
+          final hiveCategories = categoryBox.values
+              .where((c) => c.type == TransactionType.expense)
+              .take(8)
+              .toList();
+          if (hiveCategories.isNotEmpty) {
+            expenseCategories = hiveCategories;
+          }
+        }
+      }
+    } catch (_) {
+      // Keep using hardcoded defaults
+    }
+
+    return Column(
+      key: const ValueKey('catchUpStep'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Vos dépenses ce mois',
+          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
+        ),
+        SizedBox(height: KoalaSpacing.sm),
+        Container(
+          padding: EdgeInsets.all(KoalaSpacing.md),
+          decoration: BoxDecoration(
+            color: KoalaColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(KoalaRadius.md),
+            border: Border.all(color: KoalaColors.primary.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(CupertinoIcons.info_circle,
+                  color: KoalaColors.primary, size: 20.sp),
+              SizedBox(width: KoalaSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Optionnel: Entrez vos dépenses depuis le 1er du mois.',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: KoalaColors.textSecondary(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: KoalaSpacing.xl),
+        ...expenseCategories.take(8).map((category) {
+          // Initialize controller if not exists
+          _catchUpControllers.putIfAbsent(
+            category.id,
+            () => TextEditingController(),
+          );
+          final controller = _catchUpControllers[category.id]!;
+
+          return Container(
+            margin: EdgeInsets.only(bottom: KoalaSpacing.md),
+            height: 60.h, // Ensure minimum touch target height
+            padding: EdgeInsets.symmetric(
+              horizontal: KoalaSpacing.lg,
+              vertical: KoalaSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: KoalaColors.inputBackground(context),
+              borderRadius: BorderRadius.circular(KoalaRadius.md),
+              border: Border.all(color: KoalaColors.border(context)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44.w,
+                  height: 44.w,
+                  decoration: BoxDecoration(
+                    color: Color(category.colorValue).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: CategoryIcon(
+                      iconKey: category.icon,
+                      size: 22.sp,
+                      color: Color(category.colorValue),
+                    ),
+                  ),
+                ),
+                SizedBox(width: KoalaSpacing.md),
+                Expanded(
+                  child: Text(
+                    category.name,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 120.w,
+                  height: 44.h,
+                  decoration: BoxDecoration(
+                    color: KoalaColors.surface(context),
+                    borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                    border: Border.all(color: KoalaColors.border(context)),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: '0 F',
+                      hintStyle: TextStyle(
+                        color: KoalaColors.textSecondary(context),
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: KoalaSpacing.sm,
+                        vertical: KoalaSpacing.sm,
+                      ),
+                    ),
+                    onChanged: (value) {
+                      final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
+                      if (digitsOnly.isNotEmpty) {
+                        _catchUpSpending[category.id] =
+                            double.parse(digitsOnly);
+                      } else {
+                        _catchUpSpending.remove(category.id);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -886,4 +1092,3 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     );
   }
 }
-
