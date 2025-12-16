@@ -17,13 +17,14 @@ class NotificationService {
       requestAlertPermission: false,
     );
 
-    const InitializationSettings initializationSettings = InitializationSettings(
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
 
     await _notificationsPlugin.initialize(initializationSettings);
-    
+
     // Request permission immediately on init (or can be called later)
     await requestPermissions();
   }
@@ -34,7 +35,7 @@ class NotificationService {
       if (status.isDenied) {
         await Permission.notification.request();
       }
-      
+
       // Also needed for exact alarms if scheduling is used
       // if (await Permission.scheduleExactAlarm.isDenied) {
       //   await Permission.scheduleExactAlarm.request();
@@ -83,22 +84,22 @@ class NotificationService {
         }
       }
 
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+      final AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
         'koala_daily_alerts',
         'Daily Alerts',
         channelDescription: 'Daily budget and summary alerts',
         importance: Importance.max,
         priority: Priority.high,
+        styleInformation: BigTextStyleInformation(body),
       );
 
       const DarwinNotificationDetails iosNotificationDetails =
           DarwinNotificationDetails();
 
-      const NotificationDetails platformChannelSpecifics =
-          NotificationDetails(
-              android: androidPlatformChannelSpecifics,
-              iOS: iosNotificationDetails);
+      final NotificationDetails platformChannelSpecifics = NotificationDetails(
+          android: androidPlatformChannelSpecifics,
+          iOS: iosNotificationDetails);
 
       await _notificationsPlugin.show(
         id,
@@ -116,8 +117,8 @@ class NotificationService {
     await showNotification(
       id: 100, // A unique ID for the welcome notification
       title: 'Bienvenue sur Koala !',
-      body: 'Commencez à gérer vos finances dès aujourd\'hui. Enregistrez votre première transaction !',
+      body:
+          'Commencez à gérer vos finances dès aujourd\'hui. Enregistrez votre première transaction !',
     );
   }
 }
-

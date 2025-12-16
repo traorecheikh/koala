@@ -30,7 +30,7 @@ class PatternRecognizer {
   List<FinancialPattern> _findRecurring(List<LocalTransaction> txs) {
     // Group by amount (fuzzy match?) and description
     final groups = <String, List<LocalTransaction>>{};
-    
+
     for (var tx in txs) {
       if (tx.type != TransactionType.expense) continue;
       // Key: Amount rounded + Description (first 2 words)
@@ -46,18 +46,20 @@ class PatternRecognizer {
         // Check intervals
         final intervals = <int>[];
         group.sort((a, b) => a.date.compareTo(b.date));
-        
+
         for (int i = 0; i < group.length - 1; i++) {
-          intervals.add(group[i+1].date.difference(group[i].date).inDays);
+          intervals.add(group[i + 1].date.difference(group[i].date).inDays);
         }
 
         // Check if intervals are ~30 days (monthly) or ~7 days (weekly)
-        final avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-        
+        final avgInterval =
+            intervals.reduce((a, b) => a + b) / intervals.length;
+
         if ((avgInterval - 30).abs() < 5) {
           patterns.add(FinancialPattern(
             patternType: PatternType.recurringExpense.name,
-            description: 'Paiement mensuel probable: ${group.first.description}',
+            description:
+                'Paiement mensuel probable: ${group.first.description}',
             confidence: 0.8,
             parameters: {
               'amount': group.first.amount.toString(),
@@ -66,14 +68,16 @@ class PatternRecognizer {
             },
           ));
         } else if ((avgInterval - 7).abs() < 2) {
-           patterns.add(FinancialPattern(
+          patterns.add(FinancialPattern(
             patternType: PatternType.recurringExpense.name,
-            description: 'Paiement hebdomadaire probable: ${group.first.description}',
+            description:
+                'Paiement hebdomadaire probable: ${group.first.description}',
             confidence: 0.7,
             parameters: {
               'amount': group.first.amount.toString(),
               'interval': 'weekly',
-              'avgDay': group.first.date.weekday.toString(), // Store weekday (1-7)
+              'avgDay':
+                  group.first.date.weekday.toString(), // Store weekday (1-7)
             },
           ));
         }
@@ -84,6 +88,12 @@ class PatternRecognizer {
   }
 
   List<FinancialPattern> _findMerchantHabits(List<LocalTransaction> txs) {
+    if (txs.isEmpty) return [];
+
+    // Calculate actual data window in months (dynamic, not hardcoded 3)
+    final monthsOfData = _calculateDataWindowMonths(txs);
+    if (monthsOfData <= 0) return [];
+
     // Top merchants
     final counts = <String, int>{};
     for (var tx in txs) {
@@ -105,7 +115,8 @@ class PatternRecognizer {
           confidence: 0.7,
           parameters: {
             'merchantName': name,
-            'visitsPerMonth': (count / 3).toStringAsFixed(1), // approx if 3 months data
+            'visitsPerMonth': (count / monthsOfData)
+                .toStringAsFixed(1), // Uses ACTUAL data window
           },
         ));
       }
@@ -114,11 +125,24 @@ class PatternRecognizer {
     return patterns;
   }
 
+  /// Calculate the actual data window in months from transaction history
+  double _calculateDataWindowMonths(List<LocalTransaction> txs) {
+    if (txs.isEmpty) return 0;
+
+    final sorted = List<LocalTransaction>.from(txs)
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    final firstDate = sorted.first.date;
+    final lastDate = sorted.last.date;
+    final daysDifference = lastDate.difference(firstDate).inDays;
+
+    // Convert to months (minimum 1 month to avoid division by zero)
+    return (daysDifference / 30.0).clamp(1.0, double.infinity);
+  }
+
   String _getFirstWords(String text, int count) {
     final words = text.split(' ');
     if (words.length <= count) return text;
     return words.take(count).join(' ');
   }
 }
-
-

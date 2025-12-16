@@ -522,6 +522,13 @@ class HomeController extends GetxController {
 
       for (var recurring in recurringBox.values) {
         try {
+          // NEW: Skip expired or inactive recurring transactions
+          if (!recurring.isCurrentlyValid) {
+            _logger.i(
+                'Skipping expired/inactive recurring: ${recurring.id} (${recurring.description})');
+            continue;
+          }
+
           // NEW: Validate recurring transaction
           if (recurring.categoryId?.isEmpty ?? true) {
             _logger.w('Recurring transaction has no category: ${recurring.id}');

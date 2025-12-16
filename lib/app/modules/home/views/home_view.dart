@@ -536,7 +536,7 @@ class _QuickActions extends GetView<HomeController> {
         Get.toNamed(Routes.categories);
         break;
       case QuickActionType.settings:
-        Get.offAndToNamed(Routes.settings);
+        Get.toNamed(Routes.settings);
         break;
       case QuickActionType.intelligence:
         Get.toNamed(Routes.intelligence);
@@ -861,17 +861,18 @@ class _AnimatedActionButton extends StatelessWidget {
         ],
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+              padding: EdgeInsets.all(14.w),
               decoration: BoxDecoration(
                 color: KoalaColors.surface(context),
                 shape: BoxShape.circle,
                 boxShadow: KoalaColors.shadowSubtle,
               ),
-              child: Icon(icon, size: 28.sp, color: color),
+              child: Icon(icon, size: 26.sp, color: color),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 6.h),
             Text(
               label,
               style: KoalaTypography.caption(context),

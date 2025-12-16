@@ -24,6 +24,18 @@ class BehaviorProfiler {
     FinancialPersona.fluctuator: Vector.fromList([0.3, 0.2, 0.6, 0.9]),
   };
 
+  // Essential categories that are NOT discretionary spending
+  static const Set<String> _essentialCategories = {
+    'Loyer',
+    'Factures',
+    'Services',
+    'Courses',
+    'Santé',
+    'Éducation',
+    'Transport',
+    'Assurance',
+  };
+
   UserFinancialProfile createProfile(List<LocalTransaction> transactions) {
     if (transactions.isEmpty) {
       return UserFinancialProfile(
@@ -41,7 +53,11 @@ class BehaviorProfiler {
     final discretionaryRatio = _calculateDiscretionaryRatio(transactions);
     final frequency = _calculateFrequency(transactions);
 
-    // 2. New Mega Persona Metrics
+    // 2. Classify persona using ML (centroid-based classification)
+    final persona = _classifyPersona(
+        savingsRate, consistency, discretionaryRatio, frequency);
+
+    // 3. Calculate additional metrics
     final weekendRatio = _calculateWeekendRatio(transactions);
     final nightRatio = _calculateNightRatio(transactions);
     final avgAmount = _calculateAverageAmount(transactions);
@@ -52,17 +68,8 @@ class BehaviorProfiler {
             .key
         : 'Autre';
 
-    // 3. Category preferences (already calculated above)
-
-    // 4. Determine Persona Type (Now just passing the raw profile to be classified by definitions later)
-    // For backward compatibility, we still assign a basic type here, but the UI will use the smart definitions.
-    // We can also run the full classification here if we want to store the "Mega Persona" name directly.
-
-    // For now, let's store a basic one, but populating all the rich data fields is key.
-
     return UserFinancialProfile(
-      personaType: FinancialPersona.planner
-          .name, // Placeholder, real classification happens in UI/Service based on data
+      personaType: persona.name, // Now uses REAL ML classification
       savingsRate: savingsRate,
       consistencyScore: consistency,
       categoryPreferences: categoryPreferences,
@@ -72,6 +79,38 @@ class BehaviorProfiler {
       dominantCategory: dominantCategory,
       averageAmount: avgAmount,
     );
+  }
+
+  /// Classify user persona using Euclidean distance to predefined centroids
+  /// This is a K-nearest-neighbor style classification with K=1
+  FinancialPersona _classifyPersona(
+    double savingsRate,
+    double consistency,
+    double discretionaryRatio,
+    double frequency,
+  ) {
+    // Create user feature vector (normalized 0-1)
+    final userVector = Vector.fromList([
+      savingsRate.clamp(0.0, 1.0),
+      consistency.clamp(0.0, 1.0),
+      discretionaryRatio.clamp(0.0, 1.0),
+      frequency.clamp(0.0, 1.0),
+    ]);
+
+    // Find nearest centroid using Euclidean distance
+    double minDistance = double.infinity;
+    FinancialPersona closestPersona = FinancialPersona.planner;
+
+    for (final entry in _centroids.entries) {
+      final distance =
+          userVector.distanceTo(entry.value, distance: Distance.euclidean);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPersona = entry.key;
+      }
+    }
+
+    return closestPersona;
   }
 
   double _calculateSavingsRate(List<LocalTransaction> txs) {
@@ -88,17 +127,76 @@ class BehaviorProfiler {
     return max(0.0, (income - expense) / income);
   }
 
+  /// Calculate spending consistency using coefficient of variation
+  /// Groups transactions by week, calculates variance of weekly spending
+  /// High consistency = low variance = predictable spending patterns
   double _calculateConsistency(List<LocalTransaction> txs) {
-    return 0.5; // Placeholder
+    // Filter for expenses only
+    final expenses =
+        txs.where((tx) => tx.type == TransactionType.expense).toList();
+    if (expenses.length < 7) return 0.5; // Not enough data, return neutral
+
+    // Sort by date
+    expenses.sort((a, b) => a.date.compareTo(b.date));
+
+    // Group by week number
+    final Map<int, double> weeklySpending = {};
+    for (final tx in expenses) {
+      // Week number = days since first transaction / 7
+      final weekNum = tx.date.difference(expenses.first.date).inDays ~/ 7;
+      weeklySpending[weekNum] = (weeklySpending[weekNum] ?? 0) + tx.amount;
+    }
+
+    if (weeklySpending.isEmpty || weeklySpending.length < 2) return 0.5;
+
+    // Calculate mean
+    final values = weeklySpending.values.toList();
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    if (mean == 0) return 0.5;
+
+    // Calculate variance
+    double variance = 0;
+    for (final v in values) {
+      variance += pow(v - mean, 2);
+    }
+    variance /= values.length;
+
+    // Coefficient of Variation (CV) = stddev / mean
+    final cv = sqrt(variance) / mean;
+
+    // Normalize: CV of 0 = consistency 1.0, CV of 1+ = consistency 0.0
+    // Lower CV means more consistent spending
+    return max(0.0, min(1.0, 1.0 - cv));
   }
 
+  /// Calculate ratio of discretionary spending to total spending
+  /// Discretionary = non-essential categories (entertainment, shopping, etc.)
   double _calculateDiscretionaryRatio(List<LocalTransaction> txs) {
-    return 0.4; // Placeholder
+    double totalSpending = 0;
+    double discretionarySpending = 0;
+
+    for (final tx in txs) {
+      if (tx.type != TransactionType.expense) continue;
+
+      final categoryName = tx.category?.displayName ?? 'Autre';
+      totalSpending += tx.amount;
+
+      // If NOT in essential categories, it's discretionary
+      if (!_essentialCategories.contains(categoryName)) {
+        discretionarySpending += tx.amount;
+      }
+    }
+
+    if (totalSpending == 0) return 0.0;
+    return discretionarySpending / totalSpending;
   }
 
   double _calculateFrequency(List<LocalTransaction> txs) {
     if (txs.isEmpty) return 0.0;
-    final duration = txs.last.date.difference(txs.first.date).inDays.abs() + 1;
+    final sorted = List<LocalTransaction>.from(txs)
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final duration =
+        sorted.last.date.difference(sorted.first.date).inDays.abs() + 1;
     final perDay = txs.length / duration;
     return min(1.0, perDay / 5.0);
   }
@@ -172,7 +270,6 @@ class BehaviorProfiler {
       case FinancialPersona.fluctuator:
         return ['Lissez vos dépenses en mettant de côté les mois fastes.'];
     }
-    return [];
   }
 
   List<String> getAdviceForPersona(String personaName) {
@@ -182,4 +279,3 @@ class BehaviorProfiler {
     return getAdvice(persona);
   }
 }
-

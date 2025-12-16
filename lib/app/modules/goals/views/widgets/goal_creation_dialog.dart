@@ -4,12 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart'; // Added
-import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/data/models/financial_goal.dart'; // Added
 import 'package:koaa/app/modules/goals/controllers/goals_controller.dart';
-import 'package:uuid/uuid.dart';
 
 class GoalCreationDialog extends StatefulWidget {
   const GoalCreationDialog({super.key});
@@ -179,19 +177,19 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
                   onPressed: () async {
                     if (_titleController.text.isNotEmpty &&
                         _targetAmountController.text.isNotEmpty) {
-                      final amount = double.parse(_amountController.text);
+                      final amount = double.parse(_targetAmountController.text);
 
                       final newGoal = FinancialGoal(
                         title: _titleController.text,
                         description: _descriptionController.text,
                         targetAmount: amount,
-                        type: _selectedType,
-                        targetDate: _selectedDate,
-                        iconKey: _selectedIconKey ?? 0,
+                        type: _selectedGoalType,
+                        targetDate: _selectedTargetDate,
+                        iconKey: _selectedIconKey,
                         colorValue: _selectedColor.value,
                       );
 
-                      await controller.addGoal(newGoal);
+                      await _goalsController.addGoal(newGoal);
                       NavigationHelper.safeBack();
                     }
                   },
@@ -205,5 +203,3 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
     );
   }
 }
-
-

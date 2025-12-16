@@ -101,4 +101,3 @@ class DebtTypeAdapter extends TypeAdapter<DebtType> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

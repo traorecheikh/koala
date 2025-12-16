@@ -51,4 +51,3 @@ class MLModelStateAdapter extends TypeAdapter<MLModelState> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

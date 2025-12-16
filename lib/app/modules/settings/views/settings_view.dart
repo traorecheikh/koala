@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/modules/settings/views/subscriptions_view.dart';
+import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
 import 'package:koaa/app/modules/settings/widgets/edit_profile_dialog.dart';
 import 'package:koaa/app/modules/settings/widgets/reset_app_sheet.dart';
 import 'package:koaa/app/modules/settings/views/privacy_policy_view.dart';
@@ -130,6 +131,13 @@ class SettingsView extends GetView<SettingsController> {
                 title: 'Abonnements',
                 iconColor: const Color(0xFFFF6B6B),
                 onTap: () => Get.to(() => const SubscriptionsView()),
+              ),
+              _buildSettingsItem(
+                context,
+                icon: CupertinoIcons.arrow_2_circlepath,
+                title: 'Revenus récurrents',
+                iconColor: KoalaColors.success,
+                onTap: () => Get.to(() => const RecurringTransactionsView()),
               ),
             ],
           ),

@@ -8,6 +8,7 @@ import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
 import 'package:koaa/app/services/ml/models/financial_health_scorer.dart';
+import 'package:koaa/app/services/ml/smart_financial_brain.dart';
 
 class ProactiveAlert {
   final String id;
@@ -135,6 +136,8 @@ class IntelligenceService extends GetxService {
   late Rx<IntelligenceSummary> _summary;
 
   late FinancialContextService _financialContextService;
+  late SmartFinancialBrain
+      _brain; // NEW: Use SmartFinancialBrain as source of truth
   late FinancialHealthScorer _healthScorer;
   late BehaviorProfiler _profiler;
 
@@ -159,20 +162,14 @@ class IntelligenceService extends GetxService {
     ).obs;
 
     _financialContextService = Get.find<FinancialContextService>();
+    _brain = Get.find<SmartFinancialBrain>(); // NEW: Get brain instance
     _healthScorer = FinancialHealthScorer();
     _profiler = BehaviorProfiler();
 
-    // Listen to all financial data changes and recalculate
-    _workers.add(ever(_financialContextService.allTransactions,
-        (_) => _scheduleRecalculation()));
-    _workers.add(ever(
-        _financialContextService.allBudgets, (_) => _scheduleRecalculation()));
-    _workers.add(ever(
-        _financialContextService.allDebts, (_) => _scheduleRecalculation()));
-    _workers.add(ever(
-        _financialContextService.allGoals, (_) => _scheduleRecalculation()));
-    _workers.add(ever(_financialContextService.currentBalance,
-        (_) => _scheduleRecalculation()));
+    // REFACTORED: Listen to SmartFinancialBrain's intelligence output
+    // instead of duplicating listeners on FinancialContextService
+    // This eliminates race conditions and duplicate calculations
+    _workers.add(ever(_brain.intelligence, (_) => _scheduleRecalculation()));
 
     // Initial calculation
     await _calculateHealthScore();
@@ -206,6 +203,11 @@ class IntelligenceService extends GetxService {
     try {
       isLoading.value = true;
 
+      // Get intelligence data from SmartFinancialBrain (single source of truth for spending)
+      final brainIntelligence = _brain.intelligence.value;
+      final spendingBehavior = brainIntelligence.spendingBehavior;
+      final brainCashFlow = brainIntelligence.cashFlowPrediction;
+
       // Create a user profile from transactions
       final transactions = _financialContextService.allTransactions.toList();
       final profile = transactions.isNotEmpty
@@ -224,12 +226,13 @@ class IntelligenceService extends GetxService {
         profile: profile,
       );
 
-      // Calculate savings rate
+      // Use savings rate calculation
       final income = _financialContextService.totalMonthlyIncome.value;
-      final savings = _financialContextService.averageMonthlySavings.value;
-      final savingsRate = income > 0 ? (savings / income) * 100 : 0.0;
+      final expenses = _financialContextService.totalMonthlyExpenses.value;
+      final savingsRate =
+          income > 0 ? ((income - expenses) / income) * 100 : 0.0;
 
-      // Determine risk level from health score
+      // Determine risk level from health score (keep using local RiskLevel)
       RiskLevel riskLevel;
       if (healthScore.totalScore >= 80) {
         riskLevel = RiskLevel.low;
@@ -251,15 +254,28 @@ class IntelligenceService extends GetxService {
       // Create alerts from penalties
       _generateAlertsFromPenalties(healthScore.penalties);
 
-      // Update the summary
+      // Use brain's spending data for predictions
+      final avgDailySpending = spendingBehavior.avgDailySpending;
+      final predictedEndBalance = brainCashFlow.predictedMonthEndBalance;
+
+      // Generate cash flow forecast using brain's data
+      forecast.value = CashFlowForecast(
+        summary: ForecastSummary(
+          endBalance: predictedEndBalance,
+          lowestBalance: predictedEndBalance - (avgDailySpending * 7),
+          riskLevel: riskLevel,
+        ),
+        dailyBalances: [], // Not used by widget currently
+      );
+
+      // Update the summary with consistent data from brain
       _summary.value = IntelligenceSummary(
         riskLevel: riskLevel,
         criticalAlertsCount: criticalCount,
         warningAlertsCount: warningCount,
         positiveAlertsCount: healthScore.totalScore >= 80 ? 1 : 0,
-        predictedEndBalance: _financialContextService.currentBalance.value,
-        lowestPredictedBalance: _financialContextService.currentBalance.value -
-            _financialContextService.totalMonthlyExpenses.value,
+        predictedEndBalance: predictedEndBalance,
+        lowestPredictedBalance: predictedEndBalance - (avgDailySpending * 7),
         savingsRate: savingsRate,
         topAlert:
             highPriorityAlerts.isNotEmpty ? highPriorityAlerts.first : null,
@@ -331,5 +347,3 @@ class IntelligenceService extends GetxService {
     highPriorityAlerts.removeWhere((a) => a.id == id);
   }
 }
-
-

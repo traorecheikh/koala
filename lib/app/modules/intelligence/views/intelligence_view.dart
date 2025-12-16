@@ -9,6 +9,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/services/ml/smart_financial_brain.dart';
+import 'package:koaa/app/data/models/ml/financial_intelligence.dart';
+import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/routes/app_pages.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
@@ -141,50 +143,35 @@ class IntelligenceView extends StatelessWidget {
   }
 
   Widget _buildHealthScore(BuildContext context, FinancialIntelligence intel) {
-    int score;
+    // Get the ACTUAL health score from IntelligenceService for consistency with dashboard
+    final intelligenceService = Get.find<IntelligenceService>();
+    final score = intelligenceService.getSummary().healthScore;
+
     Color color;
     String label;
     IconData icon;
 
-    // Default to "Analysis..." for unknown
-    // Keep raw logic mapping, but use standardized semantic colors where possible
-
-    switch (intel.overallRiskLevel) {
-      case RiskLevel.critical:
-        score = 20;
-        color = KoalaColors.destructive;
-        label = 'Critique';
-        icon = CupertinoIcons.xmark_circle_fill;
-        break;
-      case RiskLevel.high:
-        score = 40;
-        color = KoalaColors.warning;
-        label = 'Attention';
-        icon = CupertinoIcons.exclamationmark_triangle_fill;
-        break;
-      case RiskLevel.medium:
-        score = 60;
-        color = KoalaColors.warning.withOpacity(0.8);
-        label = 'Modéré';
-        icon = CupertinoIcons.exclamationmark_circle_fill;
-        break;
-      case RiskLevel.low:
-        score = 80;
-        color = KoalaColors.success;
-        label = 'Bon';
-        icon = CupertinoIcons.checkmark_circle_fill;
-        break;
-      case RiskLevel.minimal:
-        score = 95;
-        color = Colors.teal;
-        label = 'Excellent';
-        icon = CupertinoIcons.checkmark_shield_fill;
-        break;
-      default:
-        score = 50;
-        color = Colors.grey;
-        label = 'Analyse...';
-        icon = CupertinoIcons.hourglass;
+    // Determine display based on actual score (same logic as dashboard)
+    if (score >= 80) {
+      color = KoalaColors.success;
+      label = 'Excellent';
+      icon = CupertinoIcons.checkmark_shield_fill;
+    } else if (score >= 60) {
+      color = KoalaColors.success.withOpacity(0.8);
+      label = 'Bon';
+      icon = CupertinoIcons.checkmark_circle_fill;
+    } else if (score >= 40) {
+      color = KoalaColors.warning;
+      label = 'Modéré';
+      icon = CupertinoIcons.exclamationmark_circle_fill;
+    } else if (score >= 20) {
+      color = KoalaColors.warning;
+      label = 'Attention';
+      icon = CupertinoIcons.exclamationmark_triangle_fill;
+    } else {
+      color = KoalaColors.destructive;
+      label = 'Critique';
+      icon = CupertinoIcons.xmark_circle_fill;
     }
 
     return Container(

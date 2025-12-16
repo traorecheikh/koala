@@ -61,6 +61,10 @@ class Job extends HiveObject {
   @HiveField(6)
   DateTime createdAt;
 
+  /// Optional end date for time-limited jobs (contracts, etc.)
+  @HiveField(7)
+  DateTime? endDate;
+
   Job({
     required this.id,
     required this.name,
@@ -69,13 +73,22 @@ class Job extends HiveObject {
     required this.paymentDate,
     this.isActive = true,
     DateTime? createdAt,
+    this.endDate,
   }) : createdAt = createdAt ?? DateTime.now();
+
+  /// Check if this job is currently valid for income generation
+  bool get isCurrentlyValid {
+    if (!isActive) return false;
+    if (endDate != null && DateTime.now().isAfter(endDate!)) return false;
+    return true;
+  }
 
   double get monthlyIncome => amount * frequency.paymentsPerMonth;
 
   bool isPaymentDue(DateTime date) {
     // Normalize dates to ignore time component for comparison
-    final normalizedPaymentDate = DateTime(paymentDate.year, paymentDate.month, paymentDate.day);
+    final normalizedPaymentDate =
+        DateTime(paymentDate.year, paymentDate.month, paymentDate.day);
     final normalizedCheckDate = DateTime(date.year, date.month, date.day);
 
     if (normalizedCheckDate.isBefore(normalizedPaymentDate)) {
@@ -86,11 +99,13 @@ class Job extends HiveObject {
       case PaymentFrequency.weekly:
         // Check if the weekday matches and if it's a multiple of 7 days from paymentDate
         return normalizedCheckDate.weekday == normalizedPaymentDate.weekday &&
-            normalizedCheckDate.difference(normalizedPaymentDate).inDays % 7 == 0;
+            normalizedCheckDate.difference(normalizedPaymentDate).inDays % 7 ==
+                0;
       case PaymentFrequency.biweekly:
         // Check if the weekday matches and if it's a multiple of 14 days from paymentDate
         return normalizedCheckDate.weekday == normalizedPaymentDate.weekday &&
-            normalizedCheckDate.difference(normalizedPaymentDate).inDays % 14 == 0;
+            normalizedCheckDate.difference(normalizedPaymentDate).inDays % 14 ==
+                0;
       case PaymentFrequency.monthly:
         // Check if the day of the month matches
         return normalizedCheckDate.day == normalizedPaymentDate.day;
@@ -105,6 +120,7 @@ class Job extends HiveObject {
     DateTime? paymentDate,
     bool? isActive,
     DateTime? createdAt,
+    DateTime? endDate,
   }) {
     return Job(
       id: id ?? this.id,
@@ -114,8 +130,7 @@ class Job extends HiveObject {
       paymentDate: paymentDate ?? this.paymentDate,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
+      endDate: endDate ?? this.endDate,
     );
   }
 }
-
-

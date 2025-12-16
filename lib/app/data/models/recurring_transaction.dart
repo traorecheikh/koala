@@ -48,6 +48,18 @@ class RecurringTransaction extends HiveObject {
   @HiveField(9)
   String? categoryId;
 
+  /// Optional end date for time-limited recurring transactions (null = infinite)
+  @HiveField(10)
+  DateTime? endDate;
+
+  /// Whether this recurring transaction is active (can be manually stopped)
+  @HiveField(11)
+  bool isActive;
+
+  /// When this recurring transaction was created (for history tracking)
+  @HiveField(12)
+  DateTime createdAt;
+
   RecurringTransaction({
     String? id,
     required this.amount,
@@ -59,13 +71,24 @@ class RecurringTransaction extends HiveObject {
     required this.category,
     required this.type,
     this.categoryId,
-  }) : id = id ?? const Uuid().v4();
+    this.endDate,
+    this.isActive = true,
+    DateTime? createdAt,
+  })  : id = id ?? const Uuid().v4(),
+        createdAt = createdAt ?? DateTime.now();
+
+  /// Check if this recurring transaction is currently valid for generating
+  bool get isCurrentlyValid {
+    if (!isActive) return false;
+    if (endDate != null && DateTime.now().isAfter(endDate!)) return false;
+    return true;
+  }
 
   DateTime get nextDueDate {
     if (frequency == Frequency.daily) {
       return lastGeneratedDate.add(const Duration(days: 1));
     }
-    
+
     if (frequency == Frequency.weekly) {
       DateTime next = lastGeneratedDate.add(const Duration(days: 1));
       while (!daysOfWeek.contains(next.weekday)) {
@@ -73,7 +96,7 @@ class RecurringTransaction extends HiveObject {
       }
       return next;
     }
-    
+
     if (frequency == Frequency.monthly) {
       // Helper to get clamped date
       DateTime getClampedDate(int year, int month, int day) {
@@ -83,13 +106,15 @@ class RecurringTransaction extends HiveObject {
       }
 
       // Check current month (in case last generated was early in the month)
-      DateTime candidate = getClampedDate(lastGeneratedDate.year, lastGeneratedDate.month, dayOfMonth);
+      DateTime candidate = getClampedDate(
+          lastGeneratedDate.year, lastGeneratedDate.month, dayOfMonth);
       if (candidate.isAfter(lastGeneratedDate)) return candidate;
 
       // Check next month
-      return getClampedDate(lastGeneratedDate.year, lastGeneratedDate.month + 1, dayOfMonth);
+      return getClampedDate(
+          lastGeneratedDate.year, lastGeneratedDate.month + 1, dayOfMonth);
     }
-    
+
     return lastGeneratedDate.add(const Duration(days: 1));
   }
 
@@ -100,5 +125,3 @@ class RecurringTransaction extends HiveObject {
     return false;
   }
 }
-
-

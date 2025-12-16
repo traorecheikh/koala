@@ -14,6 +14,7 @@ import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/modules/analytics/controllers/analytics_controller.dart';
 import 'package:koaa/app/modules/goals/views/widgets/goal_card.dart';
+import 'package:koaa/app/services/ml/smart_financial_brain.dart';
 
 class AnalyticsView extends StatefulWidget {
   const AnalyticsView({super.key});
@@ -161,10 +162,190 @@ class _AnalyticsViewState extends State<AnalyticsView>
           if (controller.canNavigate) SizedBox(height: KoalaSpacing.xxl),
           Obx(() => _buildMonthlySummary(context)),
           SizedBox(height: KoalaSpacing.xl),
+          _buildMultiMonthProjectionCard(context),
+          SizedBox(height: KoalaSpacing.xl),
           Obx(() => _buildJobsSection(context)),
           SizedBox(height: KoalaSpacing.xl),
           Obx(() => _buildCategoryCard(context)),
           SizedBox(height: KoalaSpacing.xxxl),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMultiMonthProjectionCard(BuildContext context) {
+    final projection = controller.getMultiMonthProjection();
+
+    if (projection.months.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final trendColor = projection.trend == 'improving'
+        ? KoalaColors.success
+        : projection.trend == 'declining'
+            ? KoalaColors.destructive
+            : KoalaColors.textSecondary(context);
+
+    final trendIcon = projection.trend == 'improving'
+        ? CupertinoIcons.arrow_up_right
+        : projection.trend == 'declining'
+            ? CupertinoIcons.arrow_down_right
+            : CupertinoIcons.minus;
+
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: KoalaColors.surface(context),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: KoalaColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Projection 6 Mois',
+                  style: KoalaTypography.heading3(context)),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: trendColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Row(
+                  children: [
+                    Icon(trendIcon, size: 14.sp, color: trendColor),
+                    SizedBox(width: 4.w),
+                    Text(
+                      projection.trend == 'improving'
+                          ? 'En hausse'
+                          : projection.trend == 'declining'
+                              ? 'En baisse'
+                              : 'Stable',
+                      style: KoalaTypography.caption(context).copyWith(
+                        color: trendColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            projection.outlook,
+            style: KoalaTypography.bodyMedium(context).copyWith(
+              color: KoalaColors.textSecondary(context),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          // Mini bar chart of projected balances
+          SizedBox(
+            height: 120.h,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: projection.months.take(6).map((month) {
+                final maxBalance = projection.months
+                    .map((m) => m.projectedBalance.abs())
+                    .reduce(max);
+                final heightRatio = maxBalance > 0
+                    ? (month.projectedBalance.abs() / maxBalance)
+                        .clamp(0.1, 1.0)
+                    : 0.1;
+                final isNegative = month.projectedBalance < 0;
+
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${(month.projectedBalance / 1000).toStringAsFixed(0)}k',
+                          style: KoalaTypography.caption(context).copyWith(
+                            fontSize: 9.sp,
+                            color: isNegative
+                                ? KoalaColors.destructive
+                                : KoalaColors.success,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Container(
+                          height: (80 * heightRatio).h,
+                          decoration: BoxDecoration(
+                            color: isNegative
+                                ? KoalaColors.destructive.withValues(alpha: 0.7)
+                                : KoalaColors.accent.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          month.monthName,
+                          style: KoalaTypography.caption(context).copyWith(
+                            fontSize: 10.sp,
+                            color: KoalaColors.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          // Summary row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Épargne 3 mois',
+                      style: KoalaTypography.caption(context).copyWith(
+                        color: KoalaColors.textSecondary(context),
+                      ),
+                    ),
+                    Text(
+                      '${_formatAmount(projection.projectedSavingsIn3Months)} FCFA',
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: projection.projectedSavingsIn3Months >= 0
+                            ? KoalaColors.success
+                            : KoalaColors.destructive,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Épargne 6 mois',
+                      style: KoalaTypography.caption(context).copyWith(
+                        color: KoalaColors.textSecondary(context),
+                      ),
+                    ),
+                    Text(
+                      '${_formatAmount(projection.projectedSavingsIn6Months)} FCFA',
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: projection.projectedSavingsIn6Months >= 0
+                            ? KoalaColors.success
+                            : KoalaColors.destructive,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

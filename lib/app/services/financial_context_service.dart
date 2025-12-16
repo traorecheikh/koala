@@ -19,7 +19,8 @@ class FinancialContextService extends GetxService {
   final RxList<Debt> allDebts = <Debt>[].obs;
   final RxList<FinancialGoal> allGoals = <FinancialGoal>[].obs;
   final RxList<Category> allCategories = <Category>[].obs;
-  final RxList<RecurringTransaction> allRecurringTransactions = <RecurringTransaction>[].obs;
+  final RxList<RecurringTransaction> allRecurringTransactions =
+      <RecurringTransaction>[].obs;
 
   // Computed metrics
   final RxDouble currentBalance = 0.0.obs;
@@ -39,7 +40,8 @@ class FinancialContextService extends GetxService {
   final List<StreamSubscription> _subscriptions = [];
   // GetX Workers for everAll
   final List<Worker> _workers = [];
-  final isInitialized = false.obs; // New: Tracks initial data loading completion
+  final isInitialized =
+      false.obs; // New: Tracks initial data loading completion
 
   @override
   void onInit() {
@@ -86,19 +88,38 @@ class FinancialContextService extends GetxService {
 
   void _initListeners() {
     // Listen to changes in Hive boxes and update observables
-    _subscriptions.add(Hive.box<LocalTransaction>('transactionBox').watch().listen((_) => _loadTransactions()));
-    _subscriptions.add(Hive.box<Job>('jobBox').watch().listen((_) => _loadJobs()));
-    _subscriptions.add(Hive.box<Budget>('budgetBox').watch().listen((_) => _loadBudgets()));
-    _subscriptions.add(Hive.box<Debt>('debtBox').watch().listen((_) => _loadDebts()));
-    _subscriptions.add(Hive.box<FinancialGoal>('financialGoalBox').watch().listen((_) => _loadGoals()));
-    _subscriptions.add(Hive.box<Category>('categoryBox').watch().listen((_) => _loadCategories()));
-    _subscriptions.add(Hive.box<RecurringTransaction>('recurringTransactionBox').watch().listen((_) => _loadRecurringTransactions()));
+    _subscriptions.add(Hive.box<LocalTransaction>('transactionBox')
+        .watch()
+        .listen((_) => _loadTransactions()));
+    _subscriptions
+        .add(Hive.box<Job>('jobBox').watch().listen((_) => _loadJobs()));
+    _subscriptions.add(
+        Hive.box<Budget>('budgetBox').watch().listen((_) => _loadBudgets()));
+    _subscriptions
+        .add(Hive.box<Debt>('debtBox').watch().listen((_) => _loadDebts()));
+    _subscriptions.add(Hive.box<FinancialGoal>('financialGoalBox')
+        .watch()
+        .listen((_) => _loadGoals()));
+    _subscriptions.add(Hive.box<Category>('categoryBox')
+        .watch()
+        .listen((_) => _loadCategories()));
+    _subscriptions.add(Hive.box<RecurringTransaction>('recurringTransactionBox')
+        .watch()
+        .listen((_) => _loadRecurringTransactions()));
 
     // Recalculate computed metrics whenever underlying data changes
-    _workers.add(everAll([allTransactions, allJobs, allBudgets, allDebts, allGoals, allRecurringTransactions], (_) => _recalculateMetrics()));
+    _workers.add(everAll([
+      allTransactions,
+      allJobs,
+      allBudgets,
+      allDebts,
+      allGoals,
+      allRecurringTransactions
+    ], (_) => _recalculateMetrics()));
   }
 
-  Future<void> _loadAllData() async { // Changed to async Future<void>
+  Future<void> _loadAllData() async {
+    // Changed to async Future<void>
     _logger.i('FinancialContextService: Starting _loadAllData.');
     _loadTransactions();
     _loadJobs();
@@ -112,13 +133,28 @@ class FinancialContextService extends GetxService {
     _logger.i('FinancialContextService: _loadAllData completed.');
   }
 
-  void _loadTransactions() => allTransactions.assignAll(Hive.box<LocalTransaction>('transactionBox').values.where((t) => !t.isHidden).toList());
-  void _loadJobs() => allJobs.assignAll(Hive.box<Job>('jobBox').values.toList().where((job) => job.isActive).toList());
-  void _loadBudgets() => allBudgets.assignAll(Hive.box<Budget>('budgetBox').values.toList());
-  void _loadDebts() => allDebts.assignAll(Hive.box<Debt>('debtBox').values.toList());
-  void _loadGoals() => allGoals.assignAll(Hive.box<FinancialGoal>('financialGoalBox').values.toList());
-  void _loadCategories() => allCategories.assignAll(Hive.box<Category>('categoryBox').values.toList());
-  void _loadRecurringTransactions() => allRecurringTransactions.assignAll(Hive.box<RecurringTransaction>('recurringTransactionBox').values.toList());
+  void _loadTransactions() =>
+      allTransactions.assignAll(Hive.box<LocalTransaction>('transactionBox')
+          .values
+          .where((t) => !t.isHidden)
+          .toList());
+  void _loadJobs() => allJobs.assignAll(Hive.box<Job>('jobBox')
+      .values
+      .toList()
+      .where((job) => job.isActive)
+      .toList());
+  void _loadBudgets() =>
+      allBudgets.assignAll(Hive.box<Budget>('budgetBox').values.toList());
+  void _loadDebts() =>
+      allDebts.assignAll(Hive.box<Debt>('debtBox').values.toList());
+  void _loadGoals() => allGoals
+      .assignAll(Hive.box<FinancialGoal>('financialGoalBox').values.toList());
+  void _loadCategories() => allCategories
+      .assignAll(Hive.box<Category>('categoryBox').values.toList());
+  void _loadRecurringTransactions() => allRecurringTransactions.assignAll(
+      Hive.box<RecurringTransaction>('recurringTransactionBox')
+          .values
+          .toList());
 
   Future<void> _recalculateMetrics() async {
     await _reconcileDebtAmounts(); // Ensure consistency before calculation
@@ -136,8 +172,8 @@ class FinancialContextService extends GetxService {
         for (var debt in allDebts) {
           // Find all linked repayment transactions
           final linkedTxs = allTransactions
-            .where((tx) => tx.linkedDebtId == debt.id)
-            .toList();
+              .where((tx) => tx.linkedDebtId == debt.id)
+              .toList();
 
           double totalRepaid = 0.0;
 
@@ -157,10 +193,8 @@ class FinancialContextService extends GetxService {
 
             // Log unexpected types
             if (!isValidRepayment && tx.linkedDebtId == debt.id) {
-              _logger.w(
-                'Unexpected transaction type for debt repayment: '
-                'Debt type: ${debt.type}, TX type: ${tx.type}, TX: $tx'
-              );
+              _logger.w('Unexpected transaction type for debt repayment: '
+                  'Debt type: ${debt.type}, TX type: ${tx.type}, TX: $tx');
             }
 
             if (isValidRepayment) {
@@ -169,7 +203,7 @@ class FinancialContextService extends GetxService {
           }
 
           final calculatedRemaining = (debt.originalAmount - totalRepaid)
-            .clamp(0.0, double.infinity); // Prevent negative
+              .clamp(0.0, double.infinity); // Prevent negative
 
           // NEW: Check if reconciliation is needed
           if ((debt.remainingAmount - calculatedRemaining).abs() > 0.01) {
@@ -179,10 +213,8 @@ class FinancialContextService extends GetxService {
               // NEW: Add error handling
               await debt.save();
 
-              _logger.i(
-                'Debt reconciled: ${debt.personName}, '
-                'Remaining: $calculatedRemaining'
-              );
+              _logger.i('Debt reconciled: ${debt.personName}, '
+                  'Remaining: $calculatedRemaining');
 
               // Check if debt is now paid off
               if (calculatedRemaining <= 0 && !debt.isPaidOff) {
@@ -190,10 +222,8 @@ class FinancialContextService extends GetxService {
               }
             } catch (e, stackTrace) {
               // NEW: Proper error handling
-              _logger.e(
-                'Failed to save reconciled debt: $e',
-                stackTrace: stackTrace
-              );
+              _logger.e('Failed to save reconciled debt: $e',
+                  stackTrace: stackTrace);
               // Rethrow or handle appropriately
               rethrow;
             }
@@ -201,10 +231,7 @@ class FinancialContextService extends GetxService {
         }
       });
     } catch (e, stackTrace) {
-      _logger.e(
-        'Debt reconciliation failed: $e',
-        stackTrace: stackTrace
-      );
+      _logger.e('Debt reconciliation failed: $e', stackTrace: stackTrace);
     }
   }
 
@@ -237,14 +264,20 @@ class FinancialContextService extends GetxService {
     double income = 0.0;
     double expenses = 0.0;
 
-    // Income from transactions
+    // Income from transactions (include first day of month!)
     income += allTransactions
-        .where((tx) => tx.type == TransactionType.income && tx.date.isAfter(startOfMonth) && tx.date.isBefore(endOfMonth))
+        .where((tx) =>
+            tx.type == TransactionType.income &&
+            !tx.date.isBefore(startOfMonth) &&
+            tx.date.isBefore(endOfMonth))
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
-    // Expenses from transactions
+    // Expenses from transactions (include first day of month!)
     expenses += allTransactions
-        .where((tx) => tx.type == TransactionType.expense && tx.date.isAfter(startOfMonth) && tx.date.isBefore(endOfMonth))
+        .where((tx) =>
+            tx.type == TransactionType.expense &&
+            !tx.date.isBefore(startOfMonth) &&
+            tx.date.isBefore(endOfMonth))
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
     totalMonthlyIncome.value = income;
@@ -258,18 +291,19 @@ class FinancialContextService extends GetxService {
     for (var debt in allDebts) {
       if (!debt.isPaidOff) {
         outstanding += debt.remainingAmount;
-        
+
         if (debt.minPayment > 0) {
           monthlyPayments += debt.minPayment;
         } else {
           final dueDate = debt.dueDate;
           if (dueDate != null && dueDate.isAfter(DateTime.now())) {
             // If no min payment set but has due date, estimate based on time remaining
-            final months = (dueDate.difference(DateTime.now()).inDays / 30).ceil();
+            final months =
+                (dueDate.difference(DateTime.now()).inDays / 30).ceil();
             if (months > 0) {
               monthlyPayments += debt.remainingAmount / months;
             } else {
-               monthlyPayments += debt.remainingAmount; // Due now/soon
+              monthlyPayments += debt.remainingAmount; // Due now/soon
             }
           }
         }
@@ -288,16 +322,19 @@ class FinancialContextService extends GetxService {
     for (int i = 0; i < 3; i++) {
       final targetMonth = DateTime(now.year, now.month - i, 1);
       final start = DateTime(targetMonth.year, targetMonth.month, 1);
-      final end = DateTime(targetMonth.year, targetMonth.month + 1, 0, 23, 59, 59);
+      final end =
+          DateTime(targetMonth.year, targetMonth.month + 1, 0, 23, 59, 59);
 
       final monthIncome = allTransactions
-          .where((tx) => tx.type == TransactionType.income &&
+          .where((tx) =>
+              tx.type == TransactionType.income &&
               tx.date.isAfter(start) &&
               tx.date.isBefore(end))
           .fold(0.0, (sum, tx) => sum + tx.amount);
 
       final monthExpenses = allTransactions
-          .where((tx) => tx.type == TransactionType.expense &&
+          .where((tx) =>
+              tx.type == TransactionType.expense &&
               tx.date.isAfter(start) &&
               tx.date.isBefore(end))
           .fold(0.0, (sum, tx) => sum + tx.amount);
@@ -329,9 +366,11 @@ class FinancialContextService extends GetxService {
 
   double getBudgetedAmountForCategory(String categoryId, int year, int month) {
     return allBudgets
-        .firstWhereOrNull(
-            (b) => b.categoryId == categoryId && b.year == year && b.month == month)
-        ?.amount ??
+            .firstWhereOrNull((b) =>
+                b.categoryId == categoryId &&
+                b.year == year &&
+                b.month == month)
+            ?.amount ??
         0.0;
   }
 
@@ -374,4 +413,3 @@ class FinancialContextService extends GetxService {
     return allDebts.where((debt) => !debt.isPaidOff).toList();
   }
 }
-

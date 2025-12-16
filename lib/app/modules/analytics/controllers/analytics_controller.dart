@@ -7,6 +7,8 @@ import 'package:koaa/app/data/models/savings_goal.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/services/financial_context_service.dart'; // New import
 import 'package:koaa/app/services/ml_service.dart';
+import 'package:koaa/app/services/ml/smart_financial_brain.dart';
+import 'package:koaa/app/data/models/ml/financial_intelligence.dart';
 import 'package:uuid/uuid.dart';
 
 enum TimeRange { month, year, all }
@@ -674,5 +676,14 @@ class AnalyticsController extends GetxController {
     return ((totalExpenses - previousTotalExpenses) / previousTotalExpenses) *
         100;
   }
-}
 
+  /// Get multi-month projections from SmartFinancialBrain
+  MultiMonthProjection getMultiMonthProjection() {
+    try {
+      final brain = Get.find<SmartFinancialBrain>();
+      return brain.projectNextMonths(monthsAhead: 6);
+    } catch (_) {
+      return MultiMonthProjection.empty();
+    }
+  }
+}

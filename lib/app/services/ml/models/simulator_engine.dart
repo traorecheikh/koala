@@ -255,6 +255,9 @@ class SimulatorEngine {
 
       // Income from jobs
       for (final job in jobs) {
+        if (!job.isActive) continue;
+        if (job.endDate != null && job.endDate!.isBefore(currentDate)) continue;
+
         if (job.isPaymentDue(currentDate)) {
           currentBalance += job.amount;
           timeline.add(CashFlowEvent(
@@ -266,23 +269,38 @@ class SimulatorEngine {
         }
       }
 
-      // Recurring expenses
+      // Recurring Transactions (Income & Expenses)
       for (final rt in recurringTransactions) {
+        if (!rt.isActive) continue;
+        if (rt.endDate != null && rt.endDate!.isBefore(currentDate)) continue;
+
         if (rt.isDue(currentDate)) {
-          currentBalance -= rt.amount;
-          timeline.add(CashFlowEvent(
-            date: currentDate,
-            description: 'Dépense récurrente (${rt.description})',
-            amount: -rt.amount,
-            balanceAfterEvent: currentBalance,
-            categoryId: rt.categoryId,
-          ));
-          // Update simulated budget spent
-          if (rt.categoryId != null &&
-              simulatedBudgetSpent.containsKey(rt.categoryId)) {
-            final categoryId = rt.categoryId!;
-            simulatedBudgetSpent[categoryId] =
-                (simulatedBudgetSpent[categoryId] ?? 0) + rt.amount;
+          if (rt.type == TransactionType.income) {
+            currentBalance += rt.amount;
+            timeline.add(CashFlowEvent(
+              date: currentDate,
+              description: 'Revenu récurrent (${rt.description})',
+              amount: rt.amount,
+              balanceAfterEvent: currentBalance,
+              categoryId: rt.categoryId,
+            ));
+          } else {
+            currentBalance -= rt.amount;
+            timeline.add(CashFlowEvent(
+              date: currentDate,
+              description: 'Dépense récurrente (${rt.description})',
+              amount: -rt.amount,
+              balanceAfterEvent: currentBalance,
+              categoryId: rt.categoryId,
+            ));
+
+            // Update simulated budget spent (only for expenses)
+            if (rt.categoryId != null &&
+                simulatedBudgetSpent.containsKey(rt.categoryId)) {
+              final categoryId = rt.categoryId!;
+              simulatedBudgetSpent[categoryId] =
+                  (simulatedBudgetSpent[categoryId] ?? 0) + rt.amount;
+            }
           }
         }
       }
@@ -518,16 +536,26 @@ class SimulatorEngine {
       simulatedBalance -= dailyBurnRate;
 
       for (final job in _financialContextService.allJobs) {
+        if (!job.isActive) continue;
+        if (job.endDate != null && job.endDate!.isBefore(date)) continue;
+
         if (job.isPaymentDue(date)) {
           simulatedBalance += job.amount;
         }
       }
 
       for (final bill in recurringBills) {
+        if (!bill.isActive) continue;
+        if (bill.endDate != null && bill.endDate!.isBefore(date)) continue;
+
         if (_isBillDueOn(bill, date)) {
-          simulatedBalance -= bill.amount;
-          if (simulatedBalance <= 0 && reasonForRisk == null) {
-            reasonForRisk = 'Le paiement de la facture "${bill.description}"';
+          if (bill.type == TransactionType.income) {
+            simulatedBalance += bill.amount;
+          } else {
+            simulatedBalance -= bill.amount;
+            if (simulatedBalance <= 0 && reasonForRisk == null) {
+              reasonForRisk = 'Le paiement de la facture "${bill.description}"';
+            }
           }
         }
       }
@@ -592,6 +620,10 @@ class SimulatorEngine {
     }
 
     final upcomingBills = recurringBills.where((bill) {
+      if (!bill.isActive) return false;
+      // Only show bills that are expenses for upcoming bills warnings
+      if (bill.type == TransactionType.income) return false;
+
       for (int i = 1; i <= daysToSimulate; i++) {
         if (_isBillDueOn(bill, now.add(Duration(days: i)))) return true;
       }
@@ -618,11 +650,15 @@ class SimulatorEngine {
       List<RecurringTransaction> bills, int windowDays) {
     if (history.isEmpty) return 0;
 
+    // Only consider expense bills for filtering organic spend
+    final expenseBills =
+        bills.where((b) => b.type == TransactionType.expense).toList();
+
     // Filter for expenses, exclude amounts close to known recurring bills
     final nonBillExpenses = history.where((t) {
       if (t.type != TransactionType.expense) return false;
       // Check if this transaction is likely a recurring bill
-      return !bills.any((bill) =>
+      return !expenseBills.any((bill) =>
           (t.amount - bill.amount).abs() <
               t.amount * 0.1 && // Amount is similar
           t.date.difference(bill.lastGeneratedDate).inDays.abs() <
@@ -686,5 +722,3 @@ class SimulationExplanation {
     this.criticalPoint,
   });
 }
-
-

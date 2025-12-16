@@ -527,9 +527,14 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     final theme = Theme.of(context);
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = keyboardHeight > 0;
+    // Expand to 85% when keyboard visible, otherwise 50%
+    final dialogHeight = isKeyboardVisible
+        ? MediaQuery.of(context).size.height * 0.85
+        : MediaQuery.of(context).size.height * 0.50;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      height: dialogHeight,
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -549,7 +554,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
           // Header
           Padding(
-            padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0.h),
+            padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 0.h),
             child: Row(
               children: [
                 Container(
@@ -577,7 +582,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       : 'Ajouter une dépense',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    fontSize: 23.sp,
+                    fontSize: 20.sp,
                   ),
                 ),
                 const Spacer(),
@@ -597,16 +602,11 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
             ),
           ),
 
+          // Content - no scrolling needed
           Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                top: isKeyboardVisible ? 24.h : 48.h,
-                bottom: isKeyboardVisible ? keyboardHeight + 24.h : 48.h,
-                left: 24.w,
-                right: 24.w,
-              ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Amount input
                   Column(
@@ -615,11 +615,11 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                         controller: _amountController,
                         focusNode: _amountFocusNode,
                         keyboardType: const TextInputType.numberWithOptions(
-                          decimal: false,
-                        ),
+                            decimal: false),
                         textAlign: TextAlign.center,
                         style: theme.textTheme.displayMedium?.copyWith(
                           fontWeight: FontWeight.w300,
+                          fontSize: 48.sp,
                           height: 1.1,
                           color: widget.type == TransactionType.income
                               ? Colors.green
@@ -637,11 +637,9 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             _amountController.value = TextEditingValue(
                               text: formatted,
                               selection: TextSelection.collapsed(
-                                offset: formatted.length,
-                              ),
+                                  offset: formatted.length),
                             );
                           }
-
                           if (_error != null) {
                             setState(() => _error = null);
                           }
@@ -653,12 +651,6 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                           color: Colors.grey.shade600,
                           fontWeight: FontWeight.w400,
                         ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Container(
-                        height: 1.h,
-                        width: 60.w,
-                        color: Colors.grey.shade300,
                       ),
                     ],
                   ).animate().scale(
@@ -740,53 +732,10 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       )
                       .fadeIn(),
 
-                  SizedBox(height: 16.h),
-
-                  // Optional description
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: TextField(
-                      controller: _descriptionController,
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Note (optionnel)',
-                        hintStyle: TextStyle(color: Colors.grey.shade500),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 16.h,
-                        ),
-                        prefixIcon: Icon(
-                          CupertinoIcons.text_alignleft,
-                          color: Colors.grey.shade500,
-                          size: 20.sp,
-                        ),
-                      ),
-                      onChanged: (_) {
-                        if (_error != null) {
-                          setState(() => _error = null);
-                        }
-                      },
-                    ),
-                  )
-                      .animate()
-                      .slideY(
-                        begin: 0.2,
-                        duration: 400.ms,
-                        delay: 200.ms,
-                        curve: Curves.easeOutQuart,
-                      )
-                      .fadeIn(),
+                  SizedBox(height: 30.h),
 
                   if (_error != null) ...[
-                    SizedBox(height: 24.h),
+                    SizedBox(height: 16.h),
                     AnimatedOpacity(
                       opacity: 1.0,
                       duration: const Duration(milliseconds: 300),
@@ -811,7 +760,6 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     ),
                   ],
 
-                  SizedBox(height: isKeyboardVisible ? 24.h : 48.h),
 
                   // Add button
                   AnimatedScale(
@@ -877,6 +825,8 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                         delay: 300.ms,
                         curve: Curves.easeOutQuart,
                       ),
+
+                  SizedBox(height: 20.h),
                 ],
               ),
             ),
@@ -1059,5 +1009,3 @@ class _PremiumBudgetRow extends StatelessWidget {
     );
   }
 }
-
-

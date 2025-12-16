@@ -2,7 +2,10 @@ import 'package:get/get.dart';
 import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/debt.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
+import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/data/models/recurring_transaction.dart';
+import 'package:koaa/app/data/models/ml/financial_intelligence.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:logger/logger.dart';
 import 'dart:math';
@@ -87,10 +90,10 @@ class SmartFinancialBrain extends GetxService {
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final dayOfMonth = now.day;
 
-    // This month's expenses
+    // This month's expenses (include first day of month!)
     final thisMonthExpenses = transactions
         .where((t) =>
-            t.type == TransactionType.expense && t.date.isAfter(monthStart))
+            t.type == TransactionType.expense && !t.date.isBefore(monthStart))
         .toList();
 
     final totalSpentThisMonth =
@@ -440,7 +443,7 @@ class SmartFinancialBrain extends GetxService {
     final monthStart = DateTime(now.year, now.month, 1);
     final thisMonthExpenses = transactions
         .where((t) =>
-            t.type == TransactionType.expense && t.date.isAfter(monthStart))
+            t.type == TransactionType.expense && !t.date.isBefore(monthStart))
         .fold(0.0, (sum, t) => sum + t.amount);
     final avgDailySpending =
         dayOfMonth > 0 ? thisMonthExpenses / dayOfMonth : 0;
@@ -498,6 +501,175 @@ class SmartFinancialBrain extends GetxService {
       daysRemainingInMonth: daysRemaining,
       willSurviveMonth: predictedMonthEnd > 0,
       upcomingIncome: upcomingIncome, // Added field
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MULTI-MONTH PROJECTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Calculate projected income for a specific future month
+  /// This accounts for time-limited jobs and recurring income that may end
+  double _getProjectedIncomeForMonth(DateTime targetMonth, List<Job> jobs,
+      List<RecurringTransaction> recurringIncome) {
+    double projectedIncome = 0.0;
+
+    // Income from jobs that are still active in the target month
+    for (final job in jobs) {
+      // Skip inactive jobs
+      if (!job.isActive) continue;
+
+      // Check if job ends before target month
+      if (job.endDate != null && job.endDate!.isBefore(targetMonth)) {
+        continue; // Job has ended, don't include
+      }
+
+      // Add job income (monthly equivalent)
+      projectedIncome += job.monthlyIncome;
+    }
+
+    // Income from recurring transactions that are still active
+    for (final recurring in recurringIncome) {
+      // Skip inactive or non-income recurring
+      if (!recurring.isActive) continue;
+      if (recurring.type != TransactionType.income) continue;
+
+      // Check if recurring ends before target month
+      if (recurring.endDate != null &&
+          recurring.endDate!.isBefore(targetMonth)) {
+        continue; // Recurring has ended
+      }
+
+      // Calculate monthly equivalent based on frequency
+      double monthlyAmount = recurring.amount;
+      if (recurring.frequency == Frequency.weekly) {
+        monthlyAmount = recurring.amount * 4.33; // Average weeks per month
+      } else if (recurring.frequency == Frequency.daily) {
+        monthlyAmount = recurring.amount * 30; // Average days per month
+      }
+
+      projectedIncome += monthlyAmount;
+    }
+
+    return projectedIncome;
+  }
+
+  /// Project financial status for next N months
+  MultiMonthProjection projectNextMonths({int monthsAhead = 6}) {
+    final now = DateTime.now();
+    final transactions = _context.allTransactions.toList();
+    final jobs = _context.allJobs.toList();
+    final recurringTransactions = _context.allRecurringTransactions.toList();
+    final currentMonthlyIncome = _context.totalMonthlyIncome.value;
+    final monthlyExpenses = _context.totalMonthlyExpenses.value;
+    final balance = _context.currentBalance.value;
+
+    // Calculate average monthly savings rate based on current income
+    final avgSavings = currentMonthlyIncome - monthlyExpenses;
+
+    // Get recurring expenses from last 3 months for better accuracy
+    final threeMonthsAgo = now.subtract(const Duration(days: 90));
+    final recentExpenses = transactions
+        .where((t) =>
+            t.type == TransactionType.expense && t.date.isAfter(threeMonthsAgo))
+        .fold(0.0, (sum, t) => sum + t.amount);
+    final avgMonthlyExpenseActual = recentExpenses / 3;
+
+    // Use actual spending if available, otherwise use recorded expenses
+    final effectiveMonthlyExpense =
+        avgMonthlyExpenseActual > 0 ? avgMonthlyExpenseActual : monthlyExpenses;
+
+    final projections = <MonthProjection>[];
+    var runningBalance = balance;
+    bool incomeWillChange = false;
+
+    final monthNames = [
+      'Jan',
+      'Fév',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Juin',
+      'Juil',
+      'Août',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Déc'
+    ];
+
+    for (int i = 1; i <= monthsAhead; i++) {
+      final futureMonth = DateTime(now.year, now.month + i, 1);
+
+      // Use dynamic income calculation that respects endDate
+      final projectedIncome = _getProjectedIncomeForMonth(
+        futureMonth,
+        jobs,
+        recurringTransactions,
+      );
+
+      // Track if income changes from current
+      if (projectedIncome < currentMonthlyIncome * 0.95) {
+        incomeWillChange = true;
+      }
+
+      final projectedExpense = effectiveMonthlyExpense;
+      final projectedSavings = projectedIncome - projectedExpense;
+
+      runningBalance += projectedSavings;
+
+      projections.add(MonthProjection(
+        month: futureMonth,
+        monthName: monthNames[futureMonth.month - 1],
+        projectedIncome: projectedIncome,
+        projectedExpenses: projectedExpense,
+        projectedBalance: runningBalance,
+        projectedSavings: projectedSavings,
+        isRisky: runningBalance < 0 || projectedSavings < 0,
+      ));
+    }
+
+    // Calculate totals
+    final savings3Months =
+        projections.take(3).fold(0.0, (sum, p) => sum + p.projectedSavings);
+    final savings6Months =
+        projections.fold(0.0, (sum, p) => sum + p.projectedSavings);
+
+    // Determine trend
+    String trend;
+    String outlook;
+
+    if (avgSavings > currentMonthlyIncome * 0.2) {
+      trend = 'improving';
+      outlook =
+          'Excellente trajectoire! Vous épargnez ${(avgSavings / currentMonthlyIncome * 100).toStringAsFixed(0)}% de vos revenus.';
+    } else if (avgSavings > 0) {
+      trend = 'stable';
+      outlook =
+          'Situation stable. Vous épargnez ${avgSavings.toStringAsFixed(0)} FCFA par mois.';
+    } else {
+      trend = 'declining';
+      outlook =
+          'Attention: Vos dépenses dépassent vos revenus de ${(-avgSavings).toStringAsFixed(0)} FCFA/mois.';
+    }
+
+    // Check for future risks
+    final riskyMonths = projections.where((p) => p.isRisky).length;
+    if (riskyMonths > 0) {
+      outlook =
+          '⚠️ Risque de découvert dans $riskyMonths mois si tendance continue.';
+      trend = 'declining';
+    } else if (incomeWillChange) {
+      outlook +=
+          '\nNote: Une baisse de revenus est prévue dans les prochains mois.';
+    }
+
+    return MultiMonthProjection(
+      months: projections,
+      projectedSavingsIn3Months: savings3Months,
+      projectedSavingsIn6Months: savings6Months,
+      trend: trend,
+      outlook: outlook,
     );
   }
 
@@ -684,287 +856,4 @@ class SmartFinancialBrain extends GetxService {
     if (totalScore >= 20) return RiskLevel.high; // Danger
     return RiskLevel.critical; // Emergency
   }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// DATA MODELS
-// ═══════════════════════════════════════════════════════════════════════════
-
-class FinancialIntelligence {
-  final SpendingBehavior spendingBehavior;
-  final DebtStrategy debtStrategy;
-  final GoalProgressAnalysis goalProgress;
-  final BudgetHealth budgetHealth;
-  final CashFlowPrediction cashFlowPrediction;
-  final List<SmartRecommendation> recommendations;
-  final RiskLevel overallRiskLevel;
-
-  FinancialIntelligence({
-    required this.spendingBehavior,
-    required this.debtStrategy,
-    required this.goalProgress,
-    required this.budgetHealth,
-    required this.cashFlowPrediction,
-    required this.recommendations,
-    required this.overallRiskLevel,
-  });
-
-  factory FinancialIntelligence.empty() => FinancialIntelligence(
-        spendingBehavior: SpendingBehavior.empty(),
-        debtStrategy: DebtStrategy.empty(),
-        goalProgress: GoalProgressAnalysis.empty(),
-        budgetHealth: BudgetHealth.empty(),
-        cashFlowPrediction: CashFlowPrediction.empty(),
-        recommendations: [],
-        overallRiskLevel: RiskLevel.unknown,
-      );
-}
-
-enum SpendingPattern { reckless, aggressive, atRisk, balanced, conservative }
-
-enum PayoffStrategy { seekHelp, aggressive, balanced, comfortable }
-
-enum BudgetStatus { exceeded, atRisk, onTrack, underBudget }
-
-enum RiskLevel { critical, high, medium, low, minimal, unknown }
-
-enum RecommendationPriority { critical, high, medium, low }
-
-enum RecommendationCategory { spending, debt, budget, goals, savings }
-
-class SpendingBehavior {
-  final double totalSpentThisMonth;
-  final double velocityRatio;
-  final SpendingPattern pattern;
-  final double avgDailySpending;
-  final int impulsiveTransactionCount;
-  final LocalTransaction? largestTransaction;
-  final List<int> spikeDays;
-  final String? topSpendingCategory;
-  final Map<String, double> categoryBreakdown;
-  final int daysUntilMonthEnd;
-  final double projectedMonthEndSpending;
-
-  SpendingBehavior({
-    required this.totalSpentThisMonth,
-    required this.velocityRatio,
-    required this.pattern,
-    required this.avgDailySpending,
-    required this.impulsiveTransactionCount,
-    this.largestTransaction,
-    required this.spikeDays,
-    this.topSpendingCategory,
-    required this.categoryBreakdown,
-    required this.daysUntilMonthEnd,
-    required this.projectedMonthEndSpending,
-  });
-
-  factory SpendingBehavior.empty() => SpendingBehavior(
-        totalSpentThisMonth: 0,
-        velocityRatio: 0,
-        pattern: SpendingPattern.balanced,
-        avgDailySpending: 0,
-        impulsiveTransactionCount: 0,
-        spikeDays: [],
-        categoryBreakdown: {},
-        daysUntilMonthEnd: 30,
-        projectedMonthEndSpending: 0,
-      );
-}
-
-class DebtStrategy {
-  final double totalDebt;
-  final double totalMonthlyPayments;
-  final double debtToIncomeRatio;
-  final double paymentBurden;
-  final int activeDebtCount;
-  final List<Debt> debtsAtRisk;
-  final List<Debt> optimalPayoffOrder;
-  final PayoffStrategy recommendedStrategy;
-  final int estimatedMonthsToDebtFree;
-  final Debt? priorityDebt;
-
-  DebtStrategy({
-    required this.totalDebt,
-    required this.totalMonthlyPayments,
-    required this.debtToIncomeRatio,
-    required this.paymentBurden,
-    required this.activeDebtCount,
-    required this.debtsAtRisk,
-    required this.optimalPayoffOrder,
-    required this.recommendedStrategy,
-    required this.estimatedMonthsToDebtFree,
-    this.priorityDebt,
-  });
-
-  factory DebtStrategy.empty() => DebtStrategy(
-        totalDebt: 0,
-        totalMonthlyPayments: 0,
-        debtToIncomeRatio: 0,
-        paymentBurden: 0,
-        activeDebtCount: 0,
-        debtsAtRisk: [],
-        optimalPayoffOrder: [],
-        recommendedStrategy: PayoffStrategy.comfortable,
-        estimatedMonthsToDebtFree: 0,
-      );
-}
-
-class GoalProgressAnalysis {
-  final double totalTargetAmount;
-  final double totalSavedAmount;
-  final double overallProgress;
-  final int activeGoalCount;
-  final int goalsOnTrack;
-  final int goalsAtRisk;
-  final List<GoalInsight> goalInsights;
-  final double monthlySavingsCapacity;
-  final GoalInsight? priorityGoal;
-
-  GoalProgressAnalysis({
-    required this.totalTargetAmount,
-    required this.totalSavedAmount,
-    required this.overallProgress,
-    required this.activeGoalCount,
-    required this.goalsOnTrack,
-    required this.goalsAtRisk,
-    required this.goalInsights,
-    required this.monthlySavingsCapacity,
-    this.priorityGoal,
-  });
-
-  factory GoalProgressAnalysis.empty() => GoalProgressAnalysis(
-        totalTargetAmount: 0,
-        totalSavedAmount: 0,
-        overallProgress: 0,
-        activeGoalCount: 0,
-        goalsOnTrack: 0,
-        goalsAtRisk: 0,
-        goalInsights: [],
-        monthlySavingsCapacity: 0,
-      );
-}
-
-class GoalInsight {
-  final FinancialGoal goal;
-  final double progressPercent;
-  final double remainingAmount;
-  final int? estimatedMonthsToComplete;
-  final bool isOnTrack;
-  final int? monthsBehindSchedule;
-  final double? recommendedMonthlyContribution;
-
-  GoalInsight({
-    required this.goal,
-    required this.progressPercent,
-    required this.remainingAmount,
-    this.estimatedMonthsToComplete,
-    required this.isOnTrack,
-    this.monthsBehindSchedule,
-    this.recommendedMonthlyContribution,
-  });
-}
-
-class BudgetHealth {
-  final int totalBudgets;
-  final int exceededCount;
-  final int atRiskCount;
-  final int healthyCount;
-  final List<BudgetInsight> budgetInsights;
-  final BudgetInsight? worstBudget;
-  final int overallHealth; // 0-100
-
-  BudgetHealth({
-    required this.totalBudgets,
-    required this.exceededCount,
-    required this.atRiskCount,
-    required this.healthyCount,
-    required this.budgetInsights,
-    this.worstBudget,
-    required this.overallHealth,
-  });
-
-  factory BudgetHealth.empty() => BudgetHealth(
-        totalBudgets: 0,
-        exceededCount: 0,
-        atRiskCount: 0,
-        healthyCount: 0,
-        budgetInsights: [],
-        overallHealth: 100,
-      );
-}
-
-class BudgetInsight {
-  final Budget budget;
-  final double spent;
-  final double usagePercent;
-  final BudgetStatus status;
-  final double remainingAmount;
-  final double dailyAllowance;
-  final double projectedMonthEnd;
-
-  BudgetInsight({
-    required this.budget,
-    required this.spent,
-    required this.usagePercent,
-    required this.status,
-    required this.remainingAmount,
-    required this.dailyAllowance,
-    required this.projectedMonthEnd,
-  });
-}
-
-class CashFlowPrediction {
-  final double currentBalance;
-  final double predictedMonthEndBalance;
-  final double avgDailySpending;
-  final double safeDailySpending;
-  final int? daysUntilBroke;
-  final double upcomingDebtPayments;
-  final double upcomingIncome; // New: upcoming salary/income
-  final int daysRemainingInMonth;
-  final bool willSurviveMonth;
-
-  CashFlowPrediction({
-    required this.currentBalance,
-    required this.predictedMonthEndBalance,
-    required this.avgDailySpending,
-    required this.safeDailySpending,
-    this.daysUntilBroke,
-    required this.upcomingDebtPayments,
-    this.upcomingIncome = 0,
-    required this.daysRemainingInMonth,
-    required this.willSurviveMonth,
-  });
-
-  factory CashFlowPrediction.empty() => CashFlowPrediction(
-        currentBalance: 0,
-        predictedMonthEndBalance: 0,
-        avgDailySpending: 0,
-        safeDailySpending: 0,
-        upcomingDebtPayments: 0,
-        upcomingIncome: 0,
-        daysRemainingInMonth: 30,
-        willSurviveMonth: true,
-      );
-}
-
-class SmartRecommendation {
-  final RecommendationPriority priority;
-  final RecommendationCategory category;
-  final String title;
-  final String description;
-  final String actionLabel;
-  final String actionRoute;
-  final String impact;
-
-  SmartRecommendation({
-    required this.priority,
-    required this.category,
-    required this.title,
-    required this.description,
-    required this.actionLabel,
-    required this.actionRoute,
-    required this.impact,
-  });
 }

@@ -9,13 +9,14 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
-import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
 import 'package:koaa/app/modules/settings/widgets/add_recurring_transaction_dialog.dart';
+import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/data/models/job.dart';
 
 class RecurringTransactionsView
     extends GetView<RecurringTransactionsController> {
@@ -23,6 +24,9 @@ class RecurringTransactionsView
 
   @override
   Widget build(BuildContext context) {
+    // Inject FinancialContextService to access Jobs
+    final financialContextService = Get.find<FinancialContextService>();
+
     return Scaffold(
       backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
@@ -36,7 +40,7 @@ class RecurringTransactionsView
           tooltip: 'Retour',
         ),
         title: Text(
-          'Transactions récurrentes',
+          'Revenus récurrents',
           style: KoalaTypography.heading3(context),
         ),
         actions: [
@@ -54,29 +58,69 @@ class RecurringTransactionsView
       ),
       body: SafeArea(
         child: Obx(
-          () => controller.recurringTransactions.isEmpty
-              ? _buildEmptyState(context)
-              : ListView.separated(
-                  key: const PageStorageKey('recurring_transactions_list'),
-                  padding: EdgeInsets.all(KoalaSpacing.xl),
-                  itemCount: controller.recurringTransactions.length,
-                  separatorBuilder: (context, index) =>
-                      SizedBox(height: KoalaSpacing.md),
-                  itemBuilder: (context, index) {
-                    final transaction = controller.recurringTransactions[index];
-                    return _TransactionListItem(
-                      key: ValueKey(transaction.id),
-                      transaction: transaction,
-                    );
-                  },
-                )
-                  .animate()
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutQuart,
+          () {
+            // Filter to only show income (not expenses/subscriptions)
+            final incomeTransactions = controller.recurringTransactions
+                .where((t) => t.type == TransactionType.income)
+                .toList();
+
+            final jobs = financialContextService.allJobs
+                //.where((j) => j.isActive) // Optionally filter active only, but viewing all is fine
+                .toList();
+
+            final bool isEmpty = incomeTransactions.isEmpty && jobs.isEmpty;
+
+            return isEmpty
+                ? _buildEmptyState(context)
+                : ListView(
+                    key: const PageStorageKey('recurring_income_list'),
+                    padding: EdgeInsets.all(KoalaSpacing.xl),
+                    children: [
+                      // Section: Emplois / Salaires
+                      if (jobs.isNotEmpty) ...[
+                        Text(
+                          'Salaires & Emplois',
+                          style: KoalaTypography.heading4(context).copyWith(
+                            color: KoalaColors.textSecondary(context),
+                          ),
+                        ),
+                        SizedBox(height: KoalaSpacing.sm),
+                        ...jobs.map((job) => Padding(
+                              padding: EdgeInsets.only(bottom: KoalaSpacing.md),
+                              child:
+                                  _JobListItem(key: ValueKey(job.id), job: job),
+                            )),
+                        SizedBox(height: KoalaSpacing.md),
+                      ],
+
+                      // Section: Autres revenus
+                      if (incomeTransactions.isNotEmpty) ...[
+                        if (jobs.isNotEmpty)
+                          Text(
+                            'Autres revenus',
+                            style: KoalaTypography.heading4(context).copyWith(
+                              color: KoalaColors.textSecondary(context),
+                            ),
+                          ),
+                        if (jobs.isNotEmpty) SizedBox(height: KoalaSpacing.sm),
+                        ...incomeTransactions.map((transaction) => Padding(
+                              padding: EdgeInsets.only(bottom: KoalaSpacing.md),
+                              child: _TransactionListItem(
+                                key: ValueKey(transaction.id),
+                                transaction: transaction,
+                              ),
+                            )),
+                      ],
+                    ],
                   )
-                  .fadeIn(),
+                    .animate()
+                    .slideY(
+                      begin: 0.1,
+                      duration: 400.ms,
+                      curve: Curves.easeOutQuart,
+                    )
+                    .fadeIn();
+          },
         ),
       ),
     );
@@ -84,11 +128,11 @@ class RecurringTransactionsView
 
   Widget _buildEmptyState(BuildContext context) {
     return KoalaEmptyState(
-      title: 'Aucune récurrence',
+      title: 'Aucun revenu récurrent',
       message:
-          'Ajoutez vos abonnements et factures récurrentes pour un meilleur suivi',
-      icon: CupertinoIcons.repeat,
-      buttonText: 'Ajouter une transaction',
+          'Ajoutez vos sources de revenus récurrents (salaire, freelance, etc.)',
+      icon: CupertinoIcons.arrow_2_circlepath,
+      buttonText: 'Ajouter un revenu',
       onButtonPressed: () {
         HapticFeedback.lightImpact();
         showAddRecurringTransactionDialog(context);
@@ -113,6 +157,7 @@ class _TransactionListItem extends StatelessWidget {
         if (nextDate.isBefore(now)) {
           final nextMonth = now.month == 12 ? 1 : now.month + 1;
           final nextYear = now.month == 12 ? now.year + 1 : now.year;
+          // Fix invalid days (e.g. 31st in Feb)
           final lastDayOfMonth = DateTime(nextYear, nextMonth + 1, 0).day;
           final validDay = transaction.dayOfMonth > lastDayOfMonth
               ? lastDayOfMonth
@@ -172,6 +217,11 @@ class _TransactionListItem extends StatelessWidget {
       iconKey = transaction.category.iconKey;
     }
 
+    // Fallback if category didn't provide color/icon
+    if (transaction.type == TransactionType.income && iconKey == 'other') {
+      iconKey = 'salary'; // Default logical icon for income
+    }
+
     final typeText =
         transaction.type == TransactionType.expense ? 'Dépense' : 'Revenu';
     final semanticLabel =
@@ -205,7 +255,7 @@ class _TransactionListItem extends StatelessWidget {
                     width: 48.w,
                     height: 48.w,
                     decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.1),
+                      color: iconColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(KoalaRadius.sm),
                     ),
                     child: Center(
@@ -244,6 +294,32 @@ class _TransactionListItem extends StatelessWidget {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            // Show status badge
+                            if (!transaction.isCurrentlyValid) ...[
+                              SizedBox(width: KoalaSpacing.sm),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: KoalaColors.textSecondary(context)
+                                      .withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4.r),
+                                ),
+                                child: Text(
+                                  transaction.endDate != null &&
+                                          DateTime.now()
+                                              .isAfter(transaction.endDate!)
+                                      ? 'Terminé'
+                                      : 'Inactif',
+                                  style:
+                                      KoalaTypography.caption(context).copyWith(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: KoalaColors.textSecondary(context),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -270,6 +346,160 @@ class _TransactionListItem extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _JobListItem extends StatelessWidget {
+  final Job job;
+
+  const _JobListItem({super.key, required this.job});
+
+  String _getNextPaymentDate() {
+    final now = DateTime.now();
+
+    DateTime nextDate = job.paymentDate;
+
+    // If payment date is in past, project forward based on frequency
+    if (nextDate.isBefore(now)) {
+      while (nextDate.isBefore(now)) {
+        if (job.frequency == PaymentFrequency.monthly) {
+          nextDate = DateTime(nextDate.year, nextDate.month + 1, nextDate.day);
+        } else if (job.frequency == PaymentFrequency.weekly) {
+          nextDate = nextDate.add(const Duration(days: 7));
+        } else if (job.frequency == PaymentFrequency.biweekly) {
+          nextDate = nextDate.add(const Duration(days: 14));
+        }
+      }
+    }
+
+    return 'Prochain : ${DateFormat('dd MMM', 'fr_FR').format(nextDate)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Jobs are always income
+    final amountPrefix = '+';
+    final amountColor = KoalaColors.success;
+    final iconColor = KoalaColors.success;
+    const iconKey = 'salary'; // Special icon for salary
+
+    return Container(
+      decoration: BoxDecoration(
+        color: KoalaColors.surface(context),
+        borderRadius: BorderRadius.circular(KoalaRadius.md),
+        boxShadow: KoalaColors.shadowSubtle,
+        border: Border.all(color: KoalaColors.border(context)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(KoalaRadius.md),
+        child: InkWell(
+          onTap: () {
+            // Option to navigate to Job details or show snackbar
+            Get.snackbar('Emploi',
+                'Modifiez les détails de votre emploi via le Profil > Configuration.',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 3));
+          },
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          child: Padding(
+            padding: EdgeInsets.all(KoalaSpacing.lg),
+            child: Row(
+              children: [
+                Container(
+                  width: 48.w,
+                  height: 48.w,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                  ),
+                  child: Center(
+                    child: CategoryIcon(
+                      iconKey: iconKey,
+                      size: 24.sp,
+                      color: iconColor,
+                    ),
+                  ),
+                ),
+                SizedBox(width: KoalaSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        job.name,
+                        style: KoalaTypography.bodyMedium(context).copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: KoalaSpacing.xs),
+                      Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.briefcase, // Briefcase icon for job
+                            size: 12.sp,
+                            color: KoalaColors.textSecondary(context),
+                          ),
+                          SizedBox(width: KoalaSpacing.xs),
+                          Text(
+                            _getNextPaymentDate(),
+                            style: KoalaTypography.caption(context).copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (!job.isActive) ...[
+                            SizedBox(width: KoalaSpacing.sm),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: KoalaColors.textSecondary(context)
+                                    .withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4.r),
+                              ),
+                              child: Text(
+                                'Inactif',
+                                style:
+                                    KoalaTypography.caption(context).copyWith(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: KoalaColors.textSecondary(context),
+                                ),
+                              ),
+                            ),
+                          ]
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$amountPrefix${NumberFormat('#,###', 'fr_FR').format(job.amount)}',
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: amountColor,
+                      ),
+                    ),
+                    SizedBox(height: KoalaSpacing.xs),
+                    Text(
+                      'FCFA',
+                      style: KoalaTypography.caption(context).copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

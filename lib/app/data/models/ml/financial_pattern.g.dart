@@ -51,4 +51,3 @@ class FinancialPatternAdapter extends TypeAdapter<FinancialPattern> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

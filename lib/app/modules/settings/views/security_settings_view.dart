@@ -37,20 +37,46 @@ class SecuritySettingsView extends GetView<SecuritySettingsController> {
         children: [
           _buildSettingsSection(
             context,
-            title: 'Verrouillage',
+            title: 'Verrouillage PIN',
             children: [
               Obx(
                 () => _buildSettingsItem(
                   context,
                   icon: CupertinoIcons.lock_shield_fill,
                   title: 'Verrouiller l\'application',
-                  subtitle: 'Nécessite une authentification au lancement',
+                  subtitle: controller.isPinSet.value
+                      ? 'PIN actif - verrouillage au lancement'
+                      : 'Définissez un code PIN pour activer',
                   trailing: CupertinoSwitch(
-                    value: controller.isAuthEnabled.value,
+                    value: controller.isPinEnabled.value,
                     activeColor: KoalaColors.primaryUi(context),
-                    onChanged: controller.toggleAuth,
+                    onChanged: controller.togglePinLock,
                   ),
                 ),
+              ),
+              Obx(
+                () => _buildSettingsItem(
+                  context,
+                  icon: CupertinoIcons.number_square_fill,
+                  title: controller.isPinSet.value
+                      ? 'Changer le code PIN'
+                      : 'Définir un code PIN',
+                  subtitle: controller.isPinSet.value
+                      ? 'Modifier votre code à 4 chiffres'
+                      : 'Créer un code PIN à 4 chiffres',
+                  onTap: () => controller.showPinSetupDialog(context),
+                ),
+              ),
+              Obx(
+                () => controller.isPinSet.value
+                    ? _buildSettingsItem(
+                        context,
+                        icon: CupertinoIcons.trash_fill,
+                        title: 'Supprimer le code PIN',
+                        subtitle: 'Désactiver le verrouillage',
+                        onTap: () => controller.removePin(),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),

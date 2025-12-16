@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/services/ml/smart_financial_brain.dart';
+import 'package:koaa/app/data/models/ml/financial_intelligence.dart';
 
 /// A premium widget that displays smart recommendations from the Financial Brain
 class SmartRecommendationsWidget extends StatelessWidget {

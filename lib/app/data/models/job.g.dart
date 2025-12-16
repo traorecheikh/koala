@@ -24,13 +24,14 @@ class JobAdapter extends TypeAdapter<Job> {
       paymentDate: fields[4] as DateTime,
       isActive: fields[5] == null ? true : fields[5] as bool,
       createdAt: fields[6] as DateTime?,
+      endDate: fields[7] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Job obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class JobAdapter extends TypeAdapter<Job> {
       ..writeByte(5)
       ..write(obj.isActive)
       ..writeByte(6)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(7)
+      ..write(obj.endDate);
   }
 
   @override
@@ -98,4 +101,3 @@ class PaymentFrequencyAdapter extends TypeAdapter<PaymentFrequency> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

@@ -51,4 +51,3 @@ class BudgetAdapter extends TypeAdapter<Budget> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

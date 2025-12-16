@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
@@ -16,8 +17,7 @@ class TransactionDetailsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isExpense = transaction.type == TransactionType.expense;
-    final color = isExpense ? Colors.orange.shade700 : Colors.green.shade700;
-    final bgColor = isExpense ? Colors.orange.shade50 : Colors.green.shade50;
+    final color = isExpense ? KoalaColors.destructive : KoalaColors.success;
     final sign = isExpense ? '-' : '+';
 
     final categoriesController = Get.find<CategoriesController>();
@@ -39,25 +39,24 @@ class TransactionDetailsView extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: KoalaColors.background(context),
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
-        backgroundColor: Colors.white,
+        backgroundColor: KoalaColors.background(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(CupertinoIcons.xmark, color: Colors.black),
+          icon: Icon(CupertinoIcons.xmark, color: KoalaColors.text(context)),
           onPressed: () => NavigationHelper.safeBack(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(CupertinoIcons.pencil, color: Colors.black),
+            icon: Icon(CupertinoIcons.pencil, color: KoalaColors.text(context)),
             onPressed: () {
-              // Show edit coming soon message
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text(
                       'Modification des transactions bientôt disponible'),
-                  backgroundColor: Colors.blue,
+                  backgroundColor: KoalaColors.accent,
                   behavior: SnackBarBehavior.floating,
                   duration: const Duration(seconds: 2),
                 ),
@@ -90,20 +89,16 @@ class TransactionDetailsView extends StatelessWidget {
             // Amount
             Text(
               '$sign${NumberFormat('#,###', 'fr_FR').format(transaction.amount)} FCFA',
-              style: TextStyle(
+              style: KoalaTypography.heading1(context).copyWith(
                 fontSize: 32.sp,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
                 letterSpacing: -1,
               ),
             ),
             SizedBox(height: 8.h),
             Text(
               transaction.description,
-              style: TextStyle(
-                fontSize: 16.sp,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+              style: KoalaTypography.bodyLarge(context).copyWith(
+                color: KoalaColors.textSecondary(context),
               ),
             ),
             SizedBox(height: 40.h),
@@ -113,9 +108,9 @@ class TransactionDetailsView extends StatelessWidget {
               margin: EdgeInsets.symmetric(horizontal: 20.w),
               padding: EdgeInsets.all(24.w),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: KoalaColors.surface(context),
                 borderRadius: BorderRadius.circular(24.r),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: KoalaColors.border(context)),
               ),
               child: Column(
                 children: [
@@ -125,19 +120,19 @@ class TransactionDetailsView extends StatelessWidget {
                         .format(transaction.date),
                     icon: CupertinoIcons.calendar,
                   ),
-                  Divider(height: 32.h, color: Colors.grey.shade300),
+                  Divider(height: 32.h, color: KoalaColors.border(context)),
                   _DetailRow(
                     label: 'Heure',
                     value: DateFormat('HH:mm').format(transaction.date),
                     icon: CupertinoIcons.time,
                   ),
-                  Divider(height: 32.h, color: Colors.grey.shade300),
+                  Divider(height: 32.h, color: KoalaColors.border(context)),
                   _DetailRow(
                     label: 'Catégorie',
                     value: categoryName,
                     icon: CupertinoIcons.tag,
                   ),
-                  Divider(height: 32.h, color: Colors.grey.shade300),
+                  Divider(height: 32.h, color: KoalaColors.border(context)),
                   _DetailRow(
                     label: 'Type',
                     value: isExpense ? 'Dépense' : 'Revenu',
@@ -173,22 +168,19 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 20.sp, color: Colors.grey.shade400),
+        Icon(icon, size: 20.sp, color: KoalaColors.textSecondary(context)),
         SizedBox(width: 12.w),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
+          style: KoalaTypography.bodyMedium(context).copyWith(
+            color: KoalaColors.textSecondary(context),
           ),
         ),
         const Spacer(),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: valueColor ?? Colors.black87,
+          style: KoalaTypography.bodyMedium(context).copyWith(
+            color: valueColor ?? KoalaColors.text(context),
             fontWeight: FontWeight.w600,
           ),
         ),

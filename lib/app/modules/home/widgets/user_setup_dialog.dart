@@ -48,8 +48,26 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   String? _selectedJobTitle;
   double _selectedSalary = 150000;
   PaymentFrequency _selectedFrequency = PaymentFrequency.monthly;
+  String _selectedDuration =
+      'permanent'; // permanent, 1_month, 3_months, 6_months, 1_year
   final DateTime _paymentDate = DateTime.now();
   final List<Job> _jobs = [];
+
+  DateTime? _getDurationEndDate() {
+    final now = DateTime.now();
+    switch (_selectedDuration) {
+      case '1_month':
+        return DateTime(now.year, now.month + 1, now.day);
+      case '3_months':
+        return DateTime(now.year, now.month + 3, now.day);
+      case '6_months':
+        return DateTime(now.year, now.month + 6, now.day);
+      case '1_year':
+        return DateTime(now.year + 1, now.month, now.day);
+      default:
+        return null; // permanent
+    }
+  }
 
   final List<String> _jobTitles = [
     'Développeur FullStack',
@@ -716,6 +734,35 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                 ),
               ),
               SizedBox(height: 20.h),
+              Text('Durée du contrat',
+                  style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: KoalaColors.textSecondary(context))),
+              SizedBox(height: KoalaSpacing.sm),
+              DropdownButtonFormField<String>(
+                value: _selectedDuration,
+                decoration: InputDecoration(
+                  fillColor: KoalaColors.inputBackground(context),
+                  filled: true,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                      borderSide: BorderSide.none),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'permanent', child: Text('Permanent')),
+                  DropdownMenuItem(value: '1_month', child: Text('1 mois')),
+                  DropdownMenuItem(value: '3_months', child: Text('3 mois')),
+                  DropdownMenuItem(value: '6_months', child: Text('6 mois')),
+                  DropdownMenuItem(value: '1_year', child: Text('1 an')),
+                ],
+                onChanged: (value) =>
+                    setState(() => _selectedDuration = value ?? 'permanent'),
+              ),
+              SizedBox(height: 20.h),
               SizedBox(
                 width: double.infinity,
                 child: KoalaButton(
@@ -754,6 +801,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       amount: _selectedSalary,
       frequency: _selectedFrequency,
       paymentDate: _paymentDate,
+      endDate: _getDurationEndDate(),
     );
 
     setState(() {
@@ -764,6 +812,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       _salaryController.text =
           _formatAmount(_selectedSalary.toStringAsFixed(0));
       _selectedFrequency = PaymentFrequency.monthly;
+      _selectedDuration = 'permanent';
     });
 
     HapticFeedback.mediumImpact();
