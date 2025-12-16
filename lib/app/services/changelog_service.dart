@@ -11,11 +11,31 @@ class ChangelogService {
   static const String _boxName = 'app_settings';
   static const String _lastSeenVersionKey = 'last_seen_version';
 
-  static String currentVersion = '1.2.0';
+  static String currentVersion = '1.4.0';
   static String currentBuildNumber = '1';
 
   /// Changelog entries - simple text only
   static const Map<String, List<String>> changelog = {
+    '1.4.0': [
+      '• Nouvelle UI d\'ajout de transaction',
+      '• Design plus aéré et moderne',
+      '• Suppression des chevauchements de texte',
+    ],
+    '1.3.2': [
+      '• Correction de l\'affichage des descriptions longues',
+      '• Amélioration de la lisibilité dans l\'historique',
+    ],
+    '1.3.1': [
+      '• Amélioration de l\'intelligence artificielle',
+      '• Prédictions plus souples (plage de confiance)',
+      '• Meilleure reconnaissance des habitudes',
+    ],
+    '1.3.0': [
+      '• Refonte complète des animations',
+      '• Animations fluides pour les listes et cartes',
+      '• Micro-interactions pour les boutons',
+      '• Nouvelles animations dans les paramètres',
+    ],
     '1.2.0': [
       '• Nouveau tracker d\'abonnements avec logos',
       '• 7 widgets Android pour l\'ecran d\'accueil',

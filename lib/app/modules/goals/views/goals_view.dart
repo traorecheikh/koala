@@ -171,7 +171,7 @@ class GoalsView extends GetView<GoalsController> {
                   context,
                   'Réactiver l\'objectif',
                   Icons.replay,
-                  Colors.blue,
+                  KoalaColors.primaryUi(context),
                   () {
                     controller.setGoalStatus(goal.id, GoalStatus.active);
                     NavigationHelper.safeBack();
@@ -305,8 +305,8 @@ class _Header extends StatelessWidget {
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
                 color: KoalaColors.surface(context),
-                borderRadius: BorderRadius.circular(14.r),
-                boxShadow: KoalaColors.shadowSubtle,
+                borderRadius: BorderRadius.circular(KoalaRadius.md),
+                boxShadow: KoalaShadows.sm,
               ),
               child: Icon(CupertinoIcons.add,
                   size: 20.sp, color: KoalaColors.text(context)),

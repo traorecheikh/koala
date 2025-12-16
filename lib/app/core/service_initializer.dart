@@ -26,9 +26,12 @@ import 'package:koaa/app/services/data_migration_service.dart';
 import 'package:koaa/app/services/encryption_service.dart';
 import 'package:koaa/app/services/events/financial_events_service.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
+import 'package:koaa/app/services/intelligence/ai_learning_profile.dart';
+import 'package:koaa/app/services/intelligence/ai_learning_service.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/smart_financial_brain.dart';
+import 'package:koaa/app/services/ml/contextual_brain.dart';
 import 'package:koaa/app/services/notification_service.dart';
 import 'package:koaa/app/services/pin_service.dart';
 import 'package:koaa/app/services/security_service.dart';
@@ -43,11 +46,20 @@ class ServiceInitializer {
 
   /// Initialize all app services in correct order
   static Future<void> initialize() async {
-    await _initNotifications();
-    await _initHive();
+    // 1. Critical Base Layer (Parallel)
+    await Future.wait([
+      _initNotifications(),
+      _initHive(), // Most time consuming, start early
+    ]);
+
+    // 2. Migration Layer (Sequential - depends on Hive)
     await _runMigrations();
+
+    // 3. Service Layer (Parallel where possible)
     await _initServices();
-    await _initWidgets();
+
+    // 4. UI Layer (Parallel)
+    _initWidgets(); // Fire and forget or await if critical for first frame
   }
 
   /// Initialize notification and background worker
@@ -57,50 +69,57 @@ class ServiceInitializer {
       callbackDispatcher,
       isInDebugMode: false,
     );
-    Workmanager().registerPeriodicTask(
-      "1",
-      kDailyCheckTask,
-      frequency: const Duration(hours: 24),
-      initialDelay: const Duration(minutes: 15),
-      constraints: Constraints(
-        networkType: NetworkType.notRequired,
-        requiresBatteryNotLow: true,
-      ),
-    );
+    // Register background task
+    // Using Future.microtask to not block init
+    Future.microtask(() {
+      Workmanager().registerPeriodicTask(
+        "1",
+        kDailyCheckTask,
+        frequency: const Duration(hours: 24),
+        initialDelay: const Duration(minutes: 15),
+        constraints: Constraints(
+          networkType: NetworkType.notRequired,
+          requiresBatteryNotLow: true,
+        ),
+      );
+    });
   }
 
-  /// Initialize Hive with encryption
+  /// Initialize Hive with encryption (PARALLELIZED)
   static Future<void> _initHive() async {
     final appDocDir = await getApplicationDocumentsDirectory();
     Hive.init(appDocDir.path);
     Hive.registerAdapters();
 
-    // Get encryption key for sensitive boxes
+    // Get encryption key
     final encryptionService = EncryptionService();
     final encryptionKey = await encryptionService.getEncryptionKey();
     _hiveCipher = HiveAesCipher(encryptionKey);
 
-    // Encrypted boxes (sensitive financial data)
-    await Hive.openBox<LocalUser>('userBox', encryptionCipher: _hiveCipher);
-    await Hive.openBox<LocalTransaction>('transactionBox',
-        encryptionCipher: _hiveCipher);
-    await Hive.openBox<RecurringTransaction>('recurringTransactionBox',
-        encryptionCipher: _hiveCipher);
-    await Hive.openBox<Job>('jobBox', encryptionCipher: _hiveCipher);
-    await Hive.openBox<SavingsGoal>('savingsGoalBox',
-        encryptionCipher: _hiveCipher);
-    await Hive.openBox<Budget>('budgetBox', encryptionCipher: _hiveCipher);
-    await Hive.openBox<Debt>('debtBox', encryptionCipher: _hiveCipher);
-    await Hive.openBox<FinancialGoal>('financialGoalBox',
-        encryptionCipher: _hiveCipher);
+    // Open all boxes in parallel to maximize IO throughput
+    await Future.wait([
+      // Encrypted boxes (sensitive)
+      Hive.openBox<LocalUser>('userBox', encryptionCipher: _hiveCipher),
+      Hive.openBox<LocalTransaction>('transactionBox',
+          encryptionCipher: _hiveCipher),
+      Hive.openBox<RecurringTransaction>('recurringTransactionBox',
+          encryptionCipher: _hiveCipher),
+      Hive.openBox<Job>('jobBox', encryptionCipher: _hiveCipher),
+      Hive.openBox<SavingsGoal>('savingsGoalBox',
+          encryptionCipher: _hiveCipher),
+      Hive.openBox<Budget>('budgetBox', encryptionCipher: _hiveCipher),
+      Hive.openBox<Debt>('debtBox', encryptionCipher: _hiveCipher),
+      Hive.openBox<FinancialGoal>('financialGoalBox',
+          encryptionCipher: _hiveCipher),
 
-    // Non-sensitive boxes
-    await Hive.openBox<Category>('categoryBox');
-    await Hive.openBox('settingsBox');
-
-    // Challenge system
-    await Hive.openBox<UserChallenge>('userChallengeBox');
-    await Hive.openBox<UserBadge>('userBadgeBox');
+      // Non-sensitive boxes
+      Hive.openBox<Category>('categoryBox'),
+      Hive.openBox('settingsBox'),
+      Hive.openBox('insightsBox'),
+      Hive.openBox<UserChallenge>('userChallengeBox'),
+      Hive.openBox<UserBadge>('userBadgeBox'),
+      Hive.openBox<AILearningProfile>('aiLearningBox'),
+    ]);
   }
 
   /// Run data migrations
@@ -112,42 +131,51 @@ class ServiceInitializer {
 
   /// Initialize all GetX services
   static Future<void> _initServices() async {
-    // Core financial services
+    // Core financial services (Fast, Synch)
     Get.put<FinancialContextService>(FinancialContextService(),
         permanent: true);
     Get.put<FinancialEventsService>(FinancialEventsService(), permanent: true);
     Get.put<CelebrationService>(CelebrationService(), permanent: true);
 
-    // Controllers
+    // Controllers (Lazy Load with Fenix=true)
     Get.lazyPut(() => RecurringTransactionsController(), fenix: true);
     Get.lazyPut<CategoriesController>(() => CategoriesController(),
         fenix: true);
+    Get.lazyPut(() => SettingsController(), fenix: true);
+    Get.put<PinService>(PinService(), permanent: true);
+    Get.put<SecurityService>(SecurityService(), permanent: true);
 
-    // ML Engine
-    await Get.putAsync<KoalaMLEngine>(() async {
-      return await KoalaMLEngine().init(_hiveCipher!);
-    });
+    // Heavy ML Services - Parallelize initialization
+    await Future.wait([
+      Get.putAsync<KoalaMLEngine>(() async {
+        return await KoalaMLEngine().init(_hiveCipher!);
+      }),
+      Get.putAsync<AILearningService>(() async {
+        final service = AILearningService();
+        await service.onInit();
+        return service;
+      }),
+    ]);
 
-    // Smart Financial Brain (must be before IntelligenceService)
+    // Brains (Depend on Context, so they stay after ContextService)
+    // Note: SmartFinancialBrain does heavy work onInit.
+    // We will optimize the Brain itself separately (Isolates).
     final brain = SmartFinancialBrain();
     Get.put<SmartFinancialBrain>(brain, permanent: true);
+    Get.put<ContextualBrain>(ContextualBrain(), permanent: true);
 
-    // Intelligence Service (depends on SmartFinancialBrain)
+    // Intelligence Service (Depends on Brains)
     await Get.putAsync<IntelligenceService>(() async {
       final service = IntelligenceService();
       await service.onInit();
       return service;
     });
-
-    // Settings and Security
-    Get.put<SettingsController>(SettingsController(), permanent: true);
-    Get.put<PinService>(PinService(), permanent: true);
-    Get.put<SecurityService>(SecurityService(), permanent: true);
   }
 
   /// Initialize widget service
   static Future<void> _initWidgets() async {
     await WidgetService.initialize();
+    // Don't await updateAllWidgets in critical path
     WidgetService.updateAllWidgets();
   }
 }

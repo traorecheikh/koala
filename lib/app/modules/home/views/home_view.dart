@@ -18,7 +18,7 @@ import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/modules/goals/controllers/goals_controller.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
-import '../widgets/smart_insights_widget.dart';
+
 import '../../goals/views/widgets/goal_card.dart';
 
 import '../../../routes/app_pages.dart';
@@ -103,7 +103,7 @@ class _TransactionListItem extends StatelessWidget {
                     children: [
                       Text(
                         transaction.description,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: KoalaTypography.bodyLarge(context)
                             .copyWith(fontWeight: FontWeight.w600),
@@ -272,9 +272,6 @@ class HomeView extends GetView<HomeController> {
                             padding: EdgeInsets.only(bottom: 24.h),
                             child: const _QuickActions()),
                         Padding(
-                            padding: EdgeInsets.only(bottom: 16.h),
-                            child: const SmartInsightsWidget()),
-                        Padding(
                             padding: EdgeInsets.only(bottom: 32.h),
                             child: const FinancialHealthWidget()),
                         const _TransactionsHeader(),
@@ -356,11 +353,15 @@ class _Header extends GetView<HomeController> {
               style: KoalaTypography.heading2(context),
             ),
           ),
-          IconButton(
-            icon: Icon(CupertinoIcons.settings,
-                size: 28.sp, color: KoalaColors.text(context)),
-            onPressed: () => Get.toNamed(Routes.settings),
-            splashRadius: 24,
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(CupertinoIcons.settings,
+                    size: 28.sp, color: KoalaColors.text(context)),
+                onPressed: () => Get.toNamed(Routes.settings),
+                splashRadius: 24,
+              ),
+            ],
           ),
         ],
       ),
@@ -427,6 +428,8 @@ class _QuickActions extends GetView<HomeController> {
                   color: _getColor(actionToShow, context),
                   onTap: () => isHovered ? {} : _handleTap(actionToShow),
                   onLongPress: () => _showSelectionSheet(context),
+                  showBadge: actionToShow == QuickActionType.intelligence &&
+                      controller.insights.isNotEmpty,
                 ),
               );
             },
@@ -831,12 +834,13 @@ class _MoreOptionsSheet extends GetView<HomeController> {
   }
 }
 
-class _AnimatedActionButton extends StatelessWidget {
+class _AnimatedActionButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final bool showBadge;
 
   const _AnimatedActionButton({
     super.key,
@@ -845,36 +849,81 @@ class _AnimatedActionButton extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.onLongPress,
+    this.showBadge = false,
   });
+
+  @override
+  State<_AnimatedActionButton> createState() => _AnimatedActionButtonState();
+}
+
+class _AnimatedActionButtonState extends State<_AnimatedActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 100));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Animate(
-        effects: const [
-          ScaleEffect(
-            duration: Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          ),
-        ],
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onLongPress: () {
+        if (widget.onLongPress != null) {
+          HapticFeedback.mediumImpact();
+          widget.onLongPress!();
+        }
+      },
+      child: ScaleTransition(
+        scale: _scaleAnimation,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: EdgeInsets.all(14.w),
-              decoration: BoxDecoration(
-                color: KoalaColors.surface(context),
-                shape: BoxShape.circle,
-                boxShadow: KoalaColors.shadowSubtle,
-              ),
-              child: Icon(icon, size: 26.sp, color: color),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(14.w),
+                  decoration: BoxDecoration(
+                    color: KoalaColors.surface(context),
+                    shape: BoxShape.circle,
+                    boxShadow: KoalaColors.shadowSubtle,
+                  ),
+                  child: Icon(widget.icon, color: widget.color, size: 26.sp),
+                ),
+                if (widget.showBadge)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      width: 10.w,
+                      height: 10.w,
+                      decoration: BoxDecoration(
+                        color: KoalaColors.destructive,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: KoalaColors.surface(context), width: 2),
+                      ),
+                    )
+                        .animate()
+                        .scale(duration: 300.ms, curve: Curves.elasticOut),
+                  ),
+              ],
             ),
             SizedBox(height: 6.h),
             Text(
-              label,
+              widget.label,
               style: KoalaTypography.caption(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

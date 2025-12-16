@@ -9,5 +9,3 @@ class GoalsBinding extends Bindings {
     );
   }
 }
-
-

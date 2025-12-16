@@ -11,8 +11,9 @@ import '../controllers/home_controller.dart';
 class HomeBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<HomeController>(() => HomeController());
-    Get.lazyPut<CategoriesController>(() => CategoriesController());
+    Get.lazyPut<HomeController>(() => HomeController(), fenix: true);
+    Get.lazyPut<CategoriesController>(() => CategoriesController(),
+        fenix: true);
     Get.lazyPut<GoalsController>(() => GoalsController());
     Get.lazyPut<BudgetController>(() => BudgetController());
     Get.lazyPut<DebtController>(() => DebtController());
@@ -20,5 +21,3 @@ class HomeBinding extends Bindings {
     Get.lazyPut<SimulatorController>(() => SimulatorController());
   }
 }
-
-

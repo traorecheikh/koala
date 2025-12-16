@@ -78,7 +78,7 @@ class SimulatorView extends GetView<SimulatorController> {
                           : KoalaColors.textSecondary(context),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.r),
+                        borderRadius: BorderRadius.circular(KoalaRadius.md),
                       ),
                     ),
                     child: controller.isLoading.value
@@ -179,7 +179,7 @@ class _SimulationResultView extends StatelessWidget {
           padding: EdgeInsets.all(20.w),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20.r),
+            borderRadius: BorderRadius.circular(KoalaRadius.lg),
             border: Border.all(color: color.withOpacity(0.2)),
           ),
           child: Row(
@@ -313,7 +313,7 @@ class _SimulationResultView extends StatelessWidget {
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
                   color: KoalaColors.surface(context),
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(KoalaRadius.sm),
                   border: Border.all(color: KoalaColors.border(context)),
                 ),
                 child: Row(
@@ -346,7 +346,7 @@ class _SimulationResultView extends StatelessWidget {
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
                   color: KoalaColors.surface(context),
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(KoalaRadius.sm),
                   border: Border.all(color: KoalaColors.border(context)),
                 ),
                 child: Row(
@@ -392,8 +392,8 @@ class _CashFlowTimelineWidget extends StatelessWidget {
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: KoalaColors.shadowSubtle,
+        borderRadius: BorderRadius.circular(KoalaRadius.md),
+        boxShadow: KoalaShadows.sm,
         border: Border.all(
           color: KoalaColors.border(context),
         ),
@@ -469,9 +469,9 @@ class _MetricCard extends StatelessWidget {
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(KoalaRadius.md),
         border: Border.all(color: KoalaColors.border(context)),
-        boxShadow: KoalaColors.shadowSubtle,
+        boxShadow: KoalaShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

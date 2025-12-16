@@ -65,15 +65,9 @@ class _FrontCard extends GetView<HomeController> {
       duration: const Duration(milliseconds: 800),
       height: 215.h,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(KoalaRadius.xl),
         gradient: gradient,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 16.r, // Slightly softer/larger shadow for premium feel
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: KoalaShadows.md,
       ),
       child: Stack(
         children: [
@@ -243,15 +237,9 @@ class _BackCard extends GetView<HomeController> {
     return Container(
       height: 215.h,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(KoalaRadius.xl),
         gradient: gradient,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 16.r,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: KoalaShadows.md,
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
@@ -437,4 +425,3 @@ class _MiniChart extends StatelessWidget {
     );
   }
 }
-

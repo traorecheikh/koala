@@ -14,6 +14,12 @@ enum Frequency {
 
   @HiveField(2)
   monthly,
+
+  @HiveField(3)
+  biWeekly,
+
+  @HiveField(4)
+  yearly,
 }
 
 @HiveType(typeId: 4)
@@ -97,8 +103,12 @@ class RecurringTransaction extends HiveObject {
       return next;
     }
 
+    if (frequency == Frequency.biWeekly) {
+      return lastGeneratedDate.add(const Duration(days: 14));
+    }
+
     if (frequency == Frequency.monthly) {
-      // Helper to get clamped date
+      // Robust end-of-month clamping logic
       DateTime getClampedDate(int year, int month, int day) {
         final daysInMonth = DateTime(year, month + 1, 0).day;
         final clampedDay = (day > daysInMonth) ? daysInMonth : day;
@@ -106,22 +116,48 @@ class RecurringTransaction extends HiveObject {
       }
 
       // Check current month (in case last generated was early in the month)
-      DateTime candidate = getClampedDate(
-          lastGeneratedDate.year, lastGeneratedDate.month, dayOfMonth);
-      if (candidate.isAfter(lastGeneratedDate)) return candidate;
+      // This handles cases where we might have missed a generation?
+      // Actually standard logic is usually just +1 month.
+      // But let's stick to the safer next month logic relative to lastGeneratedDate.
 
-      // Check next month
-      return getClampedDate(
+      DateTime candidate = getClampedDate(
           lastGeneratedDate.year, lastGeneratedDate.month + 1, dayOfMonth);
+
+      return candidate;
     }
 
+    if (frequency == Frequency.yearly) {
+      // Handle leap years (Feb 29 -> Feb 28 in non-leap future year)
+      final nextYear = lastGeneratedDate.year + 1;
+      final isLeap =
+          (nextYear % 4 == 0 && nextYear % 100 != 0) || (nextYear % 400 == 0);
+
+      if (lastGeneratedDate.month == 2 &&
+          lastGeneratedDate.day == 29 &&
+          !isLeap) {
+        return DateTime(nextYear, 2, 28);
+      }
+      return DateTime(nextYear, lastGeneratedDate.month, lastGeneratedDate.day);
+    }
+
+    // Default fallback
     return lastGeneratedDate.add(const Duration(days: 1));
   }
 
   bool isDue(DateTime date) {
     if (frequency == Frequency.daily) return true;
     if (frequency == Frequency.weekly) return daysOfWeek.contains(date.weekday);
+    if (frequency == Frequency.biWeekly) {
+      // Check if difference in days is multiple of 14 from start
+      // optimizing to use lastGeneratedDate as anchor
+      final diff = date.difference(lastGeneratedDate).inDays;
+      return diff > 0 && diff % 14 == 0;
+    }
     if (frequency == Frequency.monthly) return date.day == dayOfMonth;
+    if (frequency == Frequency.yearly) {
+      return date.month == lastGeneratedDate.month &&
+          date.day == lastGeneratedDate.day;
+    }
     return false;
   }
 }

@@ -7,5 +7,3 @@ class AnalyticsBinding extends Bindings {
     Get.lazyPut<AnalyticsController>(() => AnalyticsController());
   }
 }
-
-

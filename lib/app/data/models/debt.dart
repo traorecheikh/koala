@@ -40,6 +40,9 @@ class Debt extends HiveObject {
   @HiveField(8)
   double minPayment; // Renamed from monthlyPayment to minPayment
 
+  @HiveField(9)
+  int? dueDayOfMonth; // For monthly repayment schedules
+
   Debt({
     String? id,
     required this.personName,
@@ -50,6 +53,7 @@ class Debt extends HiveObject {
     DateTime? createdAt,
     this.transactionIds = const [],
     this.minPayment = 0.0,
+    this.dueDayOfMonth,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
         remainingAmount = remainingAmount ?? originalAmount;
@@ -69,6 +73,7 @@ class Debt extends HiveObject {
       'createdAt': createdAt.toIso8601String(),
       'transactionIds': transactionIds,
       'minPayment': minPayment,
+      'dueDayOfMonth': dueDayOfMonth,
     };
   }
 
@@ -82,6 +87,7 @@ class Debt extends HiveObject {
     DateTime? createdAt,
     List<String>? transactionIds,
     double? minPayment,
+    int? dueDayOfMonth,
   }) {
     return Debt(
       id: id ?? this.id,
@@ -93,8 +99,7 @@ class Debt extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       transactionIds: transactionIds ?? this.transactionIds,
       minPayment: minPayment ?? this.minPayment,
+      dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
     );
   }
 }
-
-

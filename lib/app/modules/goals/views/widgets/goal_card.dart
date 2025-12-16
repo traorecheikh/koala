@@ -27,8 +27,8 @@ class GoalCard extends StatelessWidget {
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: KoalaColors.shadowSubtle,
+        borderRadius: BorderRadius.circular(KoalaRadius.lg), // 16->20 per plan
+        boxShadow: KoalaShadows.sm,
         border: Border.all(color: KoalaColors.border(context)),
       ),
       child: Column(
@@ -40,7 +40,7 @@ class GoalCard extends StatelessWidget {
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(KoalaRadius.xs),
                 ),
                 child: Icon(
                   IconHelper.getGoalIconByIndex(goal.iconKey),
@@ -123,7 +123,7 @@ class GoalCard extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: KoalaColors.success.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(KoalaRadius.xs),
                 ),
                 child: Text(
                   'Objectif Atteint 🎉',
@@ -140,5 +140,3 @@ class GoalCard extends StatelessWidget {
     );
   }
 }
-
-

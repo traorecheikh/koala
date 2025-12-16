@@ -20,6 +20,7 @@ import 'package:koaa/app/modules/goals/bindings/goals_binding.dart';
 import 'package:koaa/app/modules/intelligence/views/intelligence_view.dart';
 import 'package:koaa/app/modules/challenges/views/challenges_view.dart';
 import 'package:koaa/app/modules/challenges/bindings/challenges_binding.dart';
+import 'package:koaa/app/modules/home/views/insights_view.dart'; // New Import
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -32,6 +33,10 @@ class AppPages {
   AppPages._();
 
   static const initial = Routes.home;
+  static const categories = '/categories';
+  static const challenges = '/challenges';
+  static const intelligence = '/intelligence';
+  static const insights = '/insights'; // New route for detailed list
 
   static final routes = [
     GetPage(
@@ -106,15 +111,19 @@ class AppPages {
       transition: Transition.cupertino,
     ),
     GetPage(
-      name: _Paths.intelligence,
+      name: Routes.intelligence,
       page: () => const IntelligenceView(),
       transition: Transition.cupertino,
     ),
     GetPage(
-      name: _Paths.challenges,
+      name: Routes.challenges,
       page: () => const ChallengesView(),
       binding: ChallengesBinding(),
       transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: Routes.insights,
+      page: () => const InsightsView(),
     ),
   ];
 }

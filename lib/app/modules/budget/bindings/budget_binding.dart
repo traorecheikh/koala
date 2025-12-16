@@ -9,5 +9,3 @@ class BudgetBinding extends Bindings {
     );
   }
 }
-
-

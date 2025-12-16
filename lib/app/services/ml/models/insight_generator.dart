@@ -360,6 +360,7 @@ class MLInsight {
   final int priority;
   final String? actionLabel;
   final Map<String, dynamic>? relatedData;
+  final DateTime createdAt;
 
   MLInsight({
     required this.id,
@@ -369,9 +370,32 @@ class MLInsight {
     required this.priority,
     this.actionLabel,
     this.relatedData,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'type': type.index,
+        'priority': priority,
+        'actionLabel': actionLabel,
+        'relatedData': relatedData,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory MLInsight.fromJson(Map<String, dynamic> json) => MLInsight(
+        id: json['id'],
+        title: json['title'],
+        description: json['description'],
+        type: InsightType.values[json['type'] ?? 0],
+        priority: json['priority'],
+        actionLabel: json['actionLabel'],
+        relatedData: json['relatedData'],
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'])
+            : null,
+      );
 }
 
 enum InsightType { positive, warning, tip, info }
-
-

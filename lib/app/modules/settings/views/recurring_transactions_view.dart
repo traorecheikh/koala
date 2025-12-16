@@ -173,6 +173,10 @@ class _TransactionListItem extends StatelessWidget {
       }
     } else if (transaction.frequency == Frequency.weekly) {
       return 'Hebdomadaire';
+    } else if (transaction.frequency == Frequency.biWeekly) {
+      return 'Bi-hebdomadaire';
+    } else if (transaction.frequency == Frequency.yearly) {
+      return 'Annuel';
     } else {
       return 'Quotidien';
     }

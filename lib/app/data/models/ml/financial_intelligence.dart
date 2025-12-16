@@ -13,6 +13,7 @@ class FinancialIntelligence {
   final GoalProgressAnalysis goalProgress;
   final BudgetHealth budgetHealth;
   final CashFlowPrediction cashFlowPrediction;
+  final NetWorthAnalysis netWorthAnalysis; // New
   final List<SmartRecommendation> recommendations;
   final RiskLevel overallRiskLevel;
 
@@ -22,6 +23,7 @@ class FinancialIntelligence {
     required this.goalProgress,
     required this.budgetHealth,
     required this.cashFlowPrediction,
+    required this.netWorthAnalysis,
     required this.recommendations,
     required this.overallRiskLevel,
   });
@@ -32,8 +34,33 @@ class FinancialIntelligence {
         goalProgress: GoalProgressAnalysis.empty(),
         budgetHealth: BudgetHealth.empty(),
         cashFlowPrediction: CashFlowPrediction.empty(),
+        netWorthAnalysis: NetWorthAnalysis.empty(),
         recommendations: [],
         overallRiskLevel: RiskLevel.unknown,
+      );
+}
+
+class NetWorthAnalysis {
+  final double totalAssets;
+  final double totalLiabilities;
+  final double netWorth;
+  final double liquidAssets; // Cash available
+  final double debtRatio; // Liabilities / Assets
+
+  NetWorthAnalysis({
+    required this.totalAssets,
+    required this.totalLiabilities,
+    required this.netWorth,
+    required this.liquidAssets,
+    required this.debtRatio,
+  });
+
+  factory NetWorthAnalysis.empty() => NetWorthAnalysis(
+        totalAssets: 0,
+        totalLiabilities: 0,
+        netWorth: 0,
+        liquidAssets: 0,
+        debtRatio: 0,
       );
 }
 

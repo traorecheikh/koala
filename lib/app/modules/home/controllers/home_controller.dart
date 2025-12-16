@@ -92,6 +92,30 @@ class HomeController extends GetxController {
     _loadThirdAction();
     _loadSheetActions(); // Load sheet order
 
+    // Load persisted balance visibility
+    final settingsBox = Hive.box('settingsBox');
+    balanceVisible.value =
+        settingsBox.get('balanceVisible', defaultValue: true);
+    isCardFlipped.value = settingsBox.get('isCardFlipped', defaultValue: false);
+
+    // Load persisted insights
+    final insightsBox = Hive.box('insightsBox');
+    if (insightsBox.isNotEmpty) {
+      try {
+        final loaded = insightsBox.values
+            .map((e) => MLInsight.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+        // Filter expired on load
+        final now = DateTime.now();
+        final valid = loaded
+            .where((i) => now.difference(i.createdAt).inHours < 72)
+            .toList();
+        insights.assignAll(valid);
+      } catch (e) {
+        _logger.e('Failed to load insights: $e');
+      }
+    }
+
     // Listen to changes from FinancialContextService with debouncing (500ms)
     // This prevents excessive rebuilds when multiple transactions are added quickly
     _debounceTransactionUpdate = Debounce(
@@ -367,9 +391,58 @@ class HomeController extends GetxController {
     }
   }
 
-  void _updateInsights() {
-    insights.value =
+  void _updateInsights() async {
+    // 1. Generate candidates from current state
+    final candidates =
         _mlService.generateInsights(_financialContextService.allTransactions);
+
+    // 2. Load existing from Hive
+    final box = Hive.box('insightsBox');
+    final now = DateTime.now();
+    final mergedInsights = <MLInsight>[];
+
+    for (var candidate in candidates) {
+      if (box.containsKey(candidate.id)) {
+        // Exists: Load old to get persist createdAt
+        try {
+          final oldJson =
+              Map<String, dynamic>.from(box.get(candidate.id) as Map);
+          final old = MLInsight.fromJson(oldJson);
+
+          // Reconstruct candidate using OLD createdAt to preserve expiration timer
+          final merged = MLInsight(
+            id: candidate.id,
+            title: candidate.title,
+            description: candidate.description,
+            type: candidate.type,
+            priority: candidate.priority,
+            actionLabel: candidate.actionLabel,
+            relatedData: candidate.relatedData,
+            createdAt: old.createdAt,
+          );
+          mergedInsights.add(merged);
+        } catch (e) {
+          _logger.w('Error restoring insight ${candidate.id}: $e');
+          mergedInsights.add(candidate);
+        }
+      } else {
+        // New: Keep as is (createdAt = now)
+        mergedInsights.add(candidate);
+      }
+    }
+
+    // 3. Filter expired (> 72h)
+    final validInsights = mergedInsights.where((i) {
+      return now.difference(i.createdAt).inHours < 72;
+    }).toList();
+
+    // 4. Save valid back to Hive (Prune old/invalid)
+    await box.clear();
+    for (var i in validInsights) {
+      await box.put(i.id, i.toJson());
+    }
+
+    insights.value = validInsights;
   }
 
   void checkUser() {
@@ -404,10 +477,12 @@ class HomeController extends GetxController {
 
   void toggleBalanceVisibility() {
     balanceVisible.value = !balanceVisible.value;
+    Hive.box('settingsBox').put('balanceVisible', balanceVisible.value);
   }
 
   void toggleCardFlip() {
     isCardFlipped.value = !isCardFlipped.value;
+    Hive.box('settingsBox').put('isCardFlipped', isCardFlipped.value);
   }
 
   void calculateBalance() {
@@ -470,6 +545,16 @@ class HomeController extends GetxController {
 
       if (totalAmount <= 0) continue;
 
+      // FIX: Try to resolve the enum category from the ID (which is the enum name for defaults)
+      // This prevents catch-up transactions from defaulting to "Other"
+      TransactionCategory? resolvedCategory;
+      try {
+        resolvedCategory =
+            TransactionCategory.values.firstWhere((e) => e.name == categoryId);
+      } catch (_) {
+        // ID might be a UUID for custom categories, or not found
+      }
+
       // Determine how many transactions to create (1 per 2-3 days, max 10)
       int numTransactions = (daysToSpread / 2).ceil().clamp(1, 10);
       final amountPerTransaction = totalAmount / numTransactions;
@@ -487,7 +572,7 @@ class HomeController extends GetxController {
           date: transactionDate,
           type: TransactionType.expense,
           categoryId: categoryId,
-          category: null,
+          category: resolvedCategory,
           isCatchUp: true,
         );
 
@@ -633,11 +718,11 @@ class HomeController extends GetxController {
       case Frequency.daily:
         // Jump to next day, not day-by-day in loop
         var current = DateTime(startDate.year, startDate.month, startDate.day);
-        current = current.add(Duration(days: 1));
+        current = current.add(const Duration(days: 1));
 
         while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
           dueDates.add(current);
-          current = current.add(Duration(days: 1));
+          current = current.add(const Duration(days: 1));
         }
         break;
 
@@ -648,13 +733,29 @@ class HomeController extends GetxController {
           return dueDates;
         }
 
-        var current = startDate;
+        var current = DateTime(startDate.year, startDate.month, startDate.day);
+        current = current.add(const Duration(days: 1));
+
         while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
-          // Check if current day matches any target day
           if (recurring.daysOfWeek.contains(current.weekday)) {
             dueDates.add(current);
           }
-          current = current.add(Duration(days: 1));
+          current = current.add(const Duration(days: 1));
+        }
+        break;
+
+      case Frequency.biWeekly:
+        // Every 14 days from lastGeneratedDate
+        var current = recurring.lastGeneratedDate.add(const Duration(days: 14));
+
+        // Fast forward to startDate if needed
+        while (current.isBefore(startDate)) {
+          current = current.add(const Duration(days: 14));
+        }
+
+        while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
+          dueDates.add(current);
+          current = current.add(const Duration(days: 14));
         }
         break;
 
@@ -663,8 +764,8 @@ class HomeController extends GetxController {
         var current = DateTime(startDate.year, startDate.month, 1);
 
         while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
-          // Handle month-end edge case
-          // E.g., Jan 31 job should work in Feb (which has 28/29 days)
+          // Calculate target day for this month
+          // Handle month-end edge case (e.g. Jan 31 -> Feb 28)
           final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
           final targetDay = min(recurring.dayOfMonth, daysInMonth);
 
@@ -673,7 +774,8 @@ class HomeController extends GetxController {
           if ((dueDate.isAfter(startDate) ||
                   dueDate.isAtSameMomentAs(startDate)) &&
               (dueDate.isBefore(endDate) ||
-                  dueDate.isAtSameMomentAs(endDate))) {
+                  dueDate.isAtSameMomentAs(endDate)) &&
+              dueDate.isAfter(recurring.lastGeneratedDate)) {
             dueDates.add(dueDate);
           }
 
@@ -683,6 +785,35 @@ class HomeController extends GetxController {
           } else {
             current = DateTime(current.year, current.month + 1, 1);
           }
+        }
+        break;
+
+      case Frequency.yearly:
+        var current = DateTime(recurring.lastGeneratedDate.year + 1,
+            recurring.lastGeneratedDate.month, recurring.lastGeneratedDate.day);
+
+        // Fast forward
+        while (current.isBefore(startDate)) {
+          current = DateTime(current.year + 1, current.month, current.day);
+        }
+
+        while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
+          // Leap year check
+          if (recurring.lastGeneratedDate.month == 2 &&
+              recurring.lastGeneratedDate.day == 29) {
+            final isLeap = (current.year % 4 == 0 && current.year % 100 != 0) ||
+                (current.year % 400 == 0);
+            if (!isLeap) {
+              // Force Feb 28 for non-leap years
+              dueDates.add(DateTime(current.year, 2, 28));
+            } else {
+              dueDates.add(current);
+            }
+          } else {
+            dueDates.add(current);
+          }
+
+          current = DateTime(current.year + 1, current.month, current.day);
         }
         break;
     }

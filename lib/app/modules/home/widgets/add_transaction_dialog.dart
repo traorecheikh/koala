@@ -14,6 +14,7 @@ import 'package:koaa/app/modules/settings/controllers/categories_controller.dart
 import 'package:koaa/app/modules/settings/controllers/settings_controller.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/services/ml/contextual_brain.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:intl/intl.dart';
 
@@ -45,11 +46,16 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   bool _buttonPressed = false;
   bool _isSubmitting = false;
 
+  // Contextual Prediction
+  ContextualPrediction? _prediction;
+  bool _showSparkle = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _amountFocusNode.requestFocus();
+      _checkContextualPrediction();
     });
   }
 
@@ -59,6 +65,43 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     _descriptionController.dispose();
     _amountFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkContextualPrediction() async {
+    if (widget.type != TransactionType.expense) return;
+
+    try {
+      final brain = Get.find<ContextualBrain>();
+      final prediction = brain.predict(DateTime.now());
+
+      if (prediction != null && prediction.confidence > 0.4) {
+        setState(() {
+          _prediction = prediction;
+          _showSparkle = true;
+        });
+
+        if (prediction.confidence > 0.7) {
+          _applyPrediction(prediction);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting contextual prediction: $e');
+    }
+  }
+
+  void _applyPrediction(ContextualPrediction prediction) {
+    final financialContext = Get.find<FinancialContextService>();
+    final category = financialContext.allCategories
+        .firstWhereOrNull((c) => c.id == prediction.categoryId);
+
+    if (category != null) {
+      setState(() {
+        _selectedCategory = category;
+        _amountController.text =
+            _formatAmount(prediction.amount.toInt().toString());
+      });
+      HapticFeedback.mediumImpact();
+    }
   }
 
   String _formatAmount(String value) {
@@ -239,7 +282,10 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       builder: (context) => _CategoryPickerSheet(
         type: widget.type,
         onSelect: (category) {
-          setState(() => _selectedCategory = category);
+          setState(() {
+            _selectedCategory = category;
+            _showSparkle = false; // Clear AI state
+          });
           NavigationHelper.safeBack();
         },
       ),
@@ -281,7 +327,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                 height: 4.h,
                 margin: EdgeInsets.only(top: 12.h),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
+                  color: KoalaColors.textSecondary(context).withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -291,19 +337,9 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                 margin: EdgeInsets.all(16.w),
                 padding: EdgeInsets.all(20.w),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFF6B6B).withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+                  color: KoalaColors.destructive,
+                  borderRadius: BorderRadius.circular(KoalaRadius.xl),
+                  boxShadow: KoalaShadows.md,
                 ),
                 child: Row(
                   children: [
@@ -326,18 +362,15 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                         children: [
                           Text(
                             'Dépassement de budget',
-                            style: TextStyle(
+                            style: KoalaTypography.heading4(context).copyWith(
                               color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           SizedBox(height: 4.h),
                           Text(
                             categoryName,
-                            style: TextStyle(
+                            style: KoalaTypography.bodyMedium(context).copyWith(
                               color: Colors.white.withOpacity(0.9),
-                              fontSize: 14.sp,
                             ),
                           ),
                         ],
@@ -356,10 +389,9 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     Container(
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(16.r),
+                        color: KoalaColors.surface(context),
+                        borderRadius: BorderRadius.circular(KoalaRadius.lg),
+                        border: Border.all(color: KoalaColors.border(context)),
                       ),
                       child: Column(
                         children: [
@@ -368,35 +400,28 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             children: [
                               Text(
                                 'Utilisation du budget',
-                                style: TextStyle(
-                                  color:
-                                      isDark ? Colors.white70 : Colors.black54,
-                                  fontSize: 13.sp,
-                                ),
+                                style: KoalaTypography.bodyMedium(context),
                               ),
                               Text(
                                 '${percentUsed.toStringAsFixed(0)}%',
-                                style: TextStyle(
-                                  color: const Color(0xFFFF6B6B),
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.bold,
+                                style:
+                                    KoalaTypography.heading4(context).copyWith(
+                                  color: KoalaColors.destructive,
                                 ),
                               ),
                             ],
                           ),
                           SizedBox(height: 12.h),
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8.r),
+                            borderRadius: BorderRadius.circular(KoalaRadius.sm),
                             child: LinearProgressIndicator(
                               value: (percentUsed / 100).clamp(0, 1),
                               minHeight: 10.h,
-                              backgroundColor: isDark
-                                  ? Colors.white10
-                                  : Colors.grey.shade200,
+                              backgroundColor: KoalaColors.background(context),
                               valueColor: AlwaysStoppedAnimation(
                                 percentUsed > 100
-                                    ? const Color(0xFFFF3B30)
-                                    : const Color(0xFFFF9500),
+                                    ? KoalaColors.destructive
+                                    : KoalaColors.warning,
                               ),
                             ),
                           ),
@@ -410,10 +435,9 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     Container(
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(16.r),
+                        color: KoalaColors.surface(context),
+                        borderRadius: BorderRadius.circular(KoalaRadius.lg),
+                        border: Border.all(color: KoalaColors.border(context)),
                       ),
                       child: Column(
                         children: [
@@ -425,10 +449,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             isDark: isDark,
                           ),
                           Divider(
-                              height: 20.h,
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.grey.shade200),
+                              height: 20.h, color: KoalaColors.border(context)),
                           _PremiumBudgetRow(
                             icon: CupertinoIcons.money_dollar_circle,
                             iconColor: Colors.orange,
@@ -437,10 +458,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             isDark: isDark,
                           ),
                           Divider(
-                              height: 20.h,
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.grey.shade200),
+                              height: 20.h, color: KoalaColors.border(context)),
                           _PremiumBudgetRow(
                             icon: CupertinoIcons.plus_circle,
                             iconColor: Colors.purple,
@@ -449,13 +467,10 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             isDark: isDark,
                           ),
                           Divider(
-                              height: 20.h,
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.grey.shade200),
+                              height: 20.h, color: KoalaColors.border(context)),
                           _PremiumBudgetRow(
                             icon: CupertinoIcons.exclamationmark_circle,
-                            iconColor: const Color(0xFFFF3B30),
+                            iconColor: KoalaColors.destructive,
                             label: 'Dépassement',
                             value: '+${_formatAmount(overage)} F',
                             isDark: isDark,
@@ -472,23 +487,21 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
               // Action buttons
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                padding: EdgeInsets.fromLTRB(
+                    16.w, 0, 16.w, 32.h), // Added bottom padding
                 child: Row(
                   children: [
                     Expanded(
                       child: CupertinoButton(
                         padding: EdgeInsets.symmetric(vertical: 16.h),
-                        color: isDark
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(14.r),
+                        color: KoalaColors.surface(context),
+                        borderRadius: BorderRadius.circular(KoalaRadius.md),
                         onPressed: () => Navigator.pop(context, false),
                         child: Text(
                           'Annuler',
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
+                          style: KoalaTypography.label(context).copyWith(
+                            color: KoalaColors.text(context),
                             fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -497,15 +510,14 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     Expanded(
                       child: CupertinoButton(
                         padding: EdgeInsets.symmetric(vertical: 16.h),
-                        color: const Color(0xFFFF6B6B),
-                        borderRadius: BorderRadius.circular(14.r),
+                        color: KoalaColors.destructive,
+                        borderRadius: BorderRadius.circular(KoalaRadius.md),
                         onPressed: () => Navigator.pop(context, true),
                         child: Text(
                           'Confirmer',
-                          style: TextStyle(
+                          style: KoalaTypography.label(context).copyWith(
                             color: Colors.white,
                             fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -531,7 +543,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     // Expand to 85% when keyboard visible, otherwise 50%
     final dialogHeight = isKeyboardVisible
         ? MediaQuery.of(context).size.height * 0.85
-        : MediaQuery.of(context).size.height * 0.50;
+        : MediaQuery.of(context).size.height * 0.55;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -551,275 +563,331 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
             child: Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(8.w),
+                  padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
                     color: widget.type == TransactionType.income
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
+                        ? KoalaColors.success.withOpacity(0.1)
+                        : KoalaColors.destructive.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(KoalaRadius.lg),
                   ),
                   child: Icon(
                     widget.type == TransactionType.income
                         ? CupertinoIcons.arrow_down_left
                         : CupertinoIcons.arrow_up_right,
                     color: widget.type == TransactionType.income
-                        ? Colors.green
-                        : Colors.orange,
+                        ? KoalaColors.success
+                        : KoalaColors.destructive,
                     size: 24.sp,
                   ),
                 ),
                 SizedBox(width: 12.w),
-                Text(
-                  widget.type == TransactionType.income
-                      ? 'Ajouter un revenu'
-                      : 'Ajouter une dépense',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20.sp,
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          widget.type == TransactionType.income
+                              ? 'Ajouter un revenu'
+                              : 'Ajouter une dépense',
+                          style: KoalaTypography.heading3(context),
+                          maxLines: 2,
+                          overflow: TextOverflow.visible,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                CupertinoButton(
+                SizedBox(width: 8.w),
+                IconButton(
                   padding: EdgeInsets.zero,
                   onPressed: () {
                     HapticFeedback.lightImpact();
                     NavigationHelper.safeBack();
                   },
-                  child: Icon(
-                    CupertinoIcons.xmark,
-                    color: Colors.grey.shade600,
-                    size: 24.sp,
+                  icon: Icon(
+                    CupertinoIcons.xmark_circle_fill,
+                    color: KoalaColors.textSecondary(context),
+                    size: 28.sp,
                   ),
                 ),
               ],
             ),
           ),
 
-          // Content - no scrolling needed
+          // Content - scrollable to prevent overflow
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-              child: Column(
-                children: [
-                  // Amount input
-                  Column(
-                    children: [
-                      TextField(
-                        controller: _amountController,
-                        focusNode: _amountFocusNode,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: false),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.displayMedium?.copyWith(
-                          fontWeight: FontWeight.w300,
-                          fontSize: 48.sp,
-                          height: 1.1,
-                          color: widget.type == TransactionType.income
-                              ? Colors.green
-                              : Colors.orange,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: '0',
-                          hintStyle: TextStyle(color: Colors.grey.shade400),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: (value) {
-                          final formatted = _formatAmount(value);
-                          if (formatted != value) {
-                            _amountController.value = TextEditingValue(
-                              text: formatted,
-                              selection: TextSelection.collapsed(
-                                  offset: formatted.length),
-                            );
-                          }
-                          if (_error != null) {
-                            setState(() => _error = null);
-                          }
-                        },
-                      ),
-                      Text(
-                        'FCFA',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ).animate().scale(
-                        duration: 500.ms,
-                        curve: Curves.easeOutBack,
-                      ),
-
-                  SizedBox(height: 32.h),
-
-                  // Category selector
-                  GestureDetector(
-                    onTap: _showCategoryPicker,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 16.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40.w,
-                            height: 40.w,
-                            decoration: BoxDecoration(
-                              color: _selectedCategory != null
-                                  ? Color(_selectedCategory!.colorValue)
-                                      .withOpacity(0.2)
-                                  : Colors.transparent,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: _selectedCategory != null
-                                  ? CategoryIcon(
-                                      iconKey: _selectedCategory!.icon,
-                                      size: 24.sp,
-                                      color:
-                                          Color(_selectedCategory!.colorValue),
-                                    )
-                                  : Icon(
-                                      CupertinoIcons.cube_box,
-                                      size: 24.sp,
-                                      color: Colors.grey.shade400,
-                                    ),
-                            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                child: Column(
+                  children: [
+                    // Amount input
+                    Column(
+                      children: [
+                        TextField(
+                          controller: _amountController,
+                          focusNode: _amountFocusNode,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: false),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.displayMedium?.copyWith(
+                            fontWeight: FontWeight.w300,
+                            fontSize: 48.sp,
+                            height: 1.1,
+                            color: (_showSparkle && _prediction != null)
+                                ? const Color(0xFFB8860B) // Dark Golden Rod
+                                : (widget.type == TransactionType.income
+                                    ? Colors.green
+                                    : Colors.orange),
                           ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Text(
-                              _selectedCategory?.name ??
-                                  'Sélectionner une catégorie',
+                          decoration: InputDecoration(
+                            hintText: '0',
+                            hintStyle: TextStyle(color: Colors.grey.shade400),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onChanged: (value) {
+                            // Clear AI state on manual edit
+                            if (_showSparkle) {
+                              setState(() => _showSparkle = false);
+                            }
+
+                            final formatted = _formatAmount(value);
+                            if (formatted != value) {
+                              _amountController.value = TextEditingValue(
+                                text: formatted,
+                                selection: TextSelection.collapsed(
+                                    offset: formatted.length),
+                              );
+                            }
+                            if (_error != null) {
+                              setState(() => _error = null);
+                            }
+                          },
+                        ),
+                        Text(
+                          'FCFA',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ).animate().scale(
+                          duration: 500.ms,
+                          curve: Curves.easeOutBack,
+                        ),
+
+                    if (_showSparkle && _prediction != null)
+                      Padding(
+                        padding: EdgeInsets.only(top: 8.h),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              CupertinoIcons.sparkles,
+                              size: 14.sp,
+                              color: const Color(0xFFFFD700), // Gold
+                            ),
+                            SizedBox(width: 6.w),
+                            Text(
+                              _prediction!.reason,
                               style: TextStyle(
-                                fontSize: 17.sp,
+                                color:
+                                    const Color(0xFFB8860B), // Dark Golden Rod
+                                fontSize: 13.sp,
                                 fontWeight: FontWeight.w500,
-                                color: _selectedCategory != null
-                                    ? Colors.black
-                                    : Colors.grey.shade500,
+                                letterSpacing: -0.2,
+                                fontStyle: FontStyle.italic,
                               ),
                             ),
-                          ),
-                          Icon(
-                            CupertinoIcons.chevron_right,
-                            color: Colors.grey.shade400,
-                            size: 20.sp,
-                          ),
-                        ],
+                          ],
+                        ).animate().fadeIn().slideY(begin: -0.5),
                       ),
-                    ),
-                  )
-                      .animate()
-                      .slideY(
-                        begin: 0.2,
-                        duration: 400.ms,
-                        delay: 100.ms,
-                        curve: Curves.easeOutQuart,
-                      )
-                      .fadeIn(),
 
-                  SizedBox(height: 30.h),
+                    SizedBox(height: 20.h),
 
-                  if (_error != null) ...[
-                    SizedBox(height: 16.h),
-                    AnimatedOpacity(
-                      opacity: 1.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Obx(() {
-                        final settingsController =
-                            Get.find<SettingsController>();
-                        final errorWidget = Text(
-                          _error!,
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        );
-
-                        // Only apply shake animation if reduce motion is not enabled
-                        if (settingsController.reduceMotion.value) {
-                          return errorWidget;
-                        }
-                        return errorWidget.animate().shake(duration: 300.ms);
-                      }),
-                    ),
-                  ],
-
-                  // Add button
-                  AnimatedScale(
-                    scale: _buttonPressed ? 0.95 : 1.0,
-                    duration: const Duration(milliseconds: 100),
-                    child: AnimatedOpacity(
-                      opacity: _loading ? 0.7 : 1.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 56.h,
-                        child: CupertinoButton(
-                          color: Colors.black,
+                    // Category selector
+                    GestureDetector(
+                      onTap: _showCategoryPicker,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 16.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (_showSparkle && _prediction != null)
+                              ? const Color(0xFFFFFDF5) // Light Gold Tint
+                              : Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(16.r),
-                          onPressed: (_loading || _isSubmitting)
-                              ? null
-                              : () async {
-                                  setState(() => _buttonPressed = true);
-                                  await Future.delayed(
-                                    const Duration(milliseconds: 100),
-                                  );
-                                  if (mounted) {
-                                    setState(() => _buttonPressed = false);
-                                    _addTransaction();
-                                  }
-                                },
-                          child: _loading
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 20.w,
-                                      height: 20.h,
-                                      child: const CupertinoActivityIndicator(
-                                        color: Colors.white,
+                          border: Border.all(
+                            color: (_showSparkle && _prediction != null)
+                                ? const Color(0xFFFFD700) // Gold
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40.w,
+                              height: 40.w,
+                              decoration: BoxDecoration(
+                                color: _selectedCategory != null
+                                    ? Color(_selectedCategory!.colorValue)
+                                        .withOpacity(0.2)
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: _selectedCategory != null
+                                    ? CategoryIcon(
+                                        iconKey: _selectedCategory!.icon,
+                                        size: 24.sp,
+                                        color: Color(
+                                            _selectedCategory!.colorValue),
+                                      )
+                                    : Icon(
+                                        CupertinoIcons.cube_box,
+                                        size: 24.sp,
+                                        color: Colors.grey.shade400,
                                       ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Text(
-                                      'Ajout en cours...',
-                                      style: TextStyle(
-                                        fontSize: 17.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white.withOpacity(0.8),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Text(
-                                  'Ajouter',
-                                  style: TextStyle(
-                                    fontSize: 17.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
+                              ),
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Text(
+                                _selectedCategory?.name ??
+                                    'Sélectionner une catégorie',
+                                style: TextStyle(
+                                  fontSize: 17.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: _selectedCategory != null
+                                      ? Colors.black
+                                      : Colors.grey.shade500,
                                 ),
+                              ),
+                            ),
+                            Icon(
+                              CupertinoIcons.chevron_right,
+                              color: Colors.grey.shade400,
+                              size: 20.sp,
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ).animate().slideY(
-                        begin: 0.3,
-                        duration: 600.ms,
-                        delay: 300.ms,
-                        curve: Curves.easeOutQuart,
-                      ),
+                    )
+                        .animate()
+                        .slideY(
+                          begin: 0.2,
+                          duration: 400.ms,
+                          delay: 100.ms,
+                          curve: Curves.easeOutQuart,
+                        )
+                        .fadeIn(),
 
-                  SizedBox(height: 20.h),
-                ],
+                    SizedBox(height: 30.h),
+
+                    if (_error != null) ...[
+                      SizedBox(height: 16.h),
+                      AnimatedOpacity(
+                        opacity: 1.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Obx(() {
+                          final settingsController =
+                              Get.find<SettingsController>();
+                          final errorWidget = Text(
+                            _error!,
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+
+                          // Only apply shake animation if reduce motion is not enabled
+                          if (settingsController.reduceMotion.value) {
+                            return errorWidget;
+                          }
+                          return errorWidget.animate().shake(duration: 300.ms);
+                        }),
+                      ),
+                    ],
+
+                    // Add button with Safe Area protection
+                    AnimatedScale(
+                      scale: _buttonPressed ? 0.95 : 1.0,
+                      duration: const Duration(milliseconds: 100),
+                      child: AnimatedOpacity(
+                        opacity: _loading ? 0.7 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Container(
+                          width: double.infinity,
+                          height: 56.h,
+                          margin: EdgeInsets.only(
+                              bottom: MediaQuery.of(context).padding.bottom +
+                                  16.h), // Safe area + padding
+                          child: CupertinoButton(
+                            color: (_showSparkle && _prediction != null)
+                                ? const Color(0xFFDAA520) // Goldenrod
+                                : Colors.black,
+                            borderRadius: BorderRadius.circular(16.r),
+                            onPressed: (_loading || _isSubmitting)
+                                ? null
+                                : () async {
+                                    setState(() => _buttonPressed = true);
+                                    await Future.delayed(
+                                      const Duration(milliseconds: 100),
+                                    );
+                                    if (mounted) {
+                                      setState(() => _buttonPressed = false);
+                                      _addTransaction();
+                                    }
+                                  },
+                            child: _loading
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 20.w,
+                                        height: 20.h,
+                                        child: const CupertinoActivityIndicator(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      SizedBox(width: 12.w),
+                                      Text(
+                                        'Ajout en cours...',
+                                        style: TextStyle(
+                                          fontSize: 17.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white.withOpacity(0.8),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    (_showSparkle && _prediction != null)
+                                        ? 'Confirmer la suggestion'
+                                        : 'Ajouter',
+                                    style: TextStyle(
+                                      fontSize: 17.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ).animate().slideY(
+                          begin: 0.3,
+                          duration: 600.ms,
+                          delay: 300.ms,
+                          curve: Curves.easeOutQuart,
+                        ),
+                  ],
+                ),
               ),
             ),
           ),

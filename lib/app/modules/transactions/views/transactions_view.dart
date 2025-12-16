@@ -168,9 +168,9 @@ class _SearchBar extends GetView<TransactionsController> {
       child: Container(
         decoration: BoxDecoration(
           color: KoalaColors.surface(context),
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
           border: Border.all(color: KoalaColors.border(context)),
-          boxShadow: KoalaColors.shadowSubtle,
+          boxShadow: KoalaShadows.sm,
         ),
         child: CupertinoSearchTextField(
           controller: controller.searchController,
@@ -207,7 +207,7 @@ class _FilterChips extends GetView<TransactionsController> {
               onTap: () => controller.setFilter(FilterType.all),
               icon: CupertinoIcons.square_stack_3d_up,
             ),
-            SizedBox(width: 8.w),
+            SizedBox(width: 12.w),
             _FilterChip(
               label: 'Revenus',
               isSelected: controller.currentFilter.value == FilterType.income,
@@ -373,12 +373,12 @@ class _EnhancedTransactionCard extends StatelessWidget {
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(KoalaRadius.lg),
         border: Border.all(
           color: KoalaColors.border(context),
           width: 1,
         ),
-        boxShadow: KoalaColors.shadowSubtle,
+        boxShadow: KoalaShadows.sm,
       ),
       child: Material(
         color: Colors.transparent,
@@ -411,8 +411,8 @@ class _EnhancedTransactionCard extends StatelessWidget {
                         style: KoalaTypography.bodyLarge(context).copyWith(
                           fontWeight: FontWeight.w600,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                        overflow: TextOverflow.visible,
                       ),
                       SizedBox(height: 4.h),
                       Row(
@@ -596,8 +596,8 @@ class _FilterBottomSheet extends GetView<TransactionsController> {
           SizedBox(height: 12.h),
           Obx(
             () => Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 _SortChip('Plus récents', SortOption.dateNewest),
                 _SortChip('Plus anciens', SortOption.dateOldest),
@@ -733,5 +733,3 @@ class _SortChip extends GetView<TransactionsController> {
     );
   }
 }
-
-

@@ -90,6 +90,10 @@ class FrequencyAdapter extends TypeAdapter<Frequency> {
         return Frequency.weekly;
       case 2:
         return Frequency.monthly;
+      case 3:
+        return Frequency.biWeekly;
+      case 4:
+        return Frequency.yearly;
       default:
         return Frequency.daily;
     }
@@ -104,6 +108,10 @@ class FrequencyAdapter extends TypeAdapter<Frequency> {
         writer.writeByte(1);
       case Frequency.monthly:
         writer.writeByte(2);
+      case Frequency.biWeekly:
+        writer.writeByte(3);
+      case Frequency.yearly:
+        writer.writeByte(4);
     }
   }
 

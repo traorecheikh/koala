@@ -27,13 +27,14 @@ class DebtAdapter extends TypeAdapter<Debt> {
       transactionIds:
           fields[7] == null ? const [] : (fields[7] as List).cast<String>(),
       minPayment: fields[8] == null ? 0.0 : (fields[8] as num).toDouble(),
+      dueDayOfMonth: (fields[9] as num?)?.toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Debt obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -51,7 +52,9 @@ class DebtAdapter extends TypeAdapter<Debt> {
       ..writeByte(7)
       ..write(obj.transactionIds)
       ..writeByte(8)
-      ..write(obj.minPayment);
+      ..write(obj.minPayment)
+      ..writeByte(9)
+      ..write(obj.dueDayOfMonth);
   }
 
   @override

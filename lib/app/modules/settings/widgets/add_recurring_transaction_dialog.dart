@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
+import 'package:intl/intl.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 
@@ -49,6 +50,7 @@ class _AddRecurringTransactionSheetState
   // New fields
   TransactionType _selectedType = TransactionType.expense;
   TransactionCategory? _selectedCategory;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -63,6 +65,7 @@ class _AddRecurringTransactionSheetState
       _dayOfMonth = t.dayOfMonth;
       _selectedType = t.type;
       _selectedCategory = t.category;
+      _endDate = t.endDate;
     } else {
       _amountController = TextEditingController();
       _descriptionController = TextEditingController();
@@ -185,6 +188,7 @@ class _AddRecurringTransactionSheetState
         t.dayOfMonth = _dayOfMonth;
         t.category = _selectedCategory!;
         t.type = _selectedType;
+        t.endDate = _endDate;
         await _controller.updateRecurringTransaction(t);
       } else {
         // Create new with error handling
@@ -197,6 +201,7 @@ class _AddRecurringTransactionSheetState
           lastGeneratedDate: DateTime.now(),
           category: _selectedCategory!,
           type: _selectedType,
+          endDate: _endDate,
         );
         _controller.addRecurringTransaction(newTransaction);
       }
@@ -383,6 +388,7 @@ class _AddRecurringTransactionSheetState
               _buildFrequencySelector(),
               if (_frequency == Frequency.weekly) _buildWeeklyDaySelector(),
               if (_frequency == Frequency.monthly) _buildMonthlyDaySelector(),
+              _buildEndDateSelector(),
               SizedBox(height: KoalaSpacing.huge),
 
               KoalaButton(
@@ -463,6 +469,12 @@ class _AddRecurringTransactionSheetState
             break;
           case Frequency.monthly:
             label = 'Mensuel';
+            break;
+          case Frequency.biWeekly:
+            label = 'Bi-Hebdo';
+            break;
+          case Frequency.yearly:
+            label = 'Annuel';
             break;
         }
 
@@ -604,6 +616,101 @@ class _AddRecurringTransactionSheetState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEndDateSelector() {
+    return Padding(
+      padding: EdgeInsets.only(top: 24.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Date de fin (Optionnel)',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              if (_endDate != null)
+                GestureDetector(
+                  onTap: () => setState(() => _endDate = null),
+                  child: Text(
+                    'Effacer',
+                    style: TextStyle(
+                      color: KoalaColors.destructive,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: KoalaSpacing.md),
+          GestureDetector(
+            onTap: () async {
+              HapticFeedback.lightImpact();
+              final date = await showDatePicker(
+                context: context,
+                initialDate:
+                    _endDate ?? DateTime.now().add(const Duration(days: 30)),
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 3650)),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: ColorScheme.light(
+                        primary: KoalaColors.primaryUi(context),
+                        onPrimary: Colors.white,
+                        surface: KoalaColors.surface(context),
+                        onSurface: KoalaColors.text(context),
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (date != null) {
+                setState(() => _endDate = date);
+              }
+            },
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              decoration: BoxDecoration(
+                color: KoalaColors.inputBackground(context),
+                borderRadius: BorderRadius.circular(KoalaRadius.md),
+                border: Border.all(color: KoalaColors.border(context)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.calendar_today,
+                    color: _endDate != null
+                        ? KoalaColors.primaryUi(context)
+                        : KoalaColors.textSecondary(context),
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: KoalaSpacing.md),
+                  Text(
+                    _endDate != null
+                        ? 'Se termine le : ${DateFormat('dd MMM yyyy', 'fr_FR').format(_endDate!)}'
+                        : 'Pas de date de fin (Indéfini)',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: _endDate != null
+                          ? KoalaColors.text(context)
+                          : KoalaColors.textSecondary(context),
+                      fontWeight: _endDate != null
+                          ? FontWeight.w500
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

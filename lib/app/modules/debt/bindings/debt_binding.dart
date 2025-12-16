@@ -9,5 +9,3 @@ class DebtBinding extends Bindings {
     );
   }
 }
-
-

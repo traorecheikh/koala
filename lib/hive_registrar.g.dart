@@ -16,9 +16,11 @@ import 'package:koaa/app/data/models/ml/ml_model_state.dart';
 import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/services/intelligence/ai_learning_profile.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
+    registerAdapter(AILearningProfileAdapter());
     registerAdapter(BadgeAdapter());
     registerAdapter(BudgetAdapter());
     registerAdapter(CategoryAdapter());
@@ -48,6 +50,7 @@ extension HiveRegistrar on HiveInterface {
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
+    registerAdapter(AILearningProfileAdapter());
     registerAdapter(BadgeAdapter());
     registerAdapter(BudgetAdapter());
     registerAdapter(CategoryAdapter());

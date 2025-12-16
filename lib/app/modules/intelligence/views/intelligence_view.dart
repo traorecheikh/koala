@@ -14,6 +14,7 @@ import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/routes/app_pages.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
+import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 
 class IntelligenceView extends StatelessWidget {
   const IntelligenceView({super.key});
@@ -52,6 +53,41 @@ class IntelligenceView extends StatelessWidget {
           style: KoalaTypography.heading3(context),
         ),
         centerTitle: true,
+        actions: [
+          Obx(() {
+            // Determine if there are active insights using HomeController
+            // Note: requires finding HomeController in view or passing it
+            if (!Get.isRegistered<HomeController>())
+              return const SizedBox.shrink();
+            final homeCtrl = Get.find<HomeController>();
+            final hasInsights = homeCtrl.insights.isNotEmpty;
+
+            return Stack(
+              children: [
+                IconButton(
+                  icon: Icon(CupertinoIcons.lightbulb_fill,
+                      color: KoalaColors.text(context)),
+                  onPressed: () =>
+                      Get.toNamed(Routes.insights), // Correct route
+                  tooltip: 'Insights',
+                ),
+                if (hasInsights)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      width: 8.w,
+                      height: 8.w,
+                      decoration: const BoxDecoration(
+                        color: KoalaColors.destructive,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          })
+        ],
       ),
       body: SafeArea(
         child: Obx(() {
@@ -178,9 +214,9 @@ class IntelligenceView extends StatelessWidget {
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius:
-            BorderRadius.circular(20.r), // Standard 20.r for big cards
-        boxShadow: KoalaColors.shadowMedium,
+        borderRadius: BorderRadius.circular(
+            KoalaRadius.lg), // Standard 20.r for big cards
+        boxShadow: KoalaShadows.md,
       ),
       child: Row(
         children: [
@@ -238,8 +274,8 @@ class IntelligenceView extends StatelessWidget {
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: KoalaColors.shadowSubtle,
+        borderRadius: BorderRadius.circular(KoalaRadius.md),
+        boxShadow: KoalaShadows.sm,
       ),
       child: Column(
         children: [
@@ -330,7 +366,7 @@ class IntelligenceView extends StatelessWidget {
         label = 'Équilibré';
         break;
       case SpendingPattern.conservative:
-        color = Colors.teal;
+        color = KoalaColors.success;
         label = 'Économe';
         break;
     }
@@ -341,8 +377,8 @@ class IntelligenceView extends StatelessWidget {
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: KoalaColors.surface(context),
-          borderRadius: BorderRadius.circular(16.r),
-          boxShadow: KoalaColors.shadowSubtle,
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          boxShadow: KoalaShadows.sm,
         ),
         child: Column(
           children: [
@@ -352,7 +388,7 @@ class IntelligenceView extends StatelessWidget {
                   padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12.r)),
+                      borderRadius: BorderRadius.circular(KoalaRadius.sm)),
                   child: Icon(CupertinoIcons.flame, color: color, size: 20.sp),
                 ),
                 SizedBox(width: 12.w),
@@ -400,7 +436,7 @@ class IntelligenceView extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 6.w),
       decoration: BoxDecoration(
         color: KoalaColors.background(context),
-        borderRadius: BorderRadius.circular(8.r),
+        borderRadius: BorderRadius.circular(KoalaRadius.xs),
       ),
       child: Column(
         children: [
@@ -429,8 +465,8 @@ class IntelligenceView extends StatelessWidget {
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: KoalaColors.shadowSubtle,
+        borderRadius: BorderRadius.circular(KoalaRadius.md),
+        boxShadow: KoalaShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,7 +537,7 @@ class IntelligenceView extends StatelessWidget {
                 'Objectifs',
                 '${intel.goalProgress.activeGoalCount}',
                 CupertinoIcons.flag,
-                Colors.pink,
+                KoalaColors.accent,
                 Routes.goals)),
         SizedBox(width: 10.w),
         Expanded(
@@ -529,8 +565,8 @@ class IntelligenceView extends StatelessWidget {
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
           color: KoalaColors.surface(context),
-          borderRadius: BorderRadius.circular(14.r),
-          boxShadow: KoalaColors.shadowSubtle,
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          boxShadow: KoalaShadows.sm,
         ),
         child: Column(
           children: [
@@ -563,7 +599,7 @@ class IntelligenceView extends StatelessWidget {
         icon = CupertinoIcons.exclamationmark_triangle;
         break;
       case RecommendationPriority.medium:
-        color = Colors.amber;
+        color = KoalaColors.warning;
         icon = CupertinoIcons.lightbulb;
         break;
       default:
@@ -581,7 +617,7 @@ class IntelligenceView extends StatelessWidget {
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
           color: KoalaColors.surface(context),
-          borderRadius: BorderRadius.circular(14.r),
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
           border: Border.all(color: color.withOpacity(0.2)),
         ),
         child: Row(
@@ -590,7 +626,7 @@ class IntelligenceView extends StatelessWidget {
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10.r)),
+                  borderRadius: BorderRadius.circular(KoalaRadius.xs)),
               child: Icon(icon, color: color, size: 18.sp),
             ),
             SizedBox(width: 12.w),

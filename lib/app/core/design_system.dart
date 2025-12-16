@@ -636,12 +636,14 @@ class KoalaBottomSheet extends StatelessWidget {
   final String title;
   final Widget child;
   final IconData? icon;
+  final Widget? headerAction; // Added
 
   const KoalaBottomSheet({
     super.key,
     required this.title,
     required this.child,
     this.icon,
+    this.headerAction, // Added
   });
 
   @override
@@ -680,6 +682,10 @@ class KoalaBottomSheet extends StatelessWidget {
                     style: KoalaTypography.heading3(context),
                   ),
                 ),
+                if (headerAction != null) ...[
+                  headerAction!,
+                  SizedBox(width: 8.w),
+                ],
                 IconButton(
                   onPressed: () => NavigationHelper.safeBack(),
                   icon: Container(
@@ -723,7 +729,9 @@ class KoalaDragHandle extends StatelessWidget {
         height: 4.h,
         margin: EdgeInsets.symmetric(vertical: 16.h),
         decoration: BoxDecoration(
-          color: KoalaColors.border(context),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade300,
           borderRadius: BorderRadius.circular(2.r),
         ),
       ),

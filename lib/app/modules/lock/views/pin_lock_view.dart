@@ -185,7 +185,7 @@ class _PinLockViewState extends State<PinLockView>
                 height: 80.w,
                 decoration: BoxDecoration(
                   color: KoalaColors.primary,
-                  borderRadius: BorderRadius.circular(20.r),
+                  borderRadius: BorderRadius.circular(KoalaRadius.lg),
                 ),
                 child: Center(
                   child: Text('🐨', style: TextStyle(fontSize: 40.sp)),
@@ -404,15 +404,7 @@ class _PressableButtonState extends State<_PressableButton> {
           duration: const Duration(milliseconds: 100),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            boxShadow: _isPressed
-                ? []
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+            boxShadow: _isPressed ? [] : KoalaShadows.sm,
           ),
           child: widget.child,
         ),

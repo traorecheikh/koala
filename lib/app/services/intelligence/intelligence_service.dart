@@ -9,6 +9,7 @@ import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
 import 'package:koaa/app/services/ml/models/financial_health_scorer.dart';
 import 'package:koaa/app/services/ml/smart_financial_brain.dart';
+import 'package:koaa/app/services/intelligence/ai_learning_service.dart';
 
 class ProactiveAlert {
   final String id;
@@ -292,8 +293,18 @@ class IntelligenceService extends GetxService {
 
   void _generateAlertsFromPenalties(List<HealthPenalty> penalties) {
     highPriorityAlerts.clear();
+    final learningService =
+        Get.find<AILearningService>(); // Get learning service
 
     for (var penalty in penalties) {
+      final alertType =
+          _getPenaltyTitle(penalty.reason); // Use title as type key for now
+
+      // Check if user has muted this alert type
+      if (!learningService.shouldShowAlert(alertType)) {
+        continue;
+      }
+
       AlertSeverity severity;
       IconData icon;
 
@@ -309,8 +320,8 @@ class IntelligenceService extends GetxService {
       }
 
       highPriorityAlerts.add(ProactiveAlert(
-        id: 'penalty_${penalty.reason.hashCode}',
-        title: _getPenaltyTitle(penalty.reason),
+        id: 'penalty_${penalty.reason.hashCode}', // Unique ID for this instance
+        title: alertType,
         message: penalty.reason,
         severity: severity,
         timestamp: DateTime.now(),
@@ -344,6 +355,15 @@ class IntelligenceService extends GetxService {
   }
 
   void dismissAlert(String id) {
-    highPriorityAlerts.removeWhere((a) => a.id == id);
+    // Find the alert to get its type before removing
+    final alert = highPriorityAlerts.firstWhereOrNull((a) => a.id == id);
+    if (alert != null) {
+      // Learn from this dismissal
+      final learningService = Get.find<AILearningService>();
+      learningService.learnDismissal(alert.title);
+
+      // Remove locally
+      highPriorityAlerts.remove(alert);
+    }
   }
 }

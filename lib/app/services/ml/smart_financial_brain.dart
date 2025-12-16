@@ -25,18 +25,27 @@ class SmartFinancialBrain extends GetxService {
     super.onInit();
     _context = Get.find<FinancialContextService>();
 
-    // React to any financial change
-    ever(_context.allTransactions, (_) => _recalculate());
-    ever(_context.allDebts, (_) => _recalculate());
-    ever(_context.allGoals, (_) => _recalculate());
-    ever(_context.allBudgets, (_) => _recalculate());
-    ever(_context.currentBalance, (_) => _recalculate());
+    // React to any financial change with DEBOUNCE to avoid UI jank during rapid updates
+    debounce(_context.allTransactions, (_) => _recalculate(),
+        time: const Duration(milliseconds: 500));
+    debounce(_context.allDebts, (_) => _recalculate(),
+        time: const Duration(milliseconds: 500));
+    debounce(_context.allGoals, (_) => _recalculate(),
+        time: const Duration(milliseconds: 500));
+    debounce(_context.allBudgets, (_) => _recalculate(),
+        time: const Duration(milliseconds: 500));
+    debounce(_context.currentBalance, (_) => _recalculate(),
+        time: const Duration(milliseconds: 500));
 
-    _recalculate();
+    // Delay initial calculation to allow UI to render first
+    Future.delayed(const Duration(milliseconds: 800), _recalculate);
   }
 
-  void _recalculate() {
+  Future<void> _recalculate() async {
     _logger.d('SmartFinancialBrain: Recalculating intelligence...');
+
+    // Yield to UI thread before starting heavy work
+    await Future.delayed(Duration.zero);
 
     final transactions = _context.allTransactions.toList();
     final debts = _context.allDebts.toList();
@@ -53,6 +62,7 @@ class SmartFinancialBrain extends GetxService {
       budgetHealth: _analyzeBudgetHealth(budgets, transactions),
       cashFlowPrediction:
           _predictCashFlow(transactions, debts, monthlyIncome, balance),
+      netWorthAnalysis: _calculateNetWorth(balance, debts, goals),
 
       // Smart recommendations
       recommendations: _generateRecommendations(
@@ -436,71 +446,170 @@ class SmartFinancialBrain extends GetxService {
   ) {
     final now = DateTime.now();
     final dayOfMonth = now.day;
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final daysRemaining = daysInMonth - dayOfMonth;
+    final int daysRemaining = 30; // Rolling 30-day window
 
-    // Calculate average daily spending
+    // 1. Calculate Variable Daily Spending (Excluding Recurring/Fixed)
     final monthStart = DateTime(now.year, now.month, 1);
-    final thisMonthExpenses = transactions
-        .where((t) =>
-            t.type == TransactionType.expense && !t.date.isBefore(monthStart))
-        .fold(0.0, (sum, t) => sum + t.amount);
-    final avgDailySpending =
-        dayOfMonth > 0 ? thisMonthExpenses / dayOfMonth : 0;
 
-    // Predict upcoming spending
-    final predictedSpendingRemaining = avgDailySpending * daysRemaining;
+    // Filter out recurring transactions from the average calculation
+    // to avoid double counting fixed costs
+    final variableExpenses = transactions.where((t) =>
+        t.type == TransactionType.expense &&
+        !t.isRecurring && // Skip recurring (rent, subs)
+        t.linkedDebtId == null && // Skip debt payments
+        !t.date.isBefore(monthStart));
 
-    // Upcoming debt payments
-    final upcomingDebtPayments = debts
-        .where((d) => !d.isPaidOff && d.createdAt.day > dayOfMonth)
-        .fold(0.0, (sum, d) => sum + d.minPayment);
+    final totalVariableSpent =
+        variableExpenses.fold(0.0, (sum, t) => sum + t.amount);
+    final avgDailyVariableSpending =
+        dayOfMonth > 0 ? totalVariableSpent / dayOfMonth : 0;
 
-    // FIX: Calculate UPCOMING INCOME from jobs before month end
-    double upcomingIncome = 0;
-    for (final job in _context.allJobs) {
-      if (!job.isActive) continue;
-      final payDay = job.paymentDate.day;
-      // If payday is after today but within this month, add it
-      if (payDay > dayOfMonth && payDay <= daysInMonth) {
-        upcomingIncome += job.amount;
+    // 2. Predict Remaining Variable Spending (For next 30 days)
+    final predictedVariableSpending = avgDailyVariableSpending * daysRemaining;
+
+    // 3. Calculate Upcoming Fixed Expenses (Recurring + Debts)
+    // For a rolling 30-day window, we assume every monthly item happens EXACTLY ONCE.
+
+    // 3a. debts (Split into Repayment vs Collection)
+    double upcomingDebtPayments = 0.0;
+    double upcomingDebtCollections = 0.0;
+
+    for (var debt in debts) {
+      if (debt.isPaidOff) continue;
+      // In a 30-day window, we pay/collect one installment of every active debt
+      if (debt.type == DebtType.borrowed) {
+        upcomingDebtPayments += debt.minPayment;
+      } else {
+        upcomingDebtCollections += debt.minPayment;
       }
     }
 
-    // Month-end prediction NOW includes upcoming salary
-    final predictedMonthEnd = balance +
-        upcomingIncome -
-        predictedSpendingRemaining -
-        upcomingDebtPayments;
+    // 3b. Recurring Expenses
+    final allRecurring = _context.allRecurringTransactions;
+    double upcomingRecurringExpenses = 0.0;
 
-    // Days until broke (if spending continues at current rate)
-    int? daysUntilBroke;
-    if (avgDailySpending > 0 && balance > 0) {
-      // Factor in upcoming income for more accurate "broke" calculation
-      final effectiveBalance = balance + upcomingIncome;
-      daysUntilBroke = (effectiveBalance / avgDailySpending).floor();
+    for (final recurring in allRecurring) {
+      if (!recurring.isActive || recurring.type != TransactionType.expense)
+        continue;
+
+      // In 30 days, monthly items happen once.
+      // TODO: Handle weekly items (x4) in Phase 2
+      if (recurring.frequency == Frequency.monthly) {
+        upcomingRecurringExpenses += recurring.amount;
+      }
     }
 
-    // Calculate safe daily spending allowance
-    final safeBuffer = monthlyIncome * 0.10; // Keep 10% buffer
-    final effectiveBalanceForSafe = balance + upcomingIncome;
+    // 4. Calculate Upcoming Income
+    double upcomingIncome = 0;
+
+    // 4a. Jobs
+    for (final job in _context.allJobs) {
+      if (!job.isActive) continue;
+      // In 30 days, we get paid once per job
+      upcomingIncome += job.amount;
+    }
+
+    // 4b. Recurring Income
+    for (final recurring in allRecurring) {
+      if (!recurring.isActive || recurring.type != TransactionType.income)
+        continue;
+
+      if (recurring.frequency == Frequency.monthly) {
+        upcomingIncome += recurring.amount;
+      }
+    }
+
+    // 5. Final Prediction
+    final predictedMonthEnd = balance +
+        upcomingIncome +
+        upcomingDebtCollections - // Add incoming debt payments
+        predictedVariableSpending -
+        upcomingDebtPayments -
+        upcomingRecurringExpenses;
+
+    _logger.i('''
+🧮 PROJECTION MATH DEBUG (ROLLING 30 DAYS):
+----------------------------------------
+   Current Balance:      ${balance.toStringAsFixed(2)}
++  Upcoming Income:      ${upcomingIncome.toStringAsFixed(2)}
++  Debt Collections:     ${upcomingDebtCollections.toStringAsFixed(2)}
+-  Variable Spending:    ${predictedVariableSpending.toStringAsFixed(2)}
+-  Debt Payments:        ${upcomingDebtPayments.toStringAsFixed(2)}
+-  Recurring Expenses:   ${upcomingRecurringExpenses.toStringAsFixed(2)}
+----------------------------------------
+=  PREDICTED (+30d):     ${predictedMonthEnd.toStringAsFixed(2)}
+''');
+
+    // daysUntilBroke calculation
+    // We deduct fixed expenses first to see "disposable" daily rate
+    int? daysUntilBroke;
+    final effectiveBalance = balance +
+        upcomingIncome +
+        upcomingDebtCollections -
+        upcomingDebtPayments -
+        upcomingRecurringExpenses;
+
+    if (avgDailyVariableSpending > 0 && effectiveBalance > 0) {
+      daysUntilBroke = (effectiveBalance / avgDailyVariableSpending).floor();
+    }
+
+    // Safe daily spending
+    // (Available - Fixed Costs) / Days Remaining
+    // Reserve 10% buffer
+    final buffer = monthlyIncome * 0.10;
     final safeDailySpending = daysRemaining > 0
-        ? max(
-            0,
-            (effectiveBalanceForSafe - upcomingDebtPayments - safeBuffer) /
-                daysRemaining)
+        ? max(0, (effectiveBalance - buffer) / daysRemaining)
         : 0;
 
     return CashFlowPrediction(
       currentBalance: balance,
       predictedMonthEndBalance: predictedMonthEnd,
-      avgDailySpending: avgDailySpending.toDouble(),
+      avgDailySpending:
+          avgDailyVariableSpending.toDouble(), // Returning variable avg now
       safeDailySpending: safeDailySpending.toDouble(),
       daysUntilBroke: daysUntilBroke,
-      upcomingDebtPayments: upcomingDebtPayments,
+      upcomingDebtPayments: upcomingDebtPayments +
+          upcomingRecurringExpenses, // Grouped fixed costs
       daysRemainingInMonth: daysRemaining,
       willSurviveMonth: predictedMonthEnd > 0,
-      upcomingIncome: upcomingIncome, // Added field
+      upcomingIncome: upcomingIncome,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NET WORTH ANALYSIS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  NetWorthAnalysis _calculateNetWorth(
+    double currentBalance,
+    List<Debt> debts,
+    List<FinancialGoal> goals,
+  ) {
+    // Assets
+    final liquidAssets = currentBalance;
+    final lentMoney = debts
+        .where((d) => !d.isPaidOff && d.type == DebtType.lent)
+        .fold(0.0, (sum, d) => sum + d.remainingAmount);
+    final goalSavings = goals.fold(0.0, (sum, g) => sum + g.currentAmount);
+
+    final totalAssets = liquidAssets + lentMoney + goalSavings;
+
+    // Liabilities
+    final borrowedMoney = debts
+        .where((d) => !d.isPaidOff && d.type == DebtType.borrowed)
+        .fold(0.0, (sum, d) => sum + d.remainingAmount);
+
+    final totalLiabilities = borrowedMoney;
+
+    final netWorth = totalAssets - totalLiabilities;
+    final debtRatio = totalAssets > 0 ? totalLiabilities / totalAssets : 0.0;
+
+    return NetWorthAnalysis(
+      totalAssets: totalAssets,
+      totalLiabilities: totalLiabilities,
+      netWorth: netWorth,
+      liquidAssets: liquidAssets,
+      debtRatio: debtRatio.toDouble(),
     );
   }
 

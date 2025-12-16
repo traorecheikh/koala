@@ -68,7 +68,7 @@ class SettingsView extends GetView<SettingsController> {
             color: Colors.transparent,
             child: InkWell(
               onTap: controller.checkForUpdates,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KoalaRadius.md),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
@@ -91,7 +91,29 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Intelligence Artificielle',
+            title: 'Données Financières',
+            children: [
+              _buildSettingsItem(
+                context,
+                icon: CupertinoIcons.arrow_2_circlepath,
+                title: 'Revenus récurrents',
+                iconColor: KoalaColors.success,
+                onTap: () => Get.to(() => const RecurringTransactionsView()),
+              ),
+              _buildSettingsItem(
+                context,
+                icon: CupertinoIcons.creditcard_fill,
+                title: 'Abonnements',
+                iconColor: const Color(0xFFFF6B6B),
+                onTap: () => Get.to(() => const SubscriptionsView()),
+              ),
+              // Future: Import/Export
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildSettingsSection(
+            context,
+            title: 'Personnalisation',
             children: [
               _buildSettingsItem(
                 context,
@@ -112,7 +134,7 @@ class SettingsView extends GetView<SettingsController> {
           const SizedBox(height: 24),
           _buildSettingsSection(
             context,
-            title: 'Compte',
+            title: 'Compte & Sécurité',
             children: [
               _buildSettingsItem(
                 context,
@@ -123,22 +145,8 @@ class SettingsView extends GetView<SettingsController> {
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.lock_fill,
-                title: 'Sécurité',
+                title: 'Sécurité (PIN & Biométrie)',
                 onTap: () => NavigationHelper.toNamed(Routes.securitySettings),
-              ),
-              _buildSettingsItem(
-                context,
-                icon: CupertinoIcons.creditcard_fill,
-                title: 'Abonnements',
-                iconColor: const Color(0xFFFF6B6B),
-                onTap: () => Get.to(() => const SubscriptionsView()),
-              ),
-              _buildSettingsItem(
-                context,
-                icon: CupertinoIcons.arrow_2_circlepath,
-                title: 'Revenus récurrents',
-                iconColor: KoalaColors.success,
-                onTap: () => Get.to(() => const RecurringTransactionsView()),
               ),
             ],
           ),
@@ -251,9 +259,9 @@ class SettingsView extends GetView<SettingsController> {
         Container(
           decoration: BoxDecoration(
             color: KoalaColors.surface(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KoalaRadius.lg),
             border: Border.all(color: KoalaColors.border(context)),
-            boxShadow: KoalaColors.shadowSubtle,
+            boxShadow: KoalaShadows.sm,
           ),
           clipBehavior: Clip.hardEdge,
           child: Column(
