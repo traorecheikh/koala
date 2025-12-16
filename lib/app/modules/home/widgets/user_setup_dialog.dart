@@ -318,15 +318,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
             key: _formKey,
             child: Column(
               children: [
-                Container(
-                  width: 36.w,
-                  height: 4.h,
-                  margin: EdgeInsets.only(top: KoalaSpacing.md),
-                  decoration: BoxDecoration(
-                    color: KoalaColors.border(context),
-                    borderRadius: BorderRadius.circular(KoalaRadius.xs),
-                  ),
-                ),
+                const KoalaDragHandle(),
 
                 Padding(
                   padding: EdgeInsets.fromLTRB(KoalaSpacing.xl, KoalaSpacing.xl,
@@ -544,239 +536,280 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
   Widget _buildJobsStep() {
     return Column(
       key: const ValueKey('jobsStep'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Ajoutez vos revenus',
-          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
+          'Vos revenus',
+          style: KoalaTypography.heading2(context),
         ),
-        SizedBox(height: KoalaSpacing.sm),
+        SizedBox(height: 8.h),
         Text(
-          'Vous pouvez ajouter plusieurs sources de revenus.',
-          style: TextStyle(
-              color: KoalaColors.textSecondary(context), fontSize: 15.sp),
+          'Ajoutez vos sources de revenus réguliers.',
+          style: KoalaTypography.bodyMedium(context)
+              .copyWith(color: KoalaColors.textSecondary(context)),
         ),
-        SizedBox(height: KoalaSpacing.xl),
+        SizedBox(height: 32.h),
+
+        // Added Jobs List (Cards)
         if (_jobs.isNotEmpty) ...[
-          ..._jobs.asMap().entries.map((entry) {
-            final index = entry.key;
-            final job = entry.value;
-            return Container(
-              margin: EdgeInsets.only(bottom: KoalaSpacing.md),
-              padding: EdgeInsets.all(KoalaSpacing.lg),
-              decoration: BoxDecoration(
-                color: KoalaColors.inputBackground(context),
-                borderRadius: BorderRadius.circular(KoalaRadius.md),
-                border: Border.all(color: KoalaColors.border(context)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(KoalaSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: KoalaColors.surface(context),
-                      borderRadius: BorderRadius.circular(KoalaRadius.sm),
-                      boxShadow: KoalaShadows.xs,
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _jobs.length,
+            separatorBuilder: (c, i) => SizedBox(height: 12.h),
+            itemBuilder: (context, index) {
+              final job = _jobs[index];
+              return Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: KoalaColors.surface(context),
+                  borderRadius: BorderRadius.circular(KoalaRadius.md),
+                  boxShadow: KoalaShadows.sm,
+                  border: Border.all(color: KoalaColors.border(context)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(10.w),
+                      decoration: BoxDecoration(
+                        color: KoalaColors.primaryUi(context).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(KoalaRadius.sm),
+                      ),
+                      child: Icon(CupertinoIcons.briefcase_fill,
+                          color: KoalaColors.primaryUi(context), size: 18.sp),
                     ),
-                    child: Icon(CupertinoIcons.briefcase,
-                        color: KoalaColors.primaryUi(context), size: 20.sp),
-                  ),
-                  SizedBox(width: KoalaSpacing.lg),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          job.name,
-                          style: KoalaTypography.bodyMedium(context)
-                              .copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        SizedBox(height: KoalaSpacing.xs),
-                        Text(
-                          '${job.frequency.displayName} • FCFA ${_formatAmount(job.amount.toString())}',
-                          style: KoalaTypography.caption(context),
-                        ),
-                      ],
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            job.name,
+                            style: KoalaTypography.bodyMedium(context)
+                                .copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            '${_formatAmount(job.amount.toStringAsFixed(0))} FCFA / mois',
+                            style: KoalaTypography.caption(context),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(CupertinoIcons.minus_circle,
-                        color: KoalaColors.destructive),
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      setState(() {
-                        _jobs.removeAt(index);
-                      });
-                    },
-                  ),
-                ],
-              ),
-            );
-          }),
-          SizedBox(height: KoalaSpacing.xl),
+                    IconButton(
+                      icon: Icon(CupertinoIcons.delete,
+                          color: KoalaColors.textSecondary(context)
+                              .withOpacity(0.5),
+                          size: 20.sp),
+                      onPressed: () {
+                        setState(() => _jobs.removeAt(index));
+                      },
+                    )
+                  ],
+                ),
+              );
+            },
+          ),
+          SizedBox(height: 24.h),
+          Divider(color: KoalaColors.border(context)),
+          SizedBox(height: 24.h),
         ],
-        Container(
-          padding: EdgeInsets.all(KoalaSpacing.xl),
+
+        // Form Title
+        Text(
+          _jobs.isEmpty ? 'Ajouter un revenu' : 'Ajouter un autre',
+          style: KoalaTypography.heading4(context),
+        ),
+        SizedBox(height: 24.h),
+
+        // Job Selector (Replaces Dropdown)
+        InkWell(
+          onTap: _showJobSelector,
+          borderRadius: BorderRadius.circular(KoalaRadius.md),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: KoalaColors.inputBackground(context),
+              borderRadius: BorderRadius.circular(KoalaRadius.md),
+              border: Border.all(color: KoalaColors.border(context)),
+            ),
+            child: Row(
+              children: [
+                Icon(CupertinoIcons.search,
+                    size: 20.sp, color: KoalaColors.textSecondary(context)),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Text(
+                    _selectedJobTitle ?? 'Sélectionner le poste',
+                    style: _selectedJobTitle != null
+                        ? KoalaTypography.bodyMedium(context)
+                            .copyWith(fontWeight: FontWeight.w500)
+                        : KoalaTypography.bodyMedium(context).copyWith(
+                            color: KoalaColors.textSecondary(context)),
+                  ),
+                ),
+                Icon(CupertinoIcons.chevron_down,
+                    size: 16.sp, color: KoalaColors.textSecondary(context)),
+              ],
+            ),
+          ),
+        ),
+
+        // Custom Job Input (if "Autre")
+        if (_selectedJobTitle == 'Autre') ...[
+          SizedBox(height: 12.h),
+          KoalaTextField(
+            controller: _customJobController,
+            label: 'Précisez le poste',
+            validator: (v) => v?.isEmpty == true ? 'Requis' : null,
+          ),
+        ],
+
+        SizedBox(height: 24.h),
+
+        // Hero Amount Input (Copy from JobDialog)
+        Text(
+          'Revenu Mensuel',
+          textAlign: TextAlign.center,
+          style: KoalaTypography.label(context)
+              .copyWith(color: KoalaColors.textSecondary(context)),
+        ),
+        SizedBox(height: 8.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            IntrinsicWidth(
+              child: TextField(
+                controller: _salaryController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: KoalaTypography.heading1(context).copyWith(
+                  fontSize: 32.sp,
+                  fontWeight: FontWeight.bold,
+                  color: KoalaColors.primaryUi(context),
+                ),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: '0',
+                  hintStyle: TextStyle(color: KoalaColors.border(context)),
+                  contentPadding: EdgeInsets.zero,
+                  isDense: true,
+                ),
+                onChanged: (val) {
+                  final clean = val.replaceAll(RegExp(r'[^0-9.]'), '');
+                  if (clean.isNotEmpty) {
+                    _selectedSalary = double.tryParse(clean) ?? 0;
+                  }
+                },
+              ),
+            ),
+            SizedBox(width: 4.w),
+            Text(
+              'FCFA',
+              style: KoalaTypography.heading4(context).copyWith(
+                color: KoalaColors.textSecondary(context),
+                fontSize: 16.sp,
+              ),
+            ),
+          ],
+        ),
+
+        SizedBox(height: 32.h),
+
+        // Add Button
+        KoalaButton(
+          text: 'Ajouter',
+          onPressed: _canAddJob() ? _addJob : () {},
+          backgroundColor: _canAddJob()
+              ? KoalaColors.primaryUi(context)
+              : KoalaColors.primaryUi(context).withOpacity(0.3), // Faded
+        ),
+        SizedBox(height: 24.h),
+      ],
+    );
+  }
+
+  void _showJobSelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
             color: KoalaColors.surface(context),
-            borderRadius: BorderRadius.circular(KoalaRadius.lg),
-            border: Border.all(color: KoalaColors.border(context)),
-            boxShadow: KoalaShadows.sm,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(KoalaRadius.lg)),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _jobs.isEmpty
-                    ? 'Ajouter une source'
-                    : 'Ajouter une autre source',
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: KoalaSpacing.lg),
-              DropdownButtonFormField<String>(
-                value: _selectedJobTitle,
-                decoration: InputDecoration(
-                  hintText: 'Type de poste',
-                  fillColor: KoalaColors.inputBackground(context),
-                  filled: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(KoalaRadius.sm),
-                      borderSide: BorderSide.none),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                ),
-                items: _jobTitles
-                    .map(
-                        (job) => DropdownMenuItem(value: job, child: Text(job)))
-                    .toList(),
-                onChanged: (value) => setState(() => _selectedJobTitle = value),
-              ),
-              if (_selectedJobTitle == 'Autre') ...[
-                SizedBox(height: KoalaSpacing.md),
-                TextField(
-                  controller: _customJobController,
-                  decoration: InputDecoration(
-                    hintText: 'Précisez votre poste',
-                    fillColor: KoalaColors.inputBackground(context),
-                    filled: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(KoalaRadius.sm),
-                        borderSide: BorderSide.none),
-                  ),
-                ),
-              ],
-              SizedBox(height: 20.h),
-              Text('Revenu Mensuel',
-                  style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: KoalaColors.textSecondary(context))),
-              SizedBox(height: KoalaSpacing.sm),
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                decoration: BoxDecoration(
-                  color: KoalaColors.inputBackground(context),
-                  borderRadius: BorderRadius.circular(KoalaRadius.md),
-                ),
-                child: Column(
+              // Handle
+              const KoalaDragHandle(),
+              // Header
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w)
+                    .copyWith(bottom: 16.w),
+                child: Row(
                   children: [
-                    TextField(
-                      controller: _salaryController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 28.sp,
-                          fontWeight: FontWeight.bold,
-                          color: KoalaColors.primaryUi(context)),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        suffixText: 'FCFA',
-                        suffixStyle: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey),
-                      ),
-                      onChanged: (value) {
-                        String digits = value.replaceAll(RegExp(r'[^\d]'), '');
-                        if (digits.isNotEmpty) {
-                          double val = double.parse(digits);
-                          setState(() => _selectedSalary = val);
-                        } else {
-                          setState(() => _selectedSalary = 0);
-                        }
-                      },
-                    ),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: KoalaColors.primaryUi(context),
-                        inactiveTrackColor: KoalaColors.border(context),
-                        thumbColor: KoalaColors.primaryUi(context),
-                        trackHeight: 4.h,
-                        thumbShape:
-                            RoundSliderThumbShape(enabledThumbRadius: 10.r),
-                        overlayShape: SliderComponentShape.noOverlay,
-                      ),
-                      child: Slider(
-                        value: _selectedSalary.clamp(0, 1000000),
-                        min: 0,
-                        max: 1000000,
-                        onChanged: (value) {
-                          final newValue = (value / 5000).round() * 5000.0;
-                          setState(() {
-                            _selectedSalary = newValue;
-                            _salaryController.text =
-                                _formatAmount(newValue.toStringAsFixed(0));
-                          });
-                        },
-                      ),
-                    ),
+                    Text('Sélectionner un poste',
+                        style: KoalaTypography.heading4(context)),
+                    Spacer(),
+                    IconButton(
+                      icon: Icon(CupertinoIcons.xmark,
+                          color: KoalaColors.textSecondary(context)),
+                      onPressed: () => Navigator.pop(context),
+                    )
                   ],
                 ),
               ),
-              SizedBox(height: 20.h),
-              Text('Durée du contrat',
-                  style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: KoalaColors.textSecondary(context))),
-              SizedBox(height: KoalaSpacing.sm),
-              DropdownButtonFormField<String>(
-                value: _selectedDuration,
-                decoration: InputDecoration(
-                  fillColor: KoalaColors.inputBackground(context),
-                  filled: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(KoalaRadius.sm),
-                      borderSide: BorderSide.none),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                      value: 'permanent', child: Text('Permanent')),
-                  DropdownMenuItem(value: '1_month', child: Text('1 mois')),
-                  DropdownMenuItem(value: '3_months', child: Text('3 mois')),
-                  DropdownMenuItem(value: '6_months', child: Text('6 mois')),
-                  DropdownMenuItem(value: '1_year', child: Text('1 an')),
-                ],
-                onChanged: (value) =>
-                    setState(() => _selectedDuration = value ?? 'permanent'),
-              ),
-              SizedBox(height: 20.h),
-              SizedBox(
-                width: double.infinity,
-                child: KoalaButton(
-                  text: 'Ajouter ce revenu',
-                  onPressed: _canAddJob() ? _addJob : () {},
-                  backgroundColor: _canAddJob()
-                      ? KoalaColors.primaryUi(context)
-                      : KoalaColors.primaryUi(context).withOpacity(0.5),
+              Divider(height: 1, color: KoalaColors.border(context)),
+
+              // List
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.all(16.w),
+                  itemCount: _jobTitles.length,
+                  separatorBuilder: (_, __) => Divider(
+                      color: KoalaColors.border(context).withOpacity(0.5)),
+                  itemBuilder: (context, index) {
+                    final title = _jobTitles[index];
+                    final isSelected = _selectedJobTitle == title;
+                    return InkWell(
+                      onTap: () {
+                        setState(() => _selectedJobTitle = title);
+                        Navigator.pop(context);
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                        child: Row(
+                          children: [
+                            Text(
+                              title,
+                              style: isSelected
+                                  ? KoalaTypography.bodyMedium(context)
+                                      .copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: KoalaColors.primaryUi(context))
+                                  : KoalaTypography.bodyMedium(context),
+                            ),
+                            Spacer(),
+                            if (isSelected)
+                              Icon(CupertinoIcons.checkmark_circle_fill,
+                                  color: KoalaColors.primaryUi(context),
+                                  size: 20.sp),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 

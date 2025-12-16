@@ -7,6 +7,7 @@ import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/core/design_system.dart';
 
 void showAddCategoryDialog(BuildContext context, {Category? category}) {
   showModalBottomSheet(
@@ -29,19 +30,33 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _controller = Get.find<CategoriesController>();
-  
+
   late TransactionType _selectedType;
   late String _selectedIconKey;
   late Color _selectedColor;
-  
+
   final List<String> _iconKeys = IconHelper.allKeys;
 
   final List<Color> _colors = [
-    Colors.red, Colors.pink, Colors.purple, Colors.deepPurple,
-    Colors.indigo, Colors.blue, Colors.lightBlue, Colors.cyan,
-    Colors.teal, Colors.green, Colors.lightGreen, Colors.lime,
-    Colors.yellow, Colors.amber, Colors.orange, Colors.deepOrange,
-    Colors.brown, Colors.grey, Colors.blueGrey,
+    Colors.red,
+    Colors.pink,
+    Colors.purple,
+    Colors.deepPurple,
+    Colors.indigo,
+    Colors.blue,
+    Colors.lightBlue,
+    Colors.cyan,
+    Colors.teal,
+    Colors.green,
+    Colors.lightGreen,
+    Colors.lime,
+    Colors.yellow,
+    Colors.amber,
+    Colors.orange,
+    Colors.deepOrange,
+    Colors.brown,
+    Colors.grey,
+    Colors.blueGrey,
   ];
 
   @override
@@ -94,7 +109,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
   Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
       HapticFeedback.mediumImpact();
-      
+
       if (widget.category != null) {
         widget.category!.name = _nameController.text.trim();
         widget.category!.icon = _selectedIconKey;
@@ -109,7 +124,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
           type: _selectedType,
         );
       }
-      
+
       NavigationHelper.safeBack();
     }
   }
@@ -128,15 +143,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
       child: Column(
         children: [
           // Handle
-          Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // Handle
+          const KoalaDragHandle(),
 
           Padding(
             padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0),
@@ -152,7 +160,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                   enabled: true,
                   onTap: () => NavigationHelper.safeBack(),
                   label: 'Fermer le dialogue',
-                  child: CloseButton(onPressed: () => NavigationHelper.safeBack()),
+                  child:
+                      CloseButton(onPressed: () => NavigationHelper.safeBack()),
                 ),
               ],
             ),
@@ -166,12 +175,17 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                 children: [
                   // Type Selector
                   Semantics(
-                    label: 'Type de catégorie: ${_selectedType == TransactionType.expense ? "Dépense" : "Revenu"}',
+                    label:
+                        'Type de catégorie: ${_selectedType == TransactionType.expense ? "Dépense" : "Revenu"}',
                     container: true,
                     child: SegmentedButton<TransactionType>(
                       segments: const [
-                        ButtonSegment(value: TransactionType.expense, label: Text('Dépense')),
-                        ButtonSegment(value: TransactionType.income, label: Text('Revenu')),
+                        ButtonSegment(
+                            value: TransactionType.expense,
+                            label: Text('Dépense')),
+                        ButtonSegment(
+                            value: TransactionType.income,
+                            label: Text('Revenu')),
                       ],
                       selected: {_selectedType},
                       onSelectionChanged: (Set<TransactionType> newSelection) {
@@ -213,7 +227,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                       filled: true,
                       fillColor: Colors.grey.shade50,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Category name is required' : null,
+                    validator: (v) =>
+                        v!.isEmpty ? 'Category name is required' : null,
                   ),
                   SizedBox(height: 24.h),
 
@@ -229,7 +244,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                     ),
                     child: GridView.builder(
                       padding: EdgeInsets.all(12.w),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 6,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 8,
@@ -242,9 +258,13 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                           onTap: () => setState(() => _selectedIconKey = key),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: isSelected ? _selectedColor.withOpacity(0.2) : Colors.white,
+                              color: isSelected
+                                  ? _selectedColor.withOpacity(0.2)
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(8.r),
-                              border: isSelected ? Border.all(color: _selectedColor, width: 2) : Border.all(color: Colors.grey.shade200),
+                              border: isSelected
+                                  ? Border.all(color: _selectedColor, width: 2)
+                                  : Border.all(color: Colors.grey.shade200),
                             ),
                             child: Stack(
                               alignment: Alignment.center,
@@ -252,7 +272,9 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                                 CategoryIcon(
                                   iconKey: key,
                                   size: 24.sp,
-                                  color: isSelected ? _selectedColor : Colors.grey.shade700,
+                                  color: isSelected
+                                      ? _selectedColor
+                                      : Colors.grey.shade700,
                                 ),
                                 if (isSelected)
                                   Positioned(
@@ -294,18 +316,22 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                         button: true,
                         enabled: true,
                         onTap: () => setState(() => _selectedColor = color),
-                        label: 'Couleur $colorName${isSelected ? ", sélectionnée" : ""}',
+                        label:
+                            'Couleur $colorName${isSelected ? ", sélectionnée" : ""}',
                         child: Tooltip(
                           message: colorName,
                           child: GestureDetector(
                             onTap: () => setState(() => _selectedColor = color),
                             child: Container(
-                              width: 48.w, // Increased for accessibility (48x48dp min)
+                              width: 48
+                                  .w, // Increased for accessibility (48x48dp min)
                               height: 48.w,
                               decoration: BoxDecoration(
                                 color: color,
                                 shape: BoxShape.circle,
-                                border: isSelected ? Border.all(color: Colors.black, width: 3) : Border.all(color: Colors.grey.shade300),
+                                border: isSelected
+                                    ? Border.all(color: Colors.black, width: 3)
+                                    : Border.all(color: Colors.grey.shade300),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.1),
@@ -313,7 +339,10 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                                   )
                                 ],
                               ),
-                              child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
+                              child: isSelected
+                                  ? const Icon(Icons.check,
+                                      color: Colors.white, size: 20)
+                                  : null,
                             ),
                           ),
                         ),
@@ -341,7 +370,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                         ),
                         child: Text(
                           'Enregistrer',
-                          style: TextStyle(fontSize: 16.sp, color: Colors.white),
+                          style:
+                              TextStyle(fontSize: 16.sp, color: Colors.white),
                         ),
                       ),
                     ),
@@ -355,4 +385,3 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
     );
   }
 }
-

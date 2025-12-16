@@ -14,6 +14,7 @@ import 'package:koaa/app/modules/settings/controllers/categories_controller.dart
 import 'package:koaa/app/modules/settings/controllers/settings_controller.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/core/design_system.dart';
 import 'package:intl/intl.dart';
 
 void showAddTransactionDialog(BuildContext context, TransactionType type) {
@@ -541,16 +542,8 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       ),
       child: Column(
         children: [
-          // Handle
-          Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // Drag Handle
+          const KoalaDragHandle(),
 
           // Header
           Padding(
@@ -759,7 +752,6 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       }),
                     ),
                   ],
-
 
                   // Add button
                   AnimatedScale(

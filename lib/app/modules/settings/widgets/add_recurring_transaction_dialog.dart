@@ -629,15 +629,7 @@ class _CategoryPickerSheet extends StatelessWidget {
       child: Column(
         children: [
           // Handle
-          Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h),
-            decoration: BoxDecoration(
-              color: KoalaColors.border(context),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          const KoalaDragHandle(),
 
           // Header
           Padding(
@@ -708,4 +700,3 @@ class _CategoryPickerSheet extends StatelessWidget {
     );
   }
 }
-

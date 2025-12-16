@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
@@ -22,12 +23,13 @@ class AddGoalView extends StatefulWidget {
 
 class _AddGoalViewState extends State<AddGoalView> {
   final GoalsController controller = Get.find<GoalsController>();
-  final CategoriesController categoriesController = Get.find<CategoriesController>(); // Added
-  
+  final CategoriesController categoriesController =
+      Get.find<CategoriesController>(); // Added
+
   late TextEditingController titleController;
   late TextEditingController descriptionController;
   late TextEditingController amountController;
-  
+
   late GoalType selectedType;
   late int selectedIcon;
   late Color selectedColor;
@@ -40,16 +42,19 @@ class _AddGoalViewState extends State<AddGoalView> {
     final goal = widget.goalToEdit;
     titleController = TextEditingController(text: goal?.title);
     descriptionController = TextEditingController(text: goal?.description);
-    amountController = TextEditingController(text: goal?.targetAmount.toString());
-    
+    amountController =
+        TextEditingController(text: goal?.targetAmount.toString());
+
     selectedType = goal?.type ?? GoalType.savings;
     selectedIcon = goal?.iconKey ?? Icons.star.codePoint;
-    selectedColor = goal?.colorValue != null ? Color(goal!.colorValue!) : Colors.blue;
+    selectedColor =
+        goal?.colorValue != null ? Color(goal!.colorValue!) : Colors.blue;
     selectedDate = goal?.targetDate;
-    
+
     // Load linked category
     if (goal?.linkedCategoryId != null) {
-      selectedCategory = categoriesController.categories.firstWhereOrNull((c) => c.id == goal!.linkedCategoryId);
+      selectedCategory = categoriesController.categories
+          .firstWhereOrNull((c) => c.id == goal!.linkedCategoryId);
     }
   }
 
@@ -86,7 +91,7 @@ class _AddGoalViewState extends State<AddGoalView> {
               ),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
@@ -146,12 +151,16 @@ class _AddGoalViewState extends State<AddGoalView> {
                   Wrap(
                     spacing: 12.w,
                     runSpacing: 12.h,
-                    children: GoalType.values.map((type) => _buildTypeChip(type, theme)).toList(),
+                    children: GoalType.values
+                        .map((type) => _buildTypeChip(type, theme))
+                        .toList(),
                   ),
-                  
-                  if (selectedType == GoalType.savings || selectedType == GoalType.purchase) ...[
+
+                  if (selectedType == GoalType.savings ||
+                      selectedType == GoalType.purchase) ...[
                     SizedBox(height: 24.h),
-                    _buildSectionLabel('Lier à une catégorie (Auto-épargne)', theme),
+                    _buildSectionLabel(
+                        'Lier à une catégorie (Auto-épargne)', theme),
                     GestureDetector(
                       onTap: () {
                         Get.bottomSheet(
@@ -160,25 +169,32 @@ class _AddGoalViewState extends State<AddGoalView> {
                             padding: EdgeInsets.all(16.w),
                             decoration: BoxDecoration(
                               color: theme.scaffoldBackgroundColor,
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(24.r)),
                             ),
                             child: Column(
                               children: [
-                                Text('Choisir une catégorie', style: theme.textTheme.titleLarge),
+                                Text('Choisir une catégorie',
+                                    style: theme.textTheme.titleLarge),
                                 SizedBox(height: 16.h),
                                 Expanded(
                                   child: Obx(() => ListView(
-                                    children: categoriesController.categories.map((cat) {
-                                      return ListTile(
-                                        leading: CategoryIcon(iconKey: cat.icon, useOriginalColor: true),
-                                        title: Text(cat.name),
-                                        onTap: () {
-                                          setState(() => selectedCategory = cat);
-                                          Get.back();
-                                        },
-                                      );
-                                    }).toList(),
-                                  )),
+                                        children: categoriesController
+                                            .categories
+                                            .map((cat) {
+                                          return ListTile(
+                                            leading: CategoryIcon(
+                                                iconKey: cat.icon,
+                                                useOriginalColor: true),
+                                            title: Text(cat.name),
+                                            onTap: () {
+                                              setState(
+                                                  () => selectedCategory = cat);
+                                              Get.back();
+                                            },
+                                          );
+                                        }).toList(),
+                                      )),
                                 ),
                               ],
                             ),
@@ -190,21 +206,28 @@ class _AddGoalViewState extends State<AddGoalView> {
                         decoration: BoxDecoration(
                           color: theme.cardColor,
                           borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                          border:
+                              Border.all(color: Colors.grey.withOpacity(0.1)),
                         ),
                         child: Row(
                           children: [
                             if (selectedCategory != null)
-                              CategoryIcon(iconKey: selectedCategory!.icon, size: 24.sp, useOriginalColor: true)
+                              CategoryIcon(
+                                  iconKey: selectedCategory!.icon,
+                                  size: 24.sp,
+                                  useOriginalColor: true)
                             else
-                              Icon(CupertinoIcons.layers_alt, color: theme.primaryColor),
+                              Icon(CupertinoIcons.layers_alt,
+                                  color: theme.primaryColor),
                             SizedBox(width: 12.w),
                             Text(
-                              selectedCategory?.name ?? 'Sélectionner une catégorie',
+                              selectedCategory?.name ??
+                                  'Sélectionner une catégorie',
                               style: theme.textTheme.bodyLarge,
                             ),
                             const Spacer(),
-                            Icon(CupertinoIcons.chevron_down, size: 16, color: Colors.grey),
+                            Icon(CupertinoIcons.chevron_down,
+                                size: 16, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -219,7 +242,8 @@ class _AddGoalViewState extends State<AddGoalView> {
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
-                        initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 90)),
+                        initialDate: selectedDate ??
+                            DateTime.now().add(const Duration(days: 90)),
                         firstDate: DateTime.now(),
                         lastDate: DateTime(2030),
                       );
@@ -236,16 +260,19 @@ class _AddGoalViewState extends State<AddGoalView> {
                       ),
                       child: Row(
                         children: [
-                          Icon(CupertinoIcons.calendar, color: theme.primaryColor),
+                          Icon(CupertinoIcons.calendar,
+                              color: theme.primaryColor),
                           SizedBox(width: 12.w),
                           Text(
-                            selectedDate == null 
-                                ? 'Sélectionner une date' 
-                                : DateFormat('dd MMM yyyy', 'fr_FR').format(selectedDate!),
+                            selectedDate == null
+                                ? 'Sélectionner une date'
+                                : DateFormat('dd MMM yyyy', 'fr_FR')
+                                    .format(selectedDate!),
                             style: theme.textTheme.bodyLarge,
                           ),
                           const Spacer(),
-                          Icon(CupertinoIcons.chevron_right, size: 16, color: Colors.grey),
+                          Icon(CupertinoIcons.chevron_right,
+                              size: 16, color: Colors.grey),
                         ],
                       ),
                     ),
@@ -259,7 +286,10 @@ class _AddGoalViewState extends State<AddGoalView> {
                   SizedBox(height: 16.h),
                   _buildIconPicker(theme),
                   SizedBox(height: 40.h),
-                ],
+                ]
+                    .animate(interval: 50.ms)
+                    .fadeIn(duration: KoalaAnim.medium)
+                    .slideY(begin: 0.1, curve: KoalaAnim.entryCurve),
               ),
             ),
           ),
@@ -291,8 +321,11 @@ class _AddGoalViewState extends State<AddGoalView> {
                   ),
                 ),
                 child: Text(
-                  widget.goalToEdit != null ? 'Sauvegarder les modifications' : 'Créer l\'objectif',
-                  style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                  widget.goalToEdit != null
+                      ? 'Sauvegarder les modifications'
+                      : 'Créer l\'objectif',
+                  style:
+                      TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -327,7 +360,8 @@ class _AddGoalViewState extends State<AddGoalView> {
     bool isBig = false,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: isBig ? 8.h : 4.h),
+      padding:
+          EdgeInsets.symmetric(horizontal: 16.w, vertical: isBig ? 8.h : 4.h),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20.r),
@@ -354,7 +388,8 @@ class _AddGoalViewState extends State<AddGoalView> {
           Expanded(
             child: TextField(
               controller: controller,
-              keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+              keyboardType:
+                  isNumber ? TextInputType.number : TextInputType.text,
               style: TextStyle(
                 fontSize: isBig ? 24.sp : 16.sp,
                 fontWeight: isBig ? FontWeight.bold : FontWeight.w600,
@@ -390,20 +425,24 @@ class _AddGoalViewState extends State<AddGoalView> {
           color: isSelected ? theme.primaryColor : theme.cardColor,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: isSelected ? theme.primaryColor : Colors.grey.withOpacity(0.2),
+            color:
+                isSelected ? theme.primaryColor : Colors.grey.withOpacity(0.2),
           ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: theme.primaryColor.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ] : [],
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: theme.primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [],
         ),
         child: Text(
           _goalTypeToString(type),
           style: TextStyle(
-            color: isSelected ? Colors.white : theme.textTheme.bodyMedium?.color,
+            color:
+                isSelected ? Colors.white : theme.textTheme.bodyMedium?.color,
             fontWeight: FontWeight.w600,
             fontSize: 14.sp,
           ),
@@ -414,9 +453,16 @@ class _AddGoalViewState extends State<AddGoalView> {
 
   Widget _buildColorPicker(ThemeData theme) {
     final colors = [
-      Colors.blue, Colors.purple, Colors.pink, Colors.red, 
-      Colors.orange, Colors.amber, Colors.green, Colors.teal, 
-      Colors.cyan, Colors.indigo
+      Colors.blue,
+      Colors.purple,
+      Colors.pink,
+      Colors.red,
+      Colors.orange,
+      Colors.amber,
+      Colors.green,
+      Colors.teal,
+      Colors.cyan,
+      Colors.indigo
     ];
 
     return SizedBox(
@@ -437,7 +483,9 @@ class _AddGoalViewState extends State<AddGoalView> {
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                border: isSelected ? Border.all(color: Colors.white, width: 3.w) : null,
+                border: isSelected
+                    ? Border.all(color: Colors.white, width: 3.w)
+                    : null,
                 boxShadow: [
                   BoxShadow(
                     color: color.withOpacity(0.4),
@@ -446,8 +494,8 @@ class _AddGoalViewState extends State<AddGoalView> {
                   ),
                 ],
               ),
-              child: isSelected 
-                  ? const Icon(Icons.check, color: Colors.white) 
+              child: isSelected
+                  ? const Icon(Icons.check, color: Colors.white)
                   : null,
             ),
           );
@@ -473,10 +521,13 @@ class _AddGoalViewState extends State<AddGoalView> {
               width: 60.w,
               height: 60.w,
               decoration: BoxDecoration(
-                color: isSelected ? selectedColor.withOpacity(0.1) : theme.cardColor,
+                color: isSelected
+                    ? selectedColor.withOpacity(0.1)
+                    : theme.cardColor,
                 borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(
-                  color: isSelected ? selectedColor : Colors.grey.withOpacity(0.2),
+                  color:
+                      isSelected ? selectedColor : Colors.grey.withOpacity(0.2),
                   width: isSelected ? 2.w : 1.w,
                 ),
               ),
@@ -494,16 +545,22 @@ class _AddGoalViewState extends State<AddGoalView> {
 
   String _goalTypeToString(GoalType type) {
     switch (type) {
-      case GoalType.savings: return 'Épargne';
-      case GoalType.debtPayoff: return 'Dette';
-      case GoalType.purchase: return 'Achat';
-      case GoalType.custom: return 'Autre';
+      case GoalType.savings:
+        return 'Épargne';
+      case GoalType.debtPayoff:
+        return 'Dette';
+      case GoalType.purchase:
+        return 'Achat';
+      case GoalType.custom:
+        return 'Autre';
     }
   }
 
   void _saveGoal() async {
     if (titleController.text.isEmpty || amountController.text.isEmpty) {
-      Get.snackbar('Manquant', 'Veuillez entrer un titre et un montant.',
+      Get.snackbar(
+        'Manquant',
+        'Veuillez entrer un titre et un montant.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.9),
         colorText: Colors.white,
@@ -515,7 +572,9 @@ class _AddGoalViewState extends State<AddGoalView> {
     final newGoal = FinancialGoal(
       id: widget.goalToEdit?.id,
       title: titleController.text,
-      description: descriptionController.text.isNotEmpty ? descriptionController.text : null,
+      description: descriptionController.text.isNotEmpty
+          ? descriptionController.text
+          : null,
       targetAmount: double.parse(amountController.text),
       currentAmount: widget.goalToEdit?.currentAmount ?? 0.0,
       type: selectedType,
@@ -535,5 +594,3 @@ class _AddGoalViewState extends State<AddGoalView> {
     NavigationHelper.safeBack();
   }
 }
-
-

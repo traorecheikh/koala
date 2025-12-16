@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -168,7 +169,10 @@ class _AnalyticsViewState extends State<AnalyticsView>
           SizedBox(height: KoalaSpacing.xl),
           Obx(() => _buildCategoryCard(context)),
           SizedBox(height: KoalaSpacing.xxxl),
-        ],
+        ]
+            .animate(interval: 50.ms)
+            .fadeIn(duration: KoalaAnim.medium)
+            .slideY(begin: 0.1, curve: KoalaAnim.entryCurve),
       ),
     );
   }
@@ -361,7 +365,10 @@ class _AnalyticsViewState extends State<AnalyticsView>
               : _buildEmptyCard(context,
                   'Sélectionnez le mois pour la comparaison budgétaire')),
           SizedBox(height: KoalaSpacing.xxxl),
-        ],
+        ]
+            .animate(interval: 50.ms)
+            .fadeIn(duration: KoalaAnim.medium)
+            .slideY(begin: 0.1, curve: KoalaAnim.entryCurve),
       ),
     );
   }

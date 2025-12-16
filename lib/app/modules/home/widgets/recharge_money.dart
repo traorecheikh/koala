@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/core/design_system.dart';
 
 void showRechargeDialog(BuildContext context) {
   showModalBottomSheet(
@@ -69,15 +70,8 @@ class _RechargeSheetState extends State<_RechargeSheet> {
       child: Column(
         children: [
           // Handle
-          Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // Handle
+          const KoalaDragHandle(),
 
           // Header
           Padding(
@@ -405,5 +399,3 @@ class _PaymentMethodTileState extends State<_PaymentMethodTile> {
     }
   }
 }
-
-

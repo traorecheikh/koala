@@ -606,6 +606,7 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const KoalaDragHandle(),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0.w, vertical: 8.0.h),
             child: Text('Plus d’options',
@@ -693,7 +694,6 @@ class _MoreOptionsSheet extends GetView<HomeController> {
       onDraggableCanceled: (_, __) => controller.isSheetHidden.value = false,
       onDragCompleted: () {
         controller.isSheetHidden.value = false;
-        controller.isMoreOptionsOpen.value = false;
       },
       feedback: Material(
         color: Colors.transparent,

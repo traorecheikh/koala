@@ -80,7 +80,10 @@ class GoalsView extends GetView<GoalsController> {
               ),
             )),
         SizedBox(height: 16.h),
-      ],
+      ]
+          .animate(interval: 50.ms)
+          .fadeIn(duration: KoalaAnim.medium)
+          .slideX(begin: 0.1, curve: KoalaAnim.entryCurve),
     );
   }
 
@@ -336,5 +339,3 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-
-

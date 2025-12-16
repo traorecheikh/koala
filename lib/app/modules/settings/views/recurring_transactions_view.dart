@@ -14,6 +14,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
 import 'package:koaa/app/modules/settings/widgets/add_recurring_transaction_dialog.dart';
+import 'package:koaa/app/modules/settings/widgets/job_dialog.dart'; // Added
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/data/models/job.dart';
@@ -116,10 +117,10 @@ class RecurringTransactionsView
                     .animate()
                     .slideY(
                       begin: 0.1,
-                      duration: 400.ms,
-                      curve: Curves.easeOutQuart,
+                      duration: KoalaAnim.medium,
+                      curve: KoalaAnim.entryCurve,
                     )
-                    .fadeIn();
+                    .fadeIn(duration: KoalaAnim.medium);
           },
         ),
       ),
@@ -400,11 +401,8 @@ class _JobListItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(KoalaRadius.md),
         child: InkWell(
           onTap: () {
-            // Option to navigate to Job details or show snackbar
-            Get.snackbar('Emploi',
-                'Modifiez les détails de votre emploi via le Profil > Configuration.',
-                snackPosition: SnackPosition.BOTTOM,
-                duration: const Duration(seconds: 3));
+            // Edit Job Dialog
+            showJobDialog(context, job: job);
           },
           borderRadius: BorderRadius.circular(KoalaRadius.md),
           child: Padding(

@@ -534,7 +534,10 @@ class _SubscriptionCard extends StatelessWidget {
           ],
         ),
       ),
-    ).animate().fadeIn(delay: delay.ms).slideX(begin: 0.03, end: 0);
+    )
+        .animate()
+        .fadeIn(delay: delay.ms, duration: KoalaAnim.medium)
+        .slideX(begin: 0.03, end: 0, curve: KoalaAnim.entryCurve);
   }
 }
 

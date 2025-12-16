@@ -3,6 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
+// --- Animations ---
+class KoalaAnim {
+  // Durations
+  static const Duration fast = Duration(milliseconds: 200);
+  static const Duration medium = Duration(milliseconds: 400);
+  static const Duration slow = Duration(milliseconds: 600);
+  static const Duration verySlow = Duration(milliseconds: 800);
+
+  // Delays
+  static const Duration stagger = Duration(milliseconds: 50);
+
+  // Curves
+  static const Curve entryCurve = Curves.easeOutQuart;
+  static const Curve bounce = Curves.elasticOut;
+  static const Curve touch = Curves.easeOutCubic;
+}
 
 // --- Colors ---
 class KoalaColors {
@@ -294,7 +312,7 @@ class KoalaTextField extends StatelessWidget {
 }
 
 // --- Buttons ---
-class KoalaButton extends StatelessWidget {
+class KoalaButton extends StatefulWidget {
   final String text;
   final VoidCallback onPressed;
   final Color? backgroundColor;
@@ -315,51 +333,106 @@ class KoalaButton extends StatelessWidget {
   });
 
   @override
+  State<KoalaButton> createState() => _KoalaButtonState();
+}
+
+class _KoalaButtonState extends State<KoalaButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    if (!widget.isLoading) {
+      _controller.forward();
+    }
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    if (!widget.isLoading) {
+      _controller.reverse();
+    }
+  }
+
+  void _onTapCancel() {
+    if (!widget.isLoading) {
+      _controller.reverse();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bgColor = isDestructive
+    final bgColor = widget.isDestructive
         ? KoalaColors.destructive.withOpacity(0.1)
-        : (backgroundColor ?? KoalaColors.primaryUi(context));
+        : (widget.backgroundColor ?? KoalaColors.primaryUi(context));
 
     final adaptiveTextColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.black
         : Colors.white;
 
-    final txtColor = isDestructive
+    final txtColor = widget.isDestructive
         ? KoalaColors.destructive
-        : (textColor ?? adaptiveTextColor);
+        : (widget.textColor ?? adaptiveTextColor);
 
-    return SizedBox(
-      width: double.infinity,
-      height: 56.h,
-      child: CupertinoButton(
-        color: bgColor,
-        padding: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(16.r),
-        onPressed: isLoading
-            ? null
-            : () {
-                HapticFeedback.lightImpact();
-                onPressed();
-              },
-        child: isLoading
-            ? CupertinoActivityIndicator(color: txtColor)
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, color: txtColor, size: 20.sp),
-                    SizedBox(width: 8.w),
-                  ],
-                  Text(
-                    text,
-                    style: TextStyle(
-                      color: txtColor,
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: widget.isLoading
+          ? null
+          : () {
+              HapticFeedback.lightImpact();
+              widget.onPressed();
+            },
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: SizedBox(
+          width: double.infinity,
+          height: 56.h,
+          child: Container(
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            child: widget.isLoading
+                ? Center(child: CupertinoActivityIndicator(color: txtColor))
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.icon != null) ...[
+                        Icon(widget.icon, color: txtColor, size: 20.sp),
+                        SizedBox(width: 8.w),
+                      ],
+                      Text(
+                        widget.text,
+                        style: TextStyle(
+                          color: txtColor,
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+          ),
+        ),
       ),
     );
   }
@@ -582,17 +655,7 @@ class KoalaBottomSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag Handle
-          Padding(
-            padding: EdgeInsets.only(top: 16.h, bottom: 8.h),
-            child: Container(
-              width: 40.w,
-              height: 4.h,
-              decoration: BoxDecoration(
-                color: KoalaColors.textSecondary(context).withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-            ),
-          ),
+          const KoalaDragHandle(),
 
           // Header
           Padding(
@@ -635,11 +698,35 @@ class KoalaBottomSheet extends StatelessWidget {
 
           Divider(height: 1, color: KoalaColors.border(context)),
 
-          Flexible(child: child),
+          Flexible(
+            child: child.animate().fadeIn(duration: KoalaAnim.medium).slideY(
+                  begin: 0.1,
+                  curve: KoalaAnim.entryCurve,
+                  duration: KoalaAnim.medium,
+                ),
+          ),
         ],
       ),
     );
   }
 }
 
+// --- Bottom Sheets ---
+class KoalaDragHandle extends StatelessWidget {
+  const KoalaDragHandle({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 40.w,
+        height: 4.h,
+        margin: EdgeInsets.symmetric(vertical: 16.h),
+        decoration: BoxDecoration(
+          color: KoalaColors.border(context),
+          borderRadius: BorderRadius.circular(2.r),
+        ),
+      ),
+    );
+  }
+}

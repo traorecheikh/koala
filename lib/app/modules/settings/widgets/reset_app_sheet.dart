@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/modules/settings/controllers/settings_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/core/design_system.dart';
 
 void showResetAppSheet(BuildContext context) {
   showModalBottomSheet(
@@ -54,15 +55,8 @@ class _ResetAppSheetState extends State<_ResetAppSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Handle
-          Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h, bottom: 32.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // Handle
+          const KoalaDragHandle(),
 
           // Icon
           Container(
@@ -113,8 +107,8 @@ class _ResetAppSheetState extends State<_ResetAppSheet> {
                   height: 56.h,
                   child: CupertinoButton(
                     padding: EdgeInsets.zero,
-                    color: theme.brightness == Brightness.dark 
-                        ? Colors.grey.shade800 
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.grey.shade800
                         : Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(16.r),
                     onPressed: () {
@@ -154,7 +148,8 @@ class _ResetAppSheetState extends State<_ResetAppSheet> {
                               _handleReset();
                             },
                       child: _loading
-                          ? const CupertinoActivityIndicator(color: Colors.white)
+                          ? const CupertinoActivityIndicator(
+                              color: Colors.white)
                           : Text(
                               'Tout effacer',
                               style: TextStyle(
@@ -174,4 +169,3 @@ class _ResetAppSheetState extends State<_ResetAppSheet> {
     );
   }
 }
-

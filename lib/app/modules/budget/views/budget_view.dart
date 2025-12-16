@@ -74,7 +74,10 @@ class BudgetView extends GetView<BudgetController> {
                       final budget = budgetsList[index];
                       final category =
                           controller.getCategory(budget.categoryId);
-                      return _BudgetCard(budget: budget, category: category);
+                      return _BudgetCard(budget: budget, category: category)
+                          .animate(delay: (50 * index).ms) // Stagger
+                          .fadeIn(duration: KoalaAnim.medium)
+                          .slideY(begin: 0.1, curve: KoalaAnim.entryCurve);
                     },
                     childCount: budgetsList.length,
                   ),
@@ -461,10 +464,8 @@ class _GlobalBudgetCard extends StatelessWidget {
           ),
         ],
       ),
-    )
-        .animate()
-        .fadeIn(duration: 500.ms)
-        .scale(delay: 100.ms, duration: 400.ms, curve: Curves.easeOutBack);
+    ).animate().fadeIn(duration: KoalaAnim.medium).scale(
+        delay: 100.ms, duration: KoalaAnim.medium, curve: KoalaAnim.entryCurve);
   }
 }
 
@@ -720,5 +721,3 @@ class _BudgetCard extends StatelessWidget {
         .slideY(begin: 0.05, curve: Curves.easeOutQuart);
   }
 }
-
-

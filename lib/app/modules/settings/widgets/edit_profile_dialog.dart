@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
+import 'package:koaa/app/core/design_system.dart';
 
 void showEditProfileDialog(BuildContext context) {
   showModalBottomSheet(
@@ -102,15 +103,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       child: Column(
         children: [
           // Handle
-          Container(
-            width: 36.w,
-            height: 4.h,
-            margin: EdgeInsets.only(top: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+          // Handle
+          const KoalaDragHandle(),
 
           // Header
           Padding(
@@ -149,78 +143,77 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                   keyboardHeight + 24.h,
                 ),
                 child: Column(
-                  children:
-                      [
-                            _buildTextFormField(
-                              controller: _fullNameController,
-                              label: 'Nom complet',
-                              icon: CupertinoIcons.person_fill,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Veuillez entrer votre nom complet';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16.h),
-                            _buildTextFormField(
-                              controller: _salaryController,
-                              label: 'Salaire',
-                              icon: CupertinoIcons.money_dollar_circle_fill,
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null ||
-                                    value.isEmpty ||
-                                    double.tryParse(value) == null) {
-                                  return 'Veuillez entrer un salaire valide';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16.h),
-                            _buildTextFormField(
-                              controller: _paydayController,
-                              label: 'Jour de paie (Jour du mois)',
-                              icon: CupertinoIcons.calendar,
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Veuillez entrer votre jour de paie';
-                                }
-                                final day = int.tryParse(value);
-                                if (day == null || day < 1 || day > 31) {
-                                  return 'Veuillez entrer un jour valide (1-31)';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16.h),
-                            _buildTextFormField(
-                              controller: _ageController,
-                              label: 'Âge',
-                              icon: CupertinoIcons.person_badge_plus_fill,
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null ||
-                                    value.isEmpty ||
-                                    int.tryParse(value) == null) {
-                                  return 'Veuillez entrer un âge valide';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 16.h),
-                            _buildDropdown(),
-                            SizedBox(height: 48.h),
-                            _buildSaveButton(),
-                          ]
-                          .animate(interval: 100.ms)
-                          .slideY(
-                            begin: 0.2,
-                            duration: 400.ms,
-                            curve: Curves.easeOutQuart,
-                          )
-                          .fadeIn(),
+                  children: [
+                    _buildTextFormField(
+                      controller: _fullNameController,
+                      label: 'Nom complet',
+                      icon: CupertinoIcons.person_fill,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez entrer votre nom complet';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildTextFormField(
+                      controller: _salaryController,
+                      label: 'Salaire',
+                      icon: CupertinoIcons.money_dollar_circle_fill,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null ||
+                            value.isEmpty ||
+                            double.tryParse(value) == null) {
+                          return 'Veuillez entrer un salaire valide';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildTextFormField(
+                      controller: _paydayController,
+                      label: 'Jour de paie (Jour du mois)',
+                      icon: CupertinoIcons.calendar,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez entrer votre jour de paie';
+                        }
+                        final day = int.tryParse(value);
+                        if (day == null || day < 1 || day > 31) {
+                          return 'Veuillez entrer un jour valide (1-31)';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildTextFormField(
+                      controller: _ageController,
+                      label: 'Âge',
+                      icon: CupertinoIcons.person_badge_plus_fill,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null ||
+                            value.isEmpty ||
+                            int.tryParse(value) == null) {
+                          return 'Veuillez entrer un âge valide';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDropdown(),
+                    SizedBox(height: 48.h),
+                    _buildSaveButton(),
+                  ]
+                      .animate(interval: 100.ms)
+                      .slideY(
+                        begin: 0.2,
+                        duration: 400.ms,
+                        curve: Curves.easeOutQuart,
+                      )
+                      .fadeIn(),
                 ),
               ),
             ),
@@ -355,5 +348,3 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     );
   }
 }
-
-

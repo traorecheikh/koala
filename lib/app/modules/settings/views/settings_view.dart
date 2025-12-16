@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/core/design_system.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/modules/settings/views/subscriptions_view.dart';
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
@@ -220,7 +221,10 @@ class SettingsView extends GetView<SettingsController> {
             ),
           ),
           const SizedBox(height: 32),
-        ],
+        ]
+            .animate(interval: KoalaAnim.stagger)
+            .fadeIn(duration: KoalaAnim.medium)
+            .slideY(begin: 0.1, curve: KoalaAnim.entryCurve),
       ),
     );
   }
