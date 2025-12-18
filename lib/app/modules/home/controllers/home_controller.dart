@@ -11,6 +11,7 @@ import 'package:koaa/app/services/financial_context_service.dart'; // New Import
 import 'package:koaa/app/services/events/financial_events_service.dart'; // New Import
 import 'package:koaa/app/services/ml_service.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:koaa/app/core/utils/debounce.dart';
 import 'package:uuid/uuid.dart';
 import 'package:logger/logger.dart';
@@ -155,9 +156,12 @@ class HomeController extends GetxController {
 
     // Initial load for transactions and balance if already initialized
     if (_financialContextService.isInitialized.value) {
-      transactions.assignAll(_financialContextService.allTransactions
+      final initialTransactions = _financialContextService.allTransactions
           .where((t) => !t.isHidden)
-          .toList());
+          .toList();
+      // Sort by date (newest first) for consistent ordering
+      initialTransactions.sort((a, b) => b.date.compareTo(a.date));
+      transactions.assignAll(initialTransactions);
       calculateBalance();
       _updateInsights();
     }
@@ -283,20 +287,21 @@ class HomeController extends GetxController {
 
   Future<void> generateJobIncomeTransactions() async {
     final jobBox = Hive.box<Job>('jobBox');
-    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
     final jobs = jobBox.values.where((job) => job.isActive).toList();
     final today = DateTime.now();
 
-    // DEBUG: Log all transactions in the box
-    _logger.d('TransactionBox total items: ${transactionBox.length}');
-    for (var tx in transactionBox.values) {
+    // Read all transactions from Isar for duplicate checking
+    final allTransactions = await IsarService.getAllTransactions();
+
+    // DEBUG: Log all transactions
+    _logger.d('IsarService total items: ${allTransactions.length}');
+    for (var tx in allTransactions) {
       _logger.d(
           '  TX: id=${tx.id}, linkedJobId=${tx.linkedJobId}, type=${tx.type}, isHidden=${tx.isHidden}, desc=${tx.description}');
     }
 
-    // FIXED: Read transactions directly from Hive to ensure we check duplicates
-    // even when FinancialContextService hasn't loaded yet (e.g., during onboarding)
-    final Set<String> existingJobTransactions = transactionBox.values
+    // Build duplicate check sets from Isar data
+    final Set<String> existingJobTransactions = allTransactions
         .where((tx) =>
             tx.linkedJobId != null &&
             tx.type == TransactionType.income &&
@@ -307,8 +312,7 @@ class HomeController extends GetxController {
     }).toSet();
 
     // FALLBACK: Also check by description pattern + date for legacy data with null linkedJobId
-    // This handles transactions saved before the Hive adapter was fixed
-    final Set<String> existingByDescription = transactionBox.values
+    final Set<String> existingByDescription = allTransactions
         .where((tx) =>
             tx.description.startsWith('Salaire: ') &&
             tx.type == TransactionType.income &&
@@ -367,7 +371,7 @@ class HomeController extends GetxController {
         _logger.i(
             'Generating salary for job ${job.name} on $lastPayday (ID: $jobTransactionIdentifier)');
 
-        final transaction = LocalTransaction(
+        final transaction = LocalTransaction.create(
           amount: job.amount,
           description: 'Salaire: ${job.name}',
           date: lastPayday,
@@ -498,13 +502,10 @@ class HomeController extends GetxController {
   }
 
   Future<void> addTransaction(LocalTransaction transaction) async {
-    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    await transactionBox.put(transaction.id, transaction);
-    // CRITICAL: Force flush to disk to survive hot restart
-    await transactionBox.flush();
+    // Write to Isar (primary storage)
+    IsarService.addTransaction(transaction);
     _logger.i(
-        'Transaction saved to Hive with ID: ${transaction.id}, linkedJobId: ${transaction.linkedJobId}');
-    _logger.d('TransactionBox now has ${transactionBox.length} items');
+        'Transaction saved to Isar with ID: ${transaction.id}, linkedJobId: ${transaction.linkedJobId}');
     _financialEventsService.emitTransactionAdded(transaction);
 
     // Update home screen widgets
@@ -529,14 +530,26 @@ class HomeController extends GetxController {
     if (daysToSpread <= 1) {
       for (final entry in categorySpending.entries) {
         if (entry.value <= 0) continue;
-        final transaction = LocalTransaction(
-          id: const Uuid().v4(),
+
+        // Get category enum and name for description
+        String categoryName = 'Dépense';
+        TransactionCategory? resolvedCat;
+        try {
+          resolvedCat =
+              TransactionCategory.values.firstWhere((e) => e.name == entry.key);
+          categoryName = resolvedCat.displayName;
+        } catch (_) {
+          // Use category ID as fallback for custom categories
+          categoryName = entry.key;
+        }
+
+        final transaction = LocalTransaction.create(
           amount: entry.value,
-          description: 'Rattrapage du mois',
+          description: categoryName,
           date: firstOfMonth,
           type: TransactionType.expense,
           categoryId: entry.key,
-          category: null,
+          category: resolvedCat, // Pass the resolved category for correct icon
           isCatchUp: true,
         );
         await addTransaction(transaction);
@@ -563,6 +576,9 @@ class HomeController extends GetxController {
         // ID might be a UUID for custom categories, or not found
       }
 
+      // Get category name for description
+      String categoryName = resolvedCategory?.displayName ?? categoryId;
+
       // Determine how many transactions to create (1 per 2-3 days, max 10)
       int numTransactions = (daysToSpread / 2).ceil().clamp(1, 10);
       final amountPerTransaction = totalAmount / numTransactions;
@@ -573,10 +589,10 @@ class HomeController extends GetxController {
         final dayOffset = (daysToSpread * i / numTransactions).round();
         final transactionDate = firstOfMonth.add(Duration(days: dayOffset));
 
-        final transaction = LocalTransaction(
-          id: const Uuid().v4(),
+        final transaction = LocalTransaction.create(
           amount: amountPerTransaction,
-          description: 'Rattrapage',
+          description:
+              categoryName, // Use category name instead of 'Rattrapage'
           date: transactionDate,
           type: TransactionType.expense,
           categoryId: categoryId,
@@ -594,11 +610,11 @@ class HomeController extends GetxController {
   Future<void> deleteTransaction(LocalTransaction transaction) async {
     // Soft delete: Mark as hidden but keep in database for calculations
     transaction.isHidden = true;
-    await transaction.save();
-    // Refresh list to hide it from UI (filter out hidden transactions)
-    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    transactions
-        .assignAll(transactionBox.values.where((t) => !t.isHidden).toList());
+    // Save to Isar (primary storage)
+    IsarService.updateTransaction(transaction);
+    // Refresh list from Isar
+    final allTx = await IsarService.getAllTransactions();
+    transactions.assignAll(allTx.where((t) => !t.isHidden).toList());
     _financialEventsService.emitTransactionDeleted(transaction.id);
   }
 
@@ -638,9 +654,9 @@ class HomeController extends GetxController {
           _logger.i('Recurring "${recurring.description}": '
               'Found ${dueDates.length} due dates');
 
-          // FIXED: Read transactions directly from Hive instead of FinancialContextService
-          final txBox = Hive.box<LocalTransaction>('transactionBox');
-          final Set<String> existingRecurringTransactions = txBox.values
+          // Read from Isar for duplicate checking
+          final allTx = await IsarService.getAllTransactions();
+          final Set<String> existingRecurringTransactions = allTx
               .where((tx) => tx.linkedRecurringId != null && !tx.isHidden)
               .map((tx) =>
                   '${tx.linkedRecurringId}-${tx.date.year}-${tx.date.month}-${tx.date.day}')
@@ -658,8 +674,7 @@ class HomeController extends GetxController {
 
             try {
               // Create transaction
-              final transaction = LocalTransaction(
-                id: const Uuid().v4(),
+              final transaction = LocalTransaction.create(
                 amount: recurring.amount,
                 description: recurring.description,
                 date: dueDate,
@@ -669,9 +684,8 @@ class HomeController extends GetxController {
                 linkedRecurringId: recurring.id,
               );
 
-              // Add to storage
-              final txBox = Hive.box<LocalTransaction>('transactionBox');
-              await txBox.add(transaction);
+              // Add to Isar (primary storage)
+              IsarService.addTransaction(transaction);
 
               generatedCount++;
 
@@ -847,19 +861,18 @@ class HomeController extends GetxController {
     try {
       final now = DateTime.now();
       final oneYearAgo = DateTime(now.year - 1, now.month, now.day);
-      final transactionBox = Hive.box<LocalTransaction>('transactionBox');
+
+      // Read all transactions from Isar
+      final allTransactions = await IsarService.getAllTransactions();
 
       int archivedCount = 0;
 
-      // Create a copy of keys to avoid concurrent modification
-      final keys = transactionBox.keys.toList();
-
-      for (var key in keys) {
-        final transaction = transactionBox.get(key);
-        if (transaction != null && transaction.date.isBefore(oneYearAgo)) {
+      for (var transaction in allTransactions) {
+        if (!transaction.isHidden && transaction.date.isBefore(oneYearAgo)) {
           // Mark as archived instead of deleting for historical data
           transaction.isHidden = true;
-          await transaction.save();
+          // Save to Isar
+          IsarService.updateTransaction(transaction);
           archivedCount++;
         }
       }

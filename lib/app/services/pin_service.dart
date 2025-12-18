@@ -76,12 +76,9 @@ class PinService extends GetxService {
   /// Attempt biometric authentication
   Future<bool> authenticateWithBiometric() async {
     try {
+      // Using older API for local_auth 3.x compatibility
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: 'Utilisez votre empreinte pour déverrouiller Koala',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false, // Allow OS PIN fallback
-        ),
       );
       return didAuthenticate;
     } on PlatformException catch (_) {

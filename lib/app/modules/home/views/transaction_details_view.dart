@@ -26,14 +26,25 @@ class TransactionDetailsView extends StatelessWidget {
     Color iconColor = color;
 
     if (transaction.categoryId != null) {
-      final cat = categoriesController.categories
+      // First try UUID match
+      var cat = categoriesController.categories
           .firstWhereOrNull((c) => c.id == transaction.categoryId);
+
+      // If not found, try matching by category name (for catch-up transactions)
+      if (cat == null) {
+        cat = categoriesController.categories.firstWhereOrNull((c) =>
+            c.name.toLowerCase() == transaction.categoryId!.toLowerCase());
+      }
+
       if (cat != null) {
         categoryIconKey = cat.icon;
         categoryName = cat.name;
         iconColor = Color(cat.colorValue);
       }
-    } else if (transaction.category != null) {
+    }
+
+    // Fallback to transaction.category enum if no match found
+    if (categoryIconKey == 'other' && transaction.category != null) {
       categoryIconKey = transaction.category!.iconKey;
       categoryName = transaction.category!.displayName;
     }

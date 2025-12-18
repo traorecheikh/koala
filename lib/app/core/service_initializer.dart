@@ -36,6 +36,8 @@ import 'package:koaa/app/services/notification_service.dart';
 import 'package:koaa/app/services/pin_service.dart';
 import 'package:koaa/app/services/security_service.dart';
 import 'package:koaa/app/services/widget_service.dart';
+import 'package:koaa/app/services/isar_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:koaa/hive_registrar.g.dart';
 
@@ -43,6 +45,7 @@ import 'package:koaa/hive_registrar.g.dart';
 /// Keeps main.dart clean and organized
 class ServiceInitializer {
   static HiveAesCipher? _hiveCipher;
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   /// Initialize all app services in correct order
   static Future<void> initialize() async {
@@ -52,13 +55,16 @@ class ServiceInitializer {
       _initHive(), // Most time consuming, start early
     ]);
 
-    // 2. Migration Layer (Sequential - depends on Hive)
+    // 2. Isar Layer (Sequential - after Hive for migration)
+    await IsarService.init();
+
+    // 3. Migration Layer (Sequential - depends on Hive + Isar)
     await _runMigrations();
 
-    // 3. Service Layer (Parallel where possible)
+    // 4. Service Layer (Parallel where possible)
     await _initServices();
 
-    // 4. UI Layer (Parallel)
+    // 5. UI Layer (Parallel)
     _initWidgets(); // Fire and forget or await if critical for first frame
   }
 
@@ -127,6 +133,108 @@ class ServiceInitializer {
     final migrationService = DataMigrationService();
     await migrationService.runMigrations();
     await ChangelogService.init();
+
+    // Migrate transactions from Hive to Isar (one-time)
+    await _migrateTransactionsToIsar();
+  }
+
+  /// One-time migration of transactions from Hive to Isar
+  static Future<void> _migrateTransactionsToIsar() async {
+    final migrationComplete =
+        await _secureStorage.read(key: 'isar_tx_migration_v1');
+
+    if (migrationComplete == 'true') {
+      debugPrint('[Migration] Isar transaction migration already complete.');
+      return;
+    }
+
+    try {
+      debugPrint('[Migration] Starting Hive → Isar transaction migration...');
+      final hiveBox = Hive.box<LocalTransaction>('transactionBox');
+      final transactions = hiveBox.values.toList();
+
+      if (transactions.isEmpty) {
+        debugPrint('[Migration] No transactions to migrate.');
+        await _secureStorage.write(key: 'isar_tx_migration_v1', value: 'true');
+        return;
+      }
+
+      debugPrint(
+          '[Migration] Migrating ${transactions.length} transactions...');
+      IsarService.addTransactions(transactions);
+
+      await _secureStorage.write(key: 'isar_tx_migration_v1', value: 'true');
+      debugPrint(
+          '[Migration] ✅ Successfully migrated ${transactions.length} transactions to Isar!');
+    } catch (e) {
+      debugPrint('[Migration] ❌ Failed to migrate transactions: $e');
+      // Don't set flag - will retry on next startup
+    }
+
+    // V2: Fix Rattrapage transaction descriptions and categories
+    await _fixRattrapageData();
+  }
+
+  /// V2 Migration: Fix existing 'Rattrapage' transactions
+  /// Updates description to category name and ensures category enum is set
+  static Future<void> _fixRattrapageData() async {
+    final done = await _secureStorage.read(key: 'rattrapage_fix_v1');
+    if (done == 'true') return;
+
+    try {
+      final allTx = await IsarService.getAllTransactions();
+      int fixed = 0;
+
+      for (final tx in allTx) {
+        bool needsUpdate = false;
+
+        // Fix description if it's "Rattrapage"
+        if (tx.description == 'Rattrapage du mois' ||
+            tx.description == 'Rattrapage') {
+          if (tx.categoryId != null) {
+            try {
+              final cat = TransactionCategory.values
+                  .firstWhere((e) => e.name == tx.categoryId);
+              tx.description = cat.displayName;
+              // Also fix the category enum if it's wrong
+              if (tx.category != cat) {
+                tx.category = cat;
+              }
+              needsUpdate = true;
+            } catch (_) {
+              // Custom category - use ID as description
+              tx.description = tx.categoryId!;
+              needsUpdate = true;
+            }
+          }
+        }
+
+        // Also fix any transaction with 'other' category but valid categoryId
+        if (tx.category == TransactionCategory.otherExpense &&
+            tx.categoryId != null) {
+          try {
+            final cat = TransactionCategory.values
+                .firstWhere((e) => e.name == tx.categoryId);
+            tx.category = cat;
+            needsUpdate = true;
+          } catch (_) {
+            // Keep as 'other' for custom categories
+          }
+        }
+
+        if (needsUpdate) {
+          IsarService.updateTransaction(tx);
+          fixed++;
+        }
+      }
+
+      await _secureStorage.write(key: 'rattrapage_fix_v1', value: 'true');
+      if (fixed > 0) {
+        debugPrint('[Migration] ✅ Fixed $fixed rattrapage transactions');
+      }
+    } catch (e) {
+      debugPrint('[Migration] ❌ Rattrapage fix failed: $e');
+    }
   }
 
   /// Initialize all GetX services

@@ -1,4 +1,5 @@
 import 'package:hive_ce/hive.dart';
+import 'package:isar_plus/isar_plus.dart';
 import 'package:uuid/uuid.dart';
 
 part 'local_transaction.g.dart';
@@ -217,8 +218,20 @@ extension TransactionCategoryExtension on TransactionCategory {
   // We should stop using IconData directly for categories.
 
   bool get isIncome {
-    return index <= TransactionCategory.otherIncome.index &&
-        index >= TransactionCategory.salary.index;
+    // Use explicit list check instead of index comparison to avoid
+    // conflict with Isar's Index type shadowing Dart enum's .index
+    const incomeCategories = [
+      TransactionCategory.salary,
+      TransactionCategory.freelance,
+      TransactionCategory.investment,
+      TransactionCategory.business,
+      TransactionCategory.gift,
+      TransactionCategory.bonus,
+      TransactionCategory.refund,
+      TransactionCategory.rental,
+      TransactionCategory.otherIncome,
+    ];
+    return incomeCategories.contains(this);
   }
 
   static List<TransactionCategory> getByType(TransactionType type) {
@@ -261,66 +274,100 @@ extension TransactionCategoryExtension on TransactionCategory {
   }
 }
 
+@collection
 @HiveType(typeId: 2)
-class LocalTransaction extends HiveObject {
+class LocalTransaction {
+  @Id()
+  @HiveField(8)
+  late String id;
+
   @HiveField(0)
-  double amount;
+  late double amount;
 
   @HiveField(1)
-  String description;
+  late String description;
 
   @HiveField(2)
-  DateTime date;
+  late DateTime date;
 
   @HiveField(3)
-  TransactionType type;
+  late TransactionType type;
 
   @HiveField(4)
-  bool isRecurring;
+  late bool isRecurring;
 
   @HiveField(5)
-  TransactionCategory? category;
+  late TransactionCategory category;
 
   @HiveField(6)
   String? categoryId;
 
   @HiveField(7)
-  bool isHidden;
-
-  @HiveField(8)
-  final String id; // New field, new index
+  late bool isHidden;
 
   @HiveField(9)
-  String? linkedDebtId; // New field, new index
+  String? linkedDebtId;
 
   @HiveField(10)
-  String? linkedRecurringId; // Links back to original recurring transaction
+  String? linkedRecurringId;
 
   @HiveField(11)
-  String? linkedJobId; // Links back to original job
+  String? linkedJobId;
 
   @HiveField(12)
-  bool isCatchUp; // Flag for catch-up transactions to skip budget warnings
+  late bool isCatchUp;
 
   LocalTransaction({
-    String? id,
+    required this.id,
     required this.amount,
     required this.description,
     required this.date,
     required this.type,
     this.isRecurring = false,
-    TransactionCategory? category,
+    required this.category,
     this.categoryId,
     this.isHidden = false,
     this.linkedDebtId,
     this.linkedRecurringId,
     this.linkedJobId,
     this.isCatchUp = false,
-  })  : id = id ?? const Uuid().v4(),
-        category = category ??
-            (type == TransactionType.income
-                ? TransactionCategory.otherIncome
-                : TransactionCategory.otherExpense);
+  });
+
+  /// Factory constructor for creating with auto-generated ID
+  factory LocalTransaction.create({
+    required double amount,
+    required String description,
+    required DateTime date,
+    required TransactionType type,
+    bool isRecurring = false,
+    TransactionCategory? category,
+    String? categoryId,
+    bool isHidden = false,
+    String? linkedDebtId,
+    String? linkedRecurringId,
+    String? linkedJobId,
+    bool isCatchUp = false,
+  }) {
+    final resolvedCategory = category ??
+        (type == TransactionType.income
+            ? TransactionCategory.otherIncome
+            : TransactionCategory.otherExpense);
+    return LocalTransaction(
+      id: const Uuid().v4(),
+      amount: amount,
+      description: description,
+      date: date,
+      type: type,
+      isRecurring: isRecurring,
+      category: resolvedCategory,
+      categoryId: categoryId,
+      isHidden: isHidden,
+      linkedDebtId: linkedDebtId,
+      linkedRecurringId: linkedRecurringId,
+      linkedJobId: linkedJobId,
+      isCatchUp: isCatchUp,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -371,4 +418,18 @@ class LocalTransaction extends HiveObject {
       isCatchUp: isCatchUp ?? this.isCatchUp,
     );
   }
+}
+
+/// FNV-1a 64bit hash algorithm optimized for Dart Strings
+int fastHash(String string) {
+  var hash = 0xcbf29ce484222325;
+  var i = 0;
+  while (i < string.length) {
+    var codeUnit = string.codeUnitAt(i++);
+    hash ^= codeUnit >> 8;
+    hash *= 0x100000001b3;
+    hash ^= codeUnit & 0xFF;
+    hash *= 0x100000001b3;
+  }
+  return hash;
 }

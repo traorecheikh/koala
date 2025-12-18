@@ -57,8 +57,7 @@ class DebtController extends GetxController {
     // Create transaction to reflect the money movement
     // Borrowed: I received money (income)
     // Lent: I gave money (expense)
-    final tx = LocalTransaction(
-      id: const Uuid().v4(),
+    final tx = LocalTransaction.create(
       amount: amount,
       description: type == DebtType.borrowed
           ? 'Emprunt: $personName'
@@ -97,8 +96,7 @@ class DebtController extends GetxController {
   Future<void> recordRepayment(Debt debt, double amount) async {
     // 1. Create transaction
     final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-    final tx = LocalTransaction(
-      id: const Uuid().v4(),
+    final tx = LocalTransaction.create(
       amount: amount,
       description: 'Remboursement: ${debt.personName}',
       date: DateTime.now(),

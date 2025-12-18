@@ -46,13 +46,21 @@ class _TransactionListItem extends StatelessWidget {
     String iconKey = 'other';
 
     if (transaction.categoryId != null) {
+      // First try UUID match
       category = categoriesController.categories
           .firstWhereOrNull((c) => c.id == transaction.categoryId);
+
+      // If not found, try matching by category name (for catch-up transactions)
+      if (category == null) {
+        category = categoriesController.categories.firstWhereOrNull((c) =>
+            c.name.toLowerCase() == transaction.categoryId!.toLowerCase());
+      }
     }
 
     if (category != null) {
       iconKey = category.icon;
     } else if (transaction.category != null) {
+      // Fallback to enum iconKey
       iconKey = transaction.category!.iconKey;
     }
 

@@ -77,19 +77,19 @@ class TransactionHistoryService extends GetxService {
       switch (entry.action) {
         case HistoryAction.added:
           // Remove the added transaction
-          await box.delete(entry.transaction.key);
+          await box.delete(entry.transaction.id);
           _redoStack.add(entry);
           break;
 
         case HistoryAction.deleted:
           // Restore the deleted transaction
-          await box.put(entry.transaction.key, entry.transaction);
+          await box.put(entry.transaction.id, entry.transaction);
           _redoStack.add(entry);
           break;
 
         case HistoryAction.modified:
           // Restore the old version
-          await box.put(entry.transaction.key, entry.transaction);
+          await box.put(entry.transaction.id, entry.transaction);
           _redoStack.add(entry);
           break;
       }
@@ -112,20 +112,20 @@ class TransactionHistoryService extends GetxService {
       switch (entry.action) {
         case HistoryAction.added:
           // Re-add the transaction
-          await box.put(entry.transaction.key, entry.transaction);
+          await box.put(entry.transaction.id, entry.transaction);
           _undoStack.add(entry);
           break;
 
         case HistoryAction.deleted:
           // Re-delete the transaction
-          await box.delete(entry.transaction.key);
+          await box.delete(entry.transaction.id);
           _undoStack.add(entry);
           break;
 
         case HistoryAction.modified:
           // Apply the new version again
           if (entry.newData != null) {
-            await box.put(entry.newData!.key, entry.newData!);
+            await box.put(entry.newData!.id, entry.newData!);
           }
           _undoStack.add(entry);
           break;
@@ -174,5 +174,3 @@ class TransactionHistoryEntry {
 }
 
 enum HistoryAction { added, deleted, modified }
-
-

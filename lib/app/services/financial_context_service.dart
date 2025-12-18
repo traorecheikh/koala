@@ -8,6 +8,7 @@ import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:logger/logger.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
@@ -95,10 +96,10 @@ class FinancialContextService extends GetxService {
   }
 
   void _initListeners() {
-    // Listen to changes in Hive boxes and update observables
-    _subscriptions.add(Hive.box<LocalTransaction>('transactionBox')
-        .watch()
-        .listen((_) => _loadTransactions()));
+    // Listen to Isar transaction changes (primary source)
+    _subscriptions.add(IsarService.watchTransactions().listen((transactions) {
+      _onIsarTransactionsChanged(transactions);
+    }));
     _subscriptions
         .add(Hive.box<Job>('jobBox').watch().listen((_) => _loadJobs()));
     _subscriptions.add(
@@ -141,13 +142,15 @@ class FinancialContextService extends GetxService {
     _logger.i('FinancialContextService: _loadAllData completed.');
   }
 
-  void _loadTransactions() {
-    final transactions = Hive.box<LocalTransaction>('transactionBox')
-        .values
-        .where((t) => !t.isHidden)
-        .toList();
+  void _loadTransactions() async {
+    // Load transactions from Isar (primary source)
+    final transactions = await IsarService.getAllTransactions();
+    _onIsarTransactionsChanged(transactions.where((t) => !t.isHidden).toList());
+  }
 
-    allTransactions.assignAll(transactions);
+  /// Handle Isar transaction stream updates
+  void _onIsarTransactionsChanged(List<LocalTransaction> transactions) {
+    allTransactions.assignAll(transactions.where((t) => !t.isHidden));
 
     // Update caches
     final byCategory = <String, List<LocalTransaction>>{};

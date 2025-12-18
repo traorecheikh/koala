@@ -218,7 +218,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       _error = null;
     });
 
-    final transaction = LocalTransaction(
+    final transaction = LocalTransaction.create(
       amount: amount,
       description: _descriptionController.text.trim().isEmpty
           ? _selectedCategory!.name
@@ -226,7 +226,6 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       date: DateTime.now(),
       type: widget.type,
       categoryId: _selectedCategory!.id,
-      category: null,
     );
 
     try {
