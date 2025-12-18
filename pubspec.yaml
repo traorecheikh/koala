@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  get: ^4.0.5
+  get: ^4.7.3
   flutter_screenutil: ^5.9.3
   google_fonts: ^6.3.2
   qr_flutter: ^4.1.0
