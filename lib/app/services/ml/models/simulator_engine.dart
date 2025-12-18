@@ -131,6 +131,38 @@ class SimulatorEngine {
         .map((b) => b.copyWith())
         .toList(); // Copy to allow modification
 
+    // ─────────────────────────────────────────────────────────
+    // HARD AUDIT: Detect Already Processed Recurring Items
+    // ─────────────────────────────────────────────────────────
+    final Map<String, DateTime> lastProcessedJobs = {};
+    for (var job in jobs) {
+      final txs = _financialContextService.allTransactions
+          .where((t) =>
+              t.description.toLowerCase().contains(job.name.toLowerCase()))
+          .toList();
+      if (txs.isNotEmpty) {
+        txs.sort((a, b) => b.date.compareTo(a.date));
+        lastProcessedJobs[job.id] = txs.first.date;
+      }
+    }
+
+    final Map<String, DateTime> lastProcessedRTs = {};
+    for (var rt in recurringTransactions) {
+      // Find history by description or category correlation
+      final txs = _financialContextService.allTransactions.where((t) =>
+          t.description.toLowerCase().contains(rt.description.toLowerCase()) ||
+          (rt.categoryId != null &&
+              t.categoryId == rt.categoryId &&
+              (t.amount - rt.amount).abs() < rt.amount * 0.1));
+
+      if (txs.isNotEmpty) {
+        final sortedTxs = List<LocalTransaction>.from(txs);
+        sortedTxs.sort((a, b) => b.date.compareTo(a.date));
+        lastProcessedRTs[rt.id] = sortedTxs.first.date;
+      }
+    }
+    // ─────────────────────────────────────────────────────────
+
     // Initial conditions
     final DateTime simulationStartDate = DateTime.now();
     double lowestBalance = currentBalance;
@@ -259,6 +291,25 @@ class SimulatorEngine {
         if (job.endDate != null && job.endDate!.isBefore(currentDate)) continue;
 
         if (job.isPaymentDue(currentDate)) {
+          // Check if already processed in history
+          final lastProcessed = lastProcessedJobs[job.id];
+          if (lastProcessed != null) {
+            bool alreadyPaid = false;
+            if (job.frequency == PaymentFrequency.monthly) {
+              alreadyPaid = lastProcessed.month == currentDate.month &&
+                  lastProcessed.year == currentDate.year;
+            } else {
+              // Proximity check for weekly/biweekly (within 4 days)
+              alreadyPaid =
+                  currentDate.difference(lastProcessed).inDays.abs() <= 4;
+            }
+
+            if (alreadyPaid) {
+              _logger.d('Skipping already paid job: ${job.name}');
+              continue;
+            }
+          }
+
           currentBalance += job.amount;
           timeline.add(CashFlowEvent(
             date: currentDate,
@@ -275,6 +326,25 @@ class SimulatorEngine {
         if (rt.endDate != null && rt.endDate!.isBefore(currentDate)) continue;
 
         if (rt.isDue(currentDate)) {
+          // Check if already processed in history
+          final lastProcessed = lastProcessedRTs[rt.id];
+          if (lastProcessed != null) {
+            bool alreadyDone = false;
+            if (rt.frequency == Frequency.monthly) {
+              alreadyDone = lastProcessed.month == currentDate.month &&
+                  lastProcessed.year == currentDate.year;
+            } else {
+              // Proximity check (within 3 days)
+              alreadyDone =
+                  currentDate.difference(lastProcessed).inDays.abs() <= 3;
+            }
+
+            if (alreadyDone) {
+              _logger.d('Skipping already processed RT: ${rt.description}');
+              continue;
+            }
+          }
+
           if (rt.type == TransactionType.income) {
             currentBalance += rt.amount;
             timeline.add(CashFlowEvent(
@@ -305,21 +375,32 @@ class SimulatorEngine {
         }
       }
 
-      // Debt payments (assuming monthly payments on specific day)
+      // Debt payments
       for (final debt in debts) {
         if (!debt.isPaidOff &&
             debt.minPayment > 0 &&
-            currentDate.day == debt.createdAt.day) {
-          // Assuming payment on creation day
+            currentDate.day == (debt.dueDayOfMonth ?? debt.createdAt.day)) {
           final payment = min(debt.minPayment, debt.remainingAmount);
-          currentBalance -= payment;
+
+          if (debt.type == DebtType.borrowed) {
+            currentBalance -= payment;
+            timeline.add(CashFlowEvent(
+              date: currentDate,
+              description: 'Paiement de dette (${debt.personName})',
+              amount: -payment,
+              balanceAfterEvent: currentBalance,
+            ));
+          } else {
+            // Repayment of money lent to others is income
+            currentBalance += payment;
+            timeline.add(CashFlowEvent(
+              date: currentDate,
+              description: 'Remboursement de dette (${debt.personName})',
+              amount: payment,
+              balanceAfterEvent: currentBalance,
+            ));
+          }
           debt.remainingAmount -= payment;
-          timeline.add(CashFlowEvent(
-            date: currentDate,
-            description: 'Paiement de dette (${debt.personName})',
-            amount: -payment,
-            balanceAfterEvent: currentBalance,
-          ));
         }
       }
 
@@ -654,15 +735,25 @@ class SimulatorEngine {
     final expenseBills =
         bills.where((b) => b.type == TransactionType.expense).toList();
 
-    // Filter for expenses, exclude amounts close to known recurring bills
+    // Filter for expenses, exclude amounts that look like recurring bills
     final nonBillExpenses = history.where((t) {
       if (t.type != TransactionType.expense) return false;
-      // Check if this transaction is likely a recurring bill
-      return !expenseBills.any((bill) =>
-          (t.amount - bill.amount).abs() <
-              t.amount * 0.1 && // Amount is similar
-          t.date.difference(bill.lastGeneratedDate).inDays.abs() <
-              10); // Around bill date
+
+      // 1. Check if this transaction matches any recurring bill by description or amount
+      final isRecurringBill = expenseBills.any((bill) {
+        final sameDescription = t.description
+            .toLowerCase()
+            .contains(bill.description.toLowerCase());
+        final sameCategory =
+            bill.categoryId != null && t.categoryId == bill.categoryId;
+        final similarAmount = (t.amount - bill.amount).abs() < t.amount * 0.15;
+
+        // If it matches description and amount, or category and amount, it's likely a bill
+        return (sameDescription && similarAmount) ||
+            (sameCategory && similarAmount);
+      });
+
+      return !isRecurringBill;
     }).toList();
 
     if (nonBillExpenses.isEmpty) return 0;

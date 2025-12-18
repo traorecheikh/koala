@@ -15,7 +15,6 @@ import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/modules/analytics/controllers/analytics_controller.dart';
 import 'package:koaa/app/modules/goals/views/widgets/goal_card.dart';
-import 'package:koaa/app/services/ml/smart_financial_brain.dart';
 
 class AnalyticsView extends StatefulWidget {
   const AnalyticsView({super.key});

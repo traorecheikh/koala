@@ -39,6 +39,8 @@ class HomeController extends GetxController {
   final RxList<LocalTransaction> transactions = <LocalTransaction>[].obs;
   final RxBool isCardFlipped = false.obs;
   final RxList<MLInsight> insights = <MLInsight>[].obs;
+  final RxInt displayedTransactionCount =
+      5.obs; // Start with 5, expand on scroll
   final _mlService = MLService();
 
   // Customizable Quick Action (Slot 3)
@@ -186,6 +188,12 @@ class HomeController extends GetxController {
     calculateBalance();
     _updateInsights();
     _refreshIntelligence();
+  }
+
+  void loadMoreTransactions() {
+    if (displayedTransactionCount.value < transactions.length) {
+      displayedTransactionCount.value += 10; // Load 10 more at a time
+    }
   }
 
   /// Rebuild the transaction cache for fast lookups (optimization)

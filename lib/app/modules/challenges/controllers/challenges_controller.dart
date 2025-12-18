@@ -336,8 +336,9 @@ class ChallengesController extends GetxController {
     for (final challenge
         in allChallenges.where((c) => c.type == ChallengeType.oneTime)) {
       // Skip if already completed
-      if (completedChallenges.any((c) => c.challengeId == challenge.id))
+      if (completedChallenges.any((c) => c.challengeId == challenge.id)) {
         continue;
+      }
 
       final progress = _evaluateOneTimeChallenge(challenge);
       if (progress >= challenge.targetValue) {

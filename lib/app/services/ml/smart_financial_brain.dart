@@ -467,16 +467,34 @@ class SmartFinancialBrain extends GetxService {
     // 2. Predict Remaining Variable Spending (For next 30 days)
     final predictedVariableSpending = avgDailyVariableSpending * daysRemaining;
 
-    // 3. Calculate Upcoming Fixed Expenses (Recurring + Debts)
-    // For a rolling 30-day window, we assume every monthly item happens EXACTLY ONCE.
+    // 3. Detect Already-Processed Items (Consistency with SimulatorEngine)
+    final allTxs = _context.allTransactions;
 
-    // 3a. debts (Split into Repayment vs Collection)
+    // Pre-calculate last processed dates for Jobs and RTs
+    final lastJobs = <String, DateTime>{};
+    final lastRTs = <String, DateTime>{};
+
+    for (var tx in allTxs) {
+      if (tx.linkedJobId != null) {
+        final last = lastJobs[tx.linkedJobId!];
+        if (last == null || tx.date.isAfter(last)) {
+          lastJobs[tx.linkedJobId!] = tx.date;
+        }
+      }
+      if (tx.linkedRecurringId != null) {
+        final last = lastRTs[tx.linkedRecurringId!];
+        if (last == null || tx.date.isAfter(last)) {
+          lastRTs[tx.linkedRecurringId!] = tx.date;
+        }
+      }
+    }
+
+    // 4. Calculate Upcoming Fixed Expenses (Recurring + Debts)
     double upcomingDebtPayments = 0.0;
     double upcomingDebtCollections = 0.0;
 
     for (var debt in debts) {
       if (debt.isPaidOff) continue;
-      // In a 30-day window, we pay/collect one installment of every active debt
       if (debt.type == DebtType.borrowed) {
         upcomingDebtPayments += debt.minPayment;
       } else {
@@ -484,45 +502,60 @@ class SmartFinancialBrain extends GetxService {
       }
     }
 
-    // 3b. Recurring Expenses
+    // 4b. Recurring Expenses (with history check)
     final allRecurring = _context.allRecurringTransactions;
     double upcomingRecurringExpenses = 0.0;
+    double upcomingRecurringIncome = 0.0;
 
     for (final recurring in allRecurring) {
-      if (!recurring.isActive || recurring.type != TransactionType.expense)
-        continue;
+      if (!recurring.isActive) continue;
 
-      // In 30 days, monthly items happen once.
-      // TODO: Handle weekly items (x4) in Phase 2
+      // Check if already done this month (simplified monthly check)
       if (recurring.frequency == Frequency.monthly) {
-        upcomingRecurringExpenses += recurring.amount;
+        final lastProcessed = lastRTs[recurring.id];
+        final alreadyDone = lastProcessed != null &&
+            lastProcessed.month == now.month &&
+            lastProcessed.year == now.year;
+
+        if (alreadyDone) continue;
+
+        if (recurring.type == TransactionType.expense) {
+          upcomingRecurringExpenses += recurring.amount;
+        } else {
+          upcomingRecurringIncome += recurring.amount;
+        }
+      } else {
+        // For other frequencies, assume at least one occurrence in 30 days if not monthly
+        // (Simplified for Brain summary, deep simulation handles daily/weekly better)
+        if (recurring.type == TransactionType.expense) {
+          upcomingRecurringExpenses += recurring.amount;
+        } else {
+          upcomingRecurringIncome += recurring.amount;
+        }
       }
     }
 
-    // 4. Calculate Upcoming Income
-    double upcomingIncome = 0;
-
-    // 4a. Jobs
+    // 5. Calculate Upcoming Job Income
+    double upcomingJobIncome = 0;
     for (final job in _context.allJobs) {
       if (!job.isActive) continue;
-      // In 30 days, we get paid once per job
-      upcomingIncome += job.amount;
+
+      final lastProcessed = lastJobs[job.id];
+      final alreadyPaid = lastProcessed != null &&
+          lastProcessed.month == now.month &&
+          lastProcessed.year == now.year;
+
+      if (alreadyPaid) continue;
+
+      upcomingJobIncome += job.amount;
     }
 
-    // 4b. Recurring Income
-    for (final recurring in allRecurring) {
-      if (!recurring.isActive || recurring.type != TransactionType.income)
-        continue;
+    // 6. Final Prediction
+    final totalUpcomingIncome = upcomingJobIncome + upcomingRecurringIncome;
 
-      if (recurring.frequency == Frequency.monthly) {
-        upcomingIncome += recurring.amount;
-      }
-    }
-
-    // 5. Final Prediction
     final predictedMonthEnd = balance +
-        upcomingIncome +
-        upcomingDebtCollections - // Add incoming debt payments
+        totalUpcomingIncome +
+        upcomingDebtCollections -
         predictedVariableSpending -
         upcomingDebtPayments -
         upcomingRecurringExpenses;
@@ -531,7 +564,7 @@ class SmartFinancialBrain extends GetxService {
 🧮 PROJECTION MATH DEBUG (ROLLING 30 DAYS):
 ----------------------------------------
    Current Balance:      ${balance.toStringAsFixed(2)}
-+  Upcoming Income:      ${upcomingIncome.toStringAsFixed(2)}
++  Upcoming Income:      ${totalUpcomingIncome.toStringAsFixed(2)}
 +  Debt Collections:     ${upcomingDebtCollections.toStringAsFixed(2)}
 -  Variable Spending:    ${predictedVariableSpending.toStringAsFixed(2)}
 -  Debt Payments:        ${upcomingDebtPayments.toStringAsFixed(2)}
@@ -541,10 +574,9 @@ class SmartFinancialBrain extends GetxService {
 ''');
 
     // daysUntilBroke calculation
-    // We deduct fixed expenses first to see "disposable" daily rate
     int? daysUntilBroke;
     final effectiveBalance = balance +
-        upcomingIncome +
+        totalUpcomingIncome +
         upcomingDebtCollections -
         upcomingDebtPayments -
         upcomingRecurringExpenses;
@@ -554,8 +586,6 @@ class SmartFinancialBrain extends GetxService {
     }
 
     // Safe daily spending
-    // (Available - Fixed Costs) / Days Remaining
-    // Reserve 10% buffer
     final buffer = monthlyIncome * 0.10;
     final safeDailySpending = daysRemaining > 0
         ? max(0, (effectiveBalance - buffer) / daysRemaining)
@@ -564,15 +594,13 @@ class SmartFinancialBrain extends GetxService {
     return CashFlowPrediction(
       currentBalance: balance,
       predictedMonthEndBalance: predictedMonthEnd,
-      avgDailySpending:
-          avgDailyVariableSpending.toDouble(), // Returning variable avg now
+      avgDailySpending: avgDailyVariableSpending.toDouble(),
       safeDailySpending: safeDailySpending.toDouble(),
       daysUntilBroke: daysUntilBroke,
-      upcomingDebtPayments: upcomingDebtPayments +
-          upcomingRecurringExpenses, // Grouped fixed costs
+      upcomingDebtPayments: upcomingDebtPayments + upcomingRecurringExpenses,
       daysRemainingInMonth: daysRemaining,
       willSurviveMonth: predictedMonthEnd > 0,
-      upcomingIncome: upcomingIncome,
+      upcomingIncome: totalUpcomingIncome,
     );
   }
 
@@ -922,9 +950,9 @@ class SmartFinancialBrain extends GetxService {
     // Velocity Score (Spending Control): Target is < 0.9x income
     final spending = _analyzeSpendingBehavior(transactions, monthlyIncome);
     double velocityScore = 100;
-    if (spending.velocityRatio > 1.2)
+    if (spending.velocityRatio > 1.2) {
       velocityScore = 0;
-    else if (spending.velocityRatio > 1.0)
+    } else if (spending.velocityRatio > 1.0)
       velocityScore = 40;
     else if (spending.velocityRatio > 0.9)
       velocityScore = 70;
@@ -934,9 +962,9 @@ class SmartFinancialBrain extends GetxService {
     // Debt Score (Burden): Target is < 20% DTI
     final debtStrategy = _analyzeDebtStrategy(debts, monthlyIncome, balance);
     double debtScore = 100;
-    if (debtStrategy.paymentBurden > 0.50)
+    if (debtStrategy.paymentBurden > 0.50) {
       debtScore = 0;
-    else if (debtStrategy.paymentBurden > 0.35)
+    } else if (debtStrategy.paymentBurden > 0.35)
       debtScore = 30;
     else if (debtStrategy.paymentBurden > 0.20)
       debtScore = 60;
@@ -945,9 +973,9 @@ class SmartFinancialBrain extends GetxService {
 
     // Impulsive Score (Behavior): Target 0
     double behaviorScore = 100;
-    if (spending.impulsiveTransactionCount > 3)
+    if (spending.impulsiveTransactionCount > 3) {
       behaviorScore = 20;
-    else if (spending.impulsiveTransactionCount > 1)
+    } else if (spending.impulsiveTransactionCount > 1)
       behaviorScore = 60;
     else if (spending.impulsiveTransactionCount > 0) behaviorScore = 80;
 

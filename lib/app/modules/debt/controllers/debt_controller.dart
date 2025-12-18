@@ -9,7 +9,7 @@ import 'package:koaa/app/services/events/financial_events_service.dart';
 import 'package:uuid/uuid.dart';
 
 class DebtController extends GetxController {
-  final debts = <Debt>[].obs;
+  RxList<Debt> get debts => _financialContextService.allDebts;
   final selectedTab = 0.obs;
 
   late FinancialContextService _financialContextService;
@@ -21,13 +21,6 @@ class DebtController extends GetxController {
     super.onInit();
     _financialContextService = Get.find<FinancialContextService>();
     _financialEventsService = Get.find<FinancialEventsService>();
-
-    // Listen to changes from FinancialContextService and store worker
-    _workers.add(ever(_financialContextService.allDebts,
-        (_) => debts.assignAll(_financialContextService.allDebts)));
-
-    // Initial load from context service
-    debts.assignAll(_financialContextService.allDebts);
   }
 
   @override

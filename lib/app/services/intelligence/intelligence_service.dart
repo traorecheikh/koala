@@ -120,10 +120,12 @@ class IntelligenceSummary {
 
   String get statusDescription {
     if (healthScore >= 80) return 'Vos finances sont en excellente santé !';
-    if (healthScore >= 60)
+    if (healthScore >= 60) {
       return 'Vos finances vont bien, quelques points d\'attention.';
-    if (healthScore >= 40)
+    }
+    if (healthScore >= 40) {
       return 'Surveillez vos dépenses, des ajustements sont nécessaires.';
+    }
     return 'Situation critique, action immédiate recommandée.';
   }
 }

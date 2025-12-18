@@ -176,10 +176,12 @@ Future<void> _runDailyCheck() async {
     Hive.init(appDocDir.path);
 
     // Register Adapters (MUST match main.dart)
-    if (!Hive.isAdapterRegistered(1))
+    if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(TransactionTypeAdapter());
-    if (!Hive.isAdapterRegistered(2))
+    }
+    if (!Hive.isAdapterRegistered(2)) {
       Hive.registerAdapter(LocalTransactionAdapter());
+    }
     if (!Hive.isAdapterRegistered(40)) Hive.registerAdapter(BudgetAdapter());
 
     // 2. Open Boxes

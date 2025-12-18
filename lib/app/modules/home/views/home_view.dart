@@ -250,46 +250,58 @@ class HomeView extends GetView<HomeController> {
       body: Stack(
         children: [
           SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 8.h,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        const _Header(),
-                        SizedBox(height: 24.h),
-                        Padding(
-                            padding: EdgeInsets.only(bottom: 32.h),
-                            child: const EnhancedBalanceCard()),
-                        const _BudgetAlertsBanner(),
-                        const _GoalProgressMiniCards(),
-                        const _UpcomingBillsWidget(),
-                        Padding(
-                            padding: EdgeInsets.only(bottom: 24.h),
-                            child: const _QuickActions()),
-                        Padding(
-                            padding: EdgeInsets.only(bottom: 32.h),
-                            child: const FinancialHealthWidget()),
-                        const _TransactionsHeader(),
-                        SizedBox(height: 12.h),
-                      ]
-                          .animate(interval: 50.ms)
-                          .slideY(
-                            begin: 0.1,
-                            duration: 400.ms,
-                            curve: Curves.easeOutQuart,
-                          )
-                          .fadeIn(),
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification scrollInfo) {
+                // Require "hard scroll" (overscroll) to load more
+                // BouncingScrollPhysics allows scrolling past maxScrollExtent
+                if (scrollInfo.metrics.pixels >
+                    scrollInfo.metrics.maxScrollExtent + 50) {
+                  controller.loadMoreTransactions();
+                }
+                return false;
+              },
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 8.h,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          const _Header(),
+                          SizedBox(height: 24.h),
+                          Padding(
+                              padding: EdgeInsets.only(bottom: 32.h),
+                              child: const EnhancedBalanceCard()),
+                          const _BudgetAlertsBanner(),
+                          const _GoalProgressMiniCards(),
+                          const _UpcomingBillsWidget(),
+                          Padding(
+                              padding: EdgeInsets.only(bottom: 24.h),
+                              child: const _QuickActions()),
+                          Padding(
+                              padding: EdgeInsets.only(bottom: 32.h),
+                              child: const FinancialHealthWidget()),
+                          const _TransactionsHeader(),
+                          SizedBox(height: 12.h),
+                        ]
+                            .animate(interval: 50.ms)
+                            .slideY(
+                              begin: 0.1,
+                              duration: 400.ms,
+                              curve: Curves.easeOutQuart,
+                            )
+                            .fadeIn(),
+                      ),
                     ),
                   ),
-                ),
-                _TransactionSliverList(),
-                SliverToBoxAdapter(child: SizedBox(height: 24.h)),
-              ],
+                  const _TransactionSliverList(),
+                  SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+                ],
+              ),
             ),
           ),
 
@@ -966,7 +978,9 @@ class _TransactionSliverList extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final transactions = controller.transactions.take(5).toList();
+      final transactions = controller.transactions
+          .take(controller.displayedTransactionCount.value)
+          .toList();
 
       if (transactions.isEmpty) {
         return SliverFillRemaining(
@@ -983,13 +997,28 @@ class _TransactionSliverList extends GetView<HomeController> {
         );
       }
 
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final tx = transactions[index];
-            return _TransactionListItem(transaction: tx);
-          },
-          childCount: transactions.length,
+      return SliverPadding(
+        padding: EdgeInsets.only(
+            bottom: 32.h), // Add bottom padding for better scroll feel
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              // Helper to check if we need to load more
+              if (index >= transactions.length - 1) {
+                // Defer to next frame to avoid build conflicts, or simpler: handle in NotificationListener parent
+                // However, SliverChildBuilderDelegate builds lazily.
+                // A simple way is to check scroll position in the parent CustomScrollView, but here we are inside it.
+                // Actually, best place to detect scroll end is NotificationListener on the CustomScrollView.
+                // But let's trigger it here if we reach the end of the currently displayed list?
+                // No, that causes "infinite auto scroll" without user intent if the screen is tall.
+                // The user said "when u scroll hard".
+                // Let's implement NotificationListener in the build method.
+              }
+              final tx = transactions[index];
+              return _TransactionListItem(transaction: tx);
+            },
+            childCount: transactions.length,
+          ),
         ),
       );
     });

@@ -336,7 +336,7 @@ class _SimulationResultView extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           // Goal impacts
           if (result.goalProgressImpact.isNotEmpty)
             ...result.goalProgressImpact.entries.map((entry) {
@@ -369,7 +369,7 @@ class _SimulationResultView extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
         ],
         SizedBox(height: 40.h),
       ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/core/utils/icon_helper.dart';
@@ -10,11 +11,13 @@ import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/core/design_system.dart';
 
 void showAddCategoryDialog(BuildContext context, {Category? category}) {
-  showModalBottomSheet(
-    context: context,
+  Get.bottomSheet(
+    KoalaBottomSheet(
+      title: category != null ? 'Modifier la catégorie' : 'Nouvelle catégorie',
+      icon: category != null ? Icons.edit_rounded : Icons.category_rounded,
+      child: _AddCategorySheet(category: category),
+    ),
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => _AddCategorySheet(category: category),
   );
 }
 
@@ -38,25 +41,19 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
   final List<String> _iconKeys = IconHelper.allKeys;
 
   final List<Color> _colors = [
-    Colors.red,
-    Colors.pink,
-    Colors.purple,
-    Colors.deepPurple,
-    Colors.indigo,
-    Colors.blue,
-    Colors.lightBlue,
-    Colors.cyan,
-    Colors.teal,
-    Colors.green,
-    Colors.lightGreen,
-    Colors.lime,
-    Colors.yellow,
-    Colors.amber,
-    Colors.orange,
-    Colors.deepOrange,
-    Colors.brown,
-    Colors.grey,
-    Colors.blueGrey,
+    const Color(0xFFFF3B30), // iOS Red
+    const Color(0xFFFF9500), // iOS Orange
+    const Color(0xFFFFCC00), // iOS Yellow
+    const Color(0xFF34C759), // iOS Green
+    const Color(0xFF00C7BE), // iOS Teal
+    const Color(0xFF30B0C7), // iOS Cyan
+    const Color(0xFF007AFF), // iOS Blue
+    const Color(0xFF5856D6), // iOS Indigo
+    const Color(0xFFAF52DE), // iOS Purple
+    const Color(0xFFFF2D55), // iOS Pink
+    const Color(0xFFA2845E), // iOS Brown
+    const Color(0xFF8E8E93), // iOS Grey
+    const Color(0xFF1C1C1E), // Darker Grey / Carbon
   ];
 
   @override
@@ -81,29 +78,21 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
   }
 
   String _getColorName(Color color) {
-    // Map colors to their names for accessibility
-    final colorMap = {
-      Colors.red: 'Rouge',
-      Colors.pink: 'Rose',
-      Colors.purple: 'Violet',
-      Colors.deepPurple: 'Violet foncé',
-      Colors.indigo: 'Indigo',
-      Colors.blue: 'Bleu',
-      Colors.lightBlue: 'Bleu clair',
-      Colors.cyan: 'Cyan',
-      Colors.teal: 'Bleu-vert',
-      Colors.green: 'Vert',
-      Colors.lightGreen: 'Vert clair',
-      Colors.lime: 'Citron vert',
-      Colors.yellow: 'Jaune',
-      Colors.amber: 'Ambre',
-      Colors.orange: 'Orange',
-      Colors.deepOrange: 'Orange foncé',
-      Colors.brown: 'Marron',
-      Colors.grey: 'Gris',
-      Colors.blueGrey: 'Gris-bleu',
-    };
-    return colorMap[color] ?? 'Couleur';
+    // Basic color naming for Tooltip/Semantics
+    if (color == const Color(0xFFFF3B30)) return 'Rouge';
+    if (color == const Color(0xFFFF9500)) return 'Orange';
+    if (color == const Color(0xFFFFCC00)) return 'Jaune';
+    if (color == const Color(0xFF34C759)) return 'Vert';
+    if (color == const Color(0xFF00C7BE)) return 'Teal';
+    if (color == const Color(0xFF30B0C7)) return 'Cyan';
+    if (color == const Color(0xFF007AFF)) return 'Bleu';
+    if (color == const Color(0xFF5856D6)) return 'Indigo';
+    if (color == const Color(0xFFAF52DE)) return 'Violet';
+    if (color == const Color(0xFFFF2D55)) return 'Rose';
+    if (color == const Color(0xFFA2845E)) return 'Marron';
+    if (color == const Color(0xFF8E8E93)) return 'Gris';
+    if (color == const Color(0xFF1C1C1E)) return 'Noir';
+    return 'Couleur';
   }
 
   Future<void> _save() async {
@@ -131,256 +120,236 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isEditing = widget.category != null;
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        children: [
-          // Handle
-          // Handle
-          const KoalaDragHandle(),
-
-          Padding(
-            padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  isEditing ? 'Modifier la catégorie' : 'Nouvelle catégorie',
-                  style: theme.textTheme.titleLarge,
-                ),
-                Semantics(
-                  button: true,
-                  enabled: true,
-                  onTap: () => NavigationHelper.safeBack(),
-                  label: 'Fermer le dialogue',
-                  child:
-                      CloseButton(onPressed: () => NavigationHelper.safeBack()),
-                ),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: EdgeInsets.all(24.w),
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 48.h),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Type Selector
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(4.w),
+              decoration: BoxDecoration(
+                color: KoalaColors.background(context),
+                borderRadius: BorderRadius.circular(KoalaRadius.md),
+              ),
+              child: Row(
                 children: [
-                  // Type Selector
-                  Semantics(
-                    label:
-                        'Type de catégorie: ${_selectedType == TransactionType.expense ? "Dépense" : "Revenu"}',
-                    container: true,
-                    child: SegmentedButton<TransactionType>(
-                      segments: const [
-                        ButtonSegment(
-                            value: TransactionType.expense,
-                            label: Text('Dépense')),
-                        ButtonSegment(
-                            value: TransactionType.income,
-                            label: Text('Revenu')),
-                      ],
-                      selected: {_selectedType},
-                      onSelectionChanged: (Set<TransactionType> newSelection) {
-                        setState(() {
-                          _selectedType = newSelection.first;
-                        });
-                      },
-                    ),
+                  _TypeButton(
+                    label: 'Dépense',
+                    type: TransactionType.expense,
+                    isSelected: _selectedType == TransactionType.expense,
+                    onTap: () =>
+                        setState(() => _selectedType = TransactionType.expense),
                   ),
-                  SizedBox(height: 24.h),
-
-                  // Preview Icon
-                  Center(
-                    child: Container(
-                      width: 80.w,
-                      height: 80.w,
-                      decoration: BoxDecoration(
-                        color: _selectedColor.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _selectedColor, width: 2),
-                      ),
-                      child: CategoryIcon(
-                        iconKey: _selectedIconKey,
-                        size: 40.sp,
-                        color: _selectedColor,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-
-                  // Name Field
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Nom de la catégorie',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                    ),
-                    validator: (v) =>
-                        v!.isEmpty ? 'Category name is required' : null,
-                  ),
-                  SizedBox(height: 24.h),
-
-                  // Icon Picker
-                  Text('Icône', style: theme.textTheme.titleMedium),
-                  SizedBox(height: 12.h),
-                  Container(
-                    height: 200.h,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: GridView.builder(
-                      padding: EdgeInsets.all(12.w),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 6,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemCount: _iconKeys.length,
-                      itemBuilder: (context, index) {
-                        final key = _iconKeys[index];
-                        final isSelected = _selectedIconKey == key;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedIconKey = key),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? _selectedColor.withOpacity(0.2)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(8.r),
-                              border: isSelected
-                                  ? Border.all(color: _selectedColor, width: 2)
-                                  : Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                CategoryIcon(
-                                  iconKey: key,
-                                  size: 24.sp,
-                                  color: isSelected
-                                      ? _selectedColor
-                                      : Colors.grey.shade700,
-                                ),
-                                if (isSelected)
-                                  Positioned(
-                                    top: 2.h,
-                                    right: 2.h,
-                                    child: Container(
-                                      width: 20.w,
-                                      height: 20.h,
-                                      decoration: BoxDecoration(
-                                        color: _selectedColor,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 12,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-
-                  // Color Picker
-                  Text('Couleur', style: theme.textTheme.titleMedium),
-                  SizedBox(height: 12.h),
-                  Wrap(
-                    spacing: 12.w,
-                    runSpacing: 12.h,
-                    children: _colors.map((color) {
-                      final isSelected = _selectedColor.value == color.value;
-                      final colorName = _getColorName(color);
-                      return Semantics(
-                        button: true,
-                        enabled: true,
-                        onTap: () => setState(() => _selectedColor = color),
-                        label:
-                            'Couleur $colorName${isSelected ? ", sélectionnée" : ""}',
-                        child: Tooltip(
-                          message: colorName,
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedColor = color),
-                            child: Container(
-                              width: 48
-                                  .w, // Increased for accessibility (48x48dp min)
-                              height: 48.w,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border: isSelected
-                                    ? Border.all(color: Colors.black, width: 3)
-                                    : Border.all(color: Colors.grey.shade300),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                  )
-                                ],
-                              ),
-                              child: isSelected
-                                  ? const Icon(Icons.check,
-                                      color: Colors.white, size: 20)
-                                  : null,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  SizedBox(height: 48.h),
-
-                  // Save Button
-                  Semantics(
-                    button: true,
-                    enabled: true,
-                    onTap: _save,
-                    label: 'Enregistrer la catégorie',
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 56.h, // Increased for accessibility (min 48dp)
-                      child: ElevatedButton(
-                        onPressed: _save,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                        ),
-                        child: Text(
-                          'Enregistrer',
-                          style:
-                              TextStyle(fontSize: 16.sp, color: Colors.white),
-                        ),
-                      ),
-                    ),
+                  _TypeButton(
+                    label: 'Revenu',
+                    type: TransactionType.income,
+                    isSelected: _selectedType == TransactionType.income,
+                    onTap: () =>
+                        setState(() => _selectedType = TransactionType.income),
                   ),
                 ],
               ),
             ),
+            SizedBox(height: 32.h),
+
+            // Preview & Name
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Hero(
+                  tag: widget.category?.id ?? 'new_category_icon',
+                  child: Container(
+                    width: 72.w,
+                    height: 72.w,
+                    decoration: BoxDecoration(
+                      color: _selectedColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _selectedColor.withOpacity(0.5),
+                        width: 2,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: CategoryIcon(
+                      iconKey: _selectedIconKey,
+                      size: 32.sp,
+                      color: _selectedColor,
+                    ),
+                  ).animate(key: ValueKey(_selectedIconKey)).shimmer(
+                        duration: 800.ms,
+                        color: _selectedColor.withOpacity(0.2),
+                      ),
+                ),
+                SizedBox(width: 20.w),
+                Expanded(
+                  child: KoalaTextField(
+                    controller: _nameController,
+                    label: 'Nom de la catégorie',
+                    validator: (v) => v!.isEmpty ? 'Le nom est requis' : null,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 32.h),
+
+            // Icon Picker
+            Text('Icône', style: KoalaTypography.heading4(context)),
+            SizedBox(height: 16.h),
+            Container(
+              height: 220.h,
+              decoration: BoxDecoration(
+                color: KoalaColors.background(context),
+                borderRadius: BorderRadius.circular(KoalaRadius.lg),
+                border: Border.all(color: KoalaColors.border(context)),
+              ),
+              child: GridView.builder(
+                padding: EdgeInsets.all(12.w),
+                physics: const BouncingScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 5,
+                  crossAxisSpacing: 12.w,
+                  mainAxisSpacing: 12.w,
+                ),
+                itemCount: _iconKeys.length,
+                itemBuilder: (context, index) {
+                  final key = _iconKeys[index];
+                  final isSelected = _selectedIconKey == key;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _selectedIconKey = key);
+                    },
+                    child: AnimatedContainer(
+                      duration: KoalaAnim.fast,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? _selectedColor
+                            : KoalaColors.surface(context),
+                        borderRadius: BorderRadius.circular(KoalaRadius.md),
+                        boxShadow: isSelected ? KoalaShadows.sm : null,
+                        border: Border.all(
+                          color: isSelected
+                              ? _selectedColor
+                              : KoalaColors.border(context),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: CategoryIcon(
+                          iconKey: key,
+                          size: 24.sp,
+                          color: isSelected
+                              ? Colors.white
+                              : KoalaColors.textSecondary(context),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 32.h),
+
+            // Color Picker
+            Text('Couleur', style: KoalaTypography.heading4(context)),
+            SizedBox(height: 16.h),
+            Center(
+              child: Wrap(
+                spacing: 16.w,
+                runSpacing: 16.w,
+                alignment: WrapAlignment.center,
+                children: _colors.map((color) {
+                  final isSelected = _selectedColor.value == color.value;
+                  return Tooltip(
+                    message: _getColorName(color),
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        setState(() => _selectedColor = color);
+                      },
+                      child: AnimatedContainer(
+                        duration: KoalaAnim.fast,
+                        width: 44.w,
+                        height: 44.w,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? KoalaColors.text(context)
+                                : Colors.transparent,
+                            width: 3,
+                          ),
+                          boxShadow: isSelected ? KoalaShadows.md : null,
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check,
+                                color: Colors.white, size: 20)
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            SizedBox(height: 48.h),
+
+            // Save Button
+            KoalaButton(
+              text: widget.category != null
+                  ? 'Mettre à jour'
+                  : 'Créer la catégorie',
+              onPressed: _save,
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1);
+  }
+}
+
+class _TypeButton extends StatelessWidget {
+  final String label;
+  final TransactionType type;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TypeButton({
+    required this.label,
+    required this.type,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12.h),
+          decoration: BoxDecoration(
+            color:
+                isSelected ? KoalaColors.surface(context) : Colors.transparent,
+            borderRadius: BorderRadius.circular(KoalaRadius.sm),
+            boxShadow: isSelected ? KoalaShadows.xs : null,
           ),
-        ],
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected
+                  ? KoalaColors.text(context)
+                  : KoalaColors.textSecondary(context),
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              fontSize: 15.sp,
+            ),
+          ),
+        ),
       ),
     );
   }

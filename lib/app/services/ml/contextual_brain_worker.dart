@@ -1,4 +1,3 @@
-import 'package:koaa/app/data/models/local_transaction.dart';
 
 /// Payload for the worker
 class ContextualTrainPayload {

@@ -11,12 +11,15 @@ import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:uuid/uuid.dart';
 
 enum BudgetStatus { safe, warning, exceeded, critical }
+
 enum Trend { improving, stable, worsening }
 
 class BudgetController extends GetxController {
-  final budgets = <Budget>[].obs;
-  final categories = <Category>[].obs;
-  final transactions = <LocalTransaction>[].obs;
+  // Use getters to point directly to FinancialContextService observables
+  RxList<Budget> get budgets => _financialContextService.allBudgets;
+  RxList<Category> get categories => _financialContextService.allCategories;
+  RxList<LocalTransaction> get transactions =>
+      _financialContextService.allTransactions;
 
   late FinancialContextService _financialContextService;
   late FinancialEventsService _financialEventsService;
@@ -27,16 +30,6 @@ class BudgetController extends GetxController {
     super.onInit();
     _financialContextService = Get.find<FinancialContextService>();
     _financialEventsService = Get.find<FinancialEventsService>();
-    
-    // Listen to changes from FinancialContextService and store workers
-    _workers.add(ever(_financialContextService.allBudgets, (_) => budgets.assignAll(_financialContextService.allBudgets)));
-    _workers.add(ever(_financialContextService.allCategories, (_) => categories.assignAll(_financialContextService.allCategories)));
-    _workers.add(ever(_financialContextService.allTransactions, (_) => transactions.assignAll(_financialContextService.allTransactions)));
-
-    // Initial load from context service
-    budgets.assignAll(_financialContextService.allBudgets);
-    categories.assignAll(_financialContextService.allCategories);
-    transactions.assignAll(_financialContextService.allTransactions);
   }
 
   @override
@@ -51,20 +44,21 @@ class BudgetController extends GetxController {
   double getSpentAmount(String categoryId) {
     final now = DateTime.now();
     final category = categories.firstWhereOrNull((c) => c.id == categoryId);
-    
+
     if (category?.type == TransactionType.income) {
-       final start = DateTime(now.year, now.month, 1);
-       final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
-       return transactions
-          .where((t) => 
-              t.categoryId == categoryId && 
+      final start = DateTime(now.year, now.month, 1);
+      final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+      return transactions
+          .where((t) =>
+              t.categoryId == categoryId &&
               t.type == TransactionType.income &&
-              t.date.isAfter(start) && 
+              t.date.isAfter(start) &&
               t.date.isBefore(end))
           .fold(0.0, (sum, t) => sum + t.amount);
     }
-    
-    return _financialContextService.getSpentAmountForCategory(categoryId, now.year, now.month);
+
+    return _financialContextService.getSpentAmountForCategory(
+        categoryId, now.year, now.month);
   }
 
   Category? getCategory(String id) {
@@ -77,8 +71,9 @@ class BudgetController extends GetxController {
       final now = DateTime.now();
       // Check if budget exists for category for current month/year
       final existing = budgets.firstWhereOrNull((b) =>
-        b.categoryId == categoryId && b.year == now.year && b.month == now.month
-      );
+          b.categoryId == categoryId &&
+          b.year == now.year &&
+          b.month == now.month);
       if (existing != null) {
         existing.amount = amount;
         await existing.save();
@@ -123,8 +118,10 @@ class BudgetController extends GetxController {
 
   // Detailed budget vs actual with trends
   double getBudgetPerformance(String categoryId, int year, int month) {
-    final budgeted = _financialContextService.getBudgetedAmountForCategory(categoryId, year, month);
-    final spent = _financialContextService.getSpentAmountForCategory(categoryId, year, month);
+    final budgeted = _financialContextService.getBudgetedAmountForCategory(
+        categoryId, year, month);
+    final spent = _financialContextService.getSpentAmountForCategory(
+        categoryId, year, month);
     return budgeted - spent; // Positive means under budget, negative means over
   }
 
@@ -172,16 +169,17 @@ class BudgetController extends GetxController {
     final category = categories.firstWhereOrNull((c) => c.id == categoryId);
     final isIncome = category?.type == TransactionType.income;
 
-    final budgeted = _financialContextService.getBudgetedAmountForCategory(categoryId, year, month);
+    final budgeted = _financialContextService.getBudgetedAmountForCategory(
+        categoryId, year, month);
     if (budgeted == 0) return BudgetStatus.safe;
 
     double actual = 0.0;
 
     if (isIncome) {
-       // For income, sum up earnings
-       final start = DateTime(year, month, 1);
-       final end = DateTime(year, month + 1, 0, 23, 59, 59);
-       actual = transactions
+      // For income, sum up earnings
+      final start = DateTime(year, month, 1);
+      final end = DateTime(year, month + 1, 0, 23, 59, 59);
+      actual = transactions
           .where((t) =>
               t.categoryId == categoryId &&
               t.type == TransactionType.income &&
@@ -189,60 +187,64 @@ class BudgetController extends GetxController {
               t.date.isBefore(end))
           .fold(0.0, (sum, t) => sum + t.amount);
     } else {
-       // For expenses, get spent amount
-       actual = _financialContextService.getSpentAmountForCategory(categoryId, year, month);
+      // For expenses, get spent amount
+      actual = _financialContextService.getSpentAmountForCategory(
+          categoryId, year, month);
     }
 
     final percentage = (actual / budgeted) * 100;
-    final budget = budgets.firstWhereOrNull((b) => b.categoryId == categoryId && b.year == year && b.month == month);
+    final budget = budgets.firstWhereOrNull((b) =>
+        b.categoryId == categoryId && b.year == year && b.month == month);
 
     if (isIncome) {
-       // INCOME LOGIC: Higher is better (reaching income target)
-       // 100%+ = exceeded target (safe/good)
-       // 80-99% = on track (safe - close to target)
-       // 0-79% = behind target (critical - far from target)
-       if (percentage >= 100) {
-         return BudgetStatus.exceeded; // Exceeded income target (positive outcome)
-       } else if (percentage >= 80) {
-         return BudgetStatus.safe; // On track, close to target (Positive)
-       } else {
-         return BudgetStatus.critical; // Behind income target
-       }
+      // INCOME LOGIC: Higher is better (reaching income target)
+      // 100%+ = exceeded target (safe/good)
+      // 80-99% = on track (safe - close to target)
+      // 0-79% = behind target (critical - far from target)
+      if (percentage >= 100) {
+        return BudgetStatus
+            .exceeded; // Exceeded income target (positive outcome)
+      } else if (percentage >= 80) {
+        return BudgetStatus.safe; // On track, close to target (Positive)
+      } else {
+        return BudgetStatus.critical; // Behind income target
+      }
     } else {
-       // EXPENSE LOGIC: Lower is better (staying under expense limit)
-       // 0-79% = safe (well under budget)
-       // 80-99% = warning (approaching limit)
-       // 100%+ = exceeded (over budget)
-       if (percentage >= 100) {
-         if (budget != null) {
-            _financialEventsService.emitBudgetExceeded(
-               budgetId: budget.id,
-               categoryId: categoryId,
-               overshootAmount: actual - budgeted
-             );
-         }
-         return BudgetStatus.exceeded; // Over expense budget (negative outcome)
-       } else if (percentage >= 80) {
-          if (budget != null) {
-             _financialEventsService.emitBudgetApproachingLimit(
-               budgetId: budget.id,
-               categoryId: categoryId,
-               percentageSpent: percentage
-             );
-          }
-         return BudgetStatus.warning; // Approaching expense limit
-       } else {
-         return BudgetStatus.safe; // Well under expense budget (positive outcome)
-       }
+      // EXPENSE LOGIC: Lower is better (staying under expense limit)
+      // 0-79% = safe (well under budget)
+      // 80-99% = warning (approaching limit)
+      // 100%+ = exceeded (over budget)
+      if (percentage >= 100) {
+        if (budget != null) {
+          _financialEventsService.emitBudgetExceeded(
+              budgetId: budget.id,
+              categoryId: categoryId,
+              overshootAmount: actual - budgeted);
+        }
+        return BudgetStatus.exceeded; // Over expense budget (negative outcome)
+      } else if (percentage >= 80) {
+        if (budget != null) {
+          _financialEventsService.emitBudgetApproachingLimit(
+              budgetId: budget.id,
+              categoryId: categoryId,
+              percentageSpent: percentage);
+        }
+        return BudgetStatus.warning; // Approaching expense limit
+      } else {
+        return BudgetStatus
+            .safe; // Well under expense budget (positive outcome)
+      }
     }
   }
 
   // Trend analysis: improving, stable, worsening
   Trend getBudgetTrend(String categoryId) {
     final now = DateTime.now();
-    final currentMonthPerformance = getBudgetPerformance(categoryId, now.year, now.month);
+    final currentMonthPerformance =
+        getBudgetPerformance(categoryId, now.year, now.month);
     final previousMonth = DateTime(now.year, now.month - 1, 1);
-    final previousMonthPerformance = getBudgetPerformance(categoryId, previousMonth.year, previousMonth.month);
+    final previousMonthPerformance = getBudgetPerformance(
+        categoryId, previousMonth.year, previousMonth.month);
 
     if (currentMonthPerformance > previousMonthPerformance) {
       return Trend.improving;
@@ -253,5 +255,3 @@ class BudgetController extends GetxController {
     }
   }
 }
-
-

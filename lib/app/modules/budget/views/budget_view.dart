@@ -439,7 +439,7 @@ class _GlobalBudgetCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${NumberFormat.compact(locale: 'fr_FR').format(totalSpent)}',
+                              NumberFormat.compact(locale: 'fr_FR').format(totalSpent),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 13.sp,

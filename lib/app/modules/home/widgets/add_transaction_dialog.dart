@@ -304,7 +304,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     final percentUsed =
         ((currentSpent + transactionAmount) / budgetAmount * 100).clamp(0, 999);
 
-    String _formatAmount(double amount) {
+    String formatAmount(double amount) {
       return NumberFormat.compact(locale: 'fr_FR').format(amount.round());
     }
 
@@ -445,7 +445,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             icon: CupertinoIcons.chart_pie,
                             iconColor: Colors.blue,
                             label: 'Budget alloué',
-                            value: '${_formatAmount(budgetAmount)} F',
+                            value: '${formatAmount(budgetAmount)} F',
                             isDark: isDark,
                           ),
                           Divider(
@@ -454,7 +454,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             icon: CupertinoIcons.money_dollar_circle,
                             iconColor: Colors.orange,
                             label: 'Déjà dépensé',
-                            value: '${_formatAmount(currentSpent)} F',
+                            value: '${formatAmount(currentSpent)} F',
                             isDark: isDark,
                           ),
                           Divider(
@@ -463,7 +463,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             icon: CupertinoIcons.plus_circle,
                             iconColor: Colors.purple,
                             label: 'Cette transaction',
-                            value: '${_formatAmount(transactionAmount)} F',
+                            value: '${formatAmount(transactionAmount)} F',
                             isDark: isDark,
                           ),
                           Divider(
@@ -472,7 +472,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                             icon: CupertinoIcons.exclamationmark_circle,
                             iconColor: KoalaColors.destructive,
                             label: 'Dépassement',
-                            value: '+${_formatAmount(overage)} F',
+                            value: '+${formatAmount(overage)} F',
                             isDark: isDark,
                             isWarning: true,
                           ),

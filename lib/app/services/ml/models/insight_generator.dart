@@ -256,8 +256,7 @@ class InsightGenerator {
         insights.add(MLInsight(
           id: 'penalty_reckless_${DateTime.now().day}',
           title: '⚠️ Dépenses impulsives détectées',
-          description: penalty.reason +
-              '. Une grosse dépense (>30% du revenu) en une seule fois peut déséquilibrer votre budget.',
+          description: '${penalty.reason}. Une grosse dépense (>30% du revenu) en une seule fois peut déséquilibrer votre budget.',
           type: InsightType.warning,
           priority: 9,
           actionLabel: 'Voir mes dépenses',
@@ -266,8 +265,7 @@ class InsightGenerator {
         insights.add(MLInsight(
           id: 'penalty_velocity_${DateTime.now().day}',
           title: '🚀 Vous dépensez trop vite',
-          description: penalty.reason +
-              '. Essayez de répartir vos dépenses sur tout le mois.',
+          description: '${penalty.reason}. Essayez de répartir vos dépenses sur tout le mois.',
           type: InsightType.warning,
           priority: 8,
         ));
@@ -275,8 +273,7 @@ class InsightGenerator {
         insights.add(MLInsight(
           id: 'penalty_debt_${DateTime.now().day}',
           title: '💳 Niveau de dette élevé',
-          description: penalty.reason +
-              '. Considérez un plan de remboursement accéléré.',
+          description: '${penalty.reason}. Considérez un plan de remboursement accéléré.',
           type: InsightType.warning,
           priority: 9,
           actionLabel: 'Gérer mes dettes',
@@ -286,7 +283,7 @@ class InsightGenerator {
           id: 'penalty_lending_${DateTime.now().day}',
           title: '🤝 Trop d\'argent prêté',
           description:
-              penalty.reason + '. Cet argent n\'est pas garanti de revenir.',
+              '${penalty.reason}. Cet argent n\'est pas garanti de revenir.',
           type: InsightType.warning,
           priority: 7,
         ));

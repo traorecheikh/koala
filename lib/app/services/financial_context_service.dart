@@ -22,6 +22,12 @@ class FinancialContextService extends GetxService {
   final RxList<RecurringTransaction> allRecurringTransactions =
       <RecurringTransaction>[].obs;
 
+  // Internal caches for optimized queries (O(1) lookups instead of O(N) filters)
+  final RxMap<String, List<LocalTransaction>> _transactionsByCategory =
+      <String, List<LocalTransaction>>{}.obs;
+  final RxMap<String, List<LocalTransaction>> _transactionsByDebt =
+      <String, List<LocalTransaction>>{}.obs;
+
   // Computed metrics
   final RxDouble currentBalance = 0.0.obs;
   final RxDouble totalMonthlyIncome = 0.0.obs;
@@ -83,6 +89,8 @@ class FinancialContextService extends GetxService {
     totalOutstandingDebt.value = 0.0;
     totalMonthlyDebtPayments.value = 0.0;
     averageMonthlySavings.value = 0.0;
+    _transactionsByCategory.clear();
+    _transactionsByDebt.clear();
     _logger.i('FinancialContextService memory cleared.');
   }
 
@@ -133,11 +141,31 @@ class FinancialContextService extends GetxService {
     _logger.i('FinancialContextService: _loadAllData completed.');
   }
 
-  void _loadTransactions() =>
-      allTransactions.assignAll(Hive.box<LocalTransaction>('transactionBox')
-          .values
-          .where((t) => !t.isHidden)
-          .toList());
+  void _loadTransactions() {
+    final transactions = Hive.box<LocalTransaction>('transactionBox')
+        .values
+        .where((t) => !t.isHidden)
+        .toList();
+
+    allTransactions.assignAll(transactions);
+
+    // Update caches
+    final byCategory = <String, List<LocalTransaction>>{};
+    final byDebt = <String, List<LocalTransaction>>{};
+
+    for (var tx in transactions) {
+      if (tx.categoryId != null) {
+        byCategory.putIfAbsent(tx.categoryId!, () => []).add(tx);
+      }
+      if (tx.linkedDebtId != null) {
+        byDebt.putIfAbsent(tx.linkedDebtId!, () => []).add(tx);
+      }
+    }
+
+    _transactionsByCategory.assignAll(byCategory);
+    _transactionsByDebt.assignAll(byDebt);
+  }
+
   void _loadJobs() => allJobs.assignAll(Hive.box<Job>('jobBox')
       .values
       .toList()
@@ -170,10 +198,8 @@ class FinancialContextService extends GetxService {
       // Self-healing: Ensure debt.remainingAmount matches the sum of linked transactions
       await _debtLock.protect(() async {
         for (var debt in allDebts) {
-          // Find all linked repayment transactions
-          final linkedTxs = allTransactions
-              .where((tx) => tx.linkedDebtId == debt.id)
-              .toList();
+          // Find all linked repayment transactions using cache (O(1) lookup)
+          final linkedTxs = _transactionsByDebt[debt.id] ?? [];
 
           double totalRepaid = 0.0;
 
@@ -378,11 +404,12 @@ class FinancialContextService extends GetxService {
     final startOfMonth = DateTime(year, month, 1);
     final endOfMonth = DateTime(year, month + 1, 0, 23, 59, 59);
 
-    return allTransactions
+    final transactions = _transactionsByCategory[categoryId] ?? [];
+
+    return transactions
         .where((tx) =>
-            tx.categoryId == categoryId &&
             tx.type == TransactionType.expense &&
-            tx.date.isAfter(startOfMonth) &&
+            !tx.date.isBefore(startOfMonth) &&
             tx.date.isBefore(endOfMonth))
         .fold(0.0, (sum, tx) => sum + tx.amount);
   }

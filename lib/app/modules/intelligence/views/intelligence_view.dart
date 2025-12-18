@@ -57,8 +57,9 @@ class IntelligenceView extends StatelessWidget {
           Obx(() {
             // Determine if there are active insights using HomeController
             // Note: requires finding HomeController in view or passing it
-            if (!Get.isRegistered<HomeController>())
+            if (!Get.isRegistered<HomeController>()) {
               return const SizedBox.shrink();
+            }
             final homeCtrl = Get.find<HomeController>();
             final hasInsights = homeCtrl.insights.isNotEmpty;
 
