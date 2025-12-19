@@ -127,3 +127,93 @@ class GoalMilestoneAdapter extends TypeAdapter<GoalMilestone> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class GoalTypeAdapter extends TypeAdapter<GoalType> {
+  @override
+  final typeId = 51;
+
+  @override
+  GoalType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return GoalType.savings;
+      case 1:
+        return GoalType.debtPayoff;
+      case 2:
+        return GoalType.purchase;
+      case 3:
+        return GoalType.custom;
+      default:
+        return GoalType.savings;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, GoalType obj) {
+    switch (obj) {
+      case GoalType.savings:
+        writer.writeByte(0);
+      case GoalType.debtPayoff:
+        writer.writeByte(1);
+      case GoalType.purchase:
+        writer.writeByte(2);
+      case GoalType.custom:
+        writer.writeByte(3);
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GoalTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class GoalStatusAdapter extends TypeAdapter<GoalStatus> {
+  @override
+  final typeId = 52;
+
+  @override
+  GoalStatus read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return GoalStatus.active;
+      case 1:
+        return GoalStatus.completed;
+      case 2:
+        return GoalStatus.paused;
+      case 3:
+        return GoalStatus.abandoned;
+      default:
+        return GoalStatus.active;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, GoalStatus obj) {
+    switch (obj) {
+      case GoalStatus.active:
+        writer.writeByte(0);
+      case GoalStatus.completed:
+        writer.writeByte(1);
+      case GoalStatus.paused:
+        writer.writeByte(2);
+      case GoalStatus.abandoned:
+        writer.writeByte(3);
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GoalStatusAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
