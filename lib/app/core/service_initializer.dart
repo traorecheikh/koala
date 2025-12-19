@@ -28,6 +28,7 @@ import 'package:koaa/app/services/events/financial_events_service.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/intelligence/ai_learning_profile.dart';
 import 'package:koaa/app/services/intelligence/ai_learning_service.dart';
+import 'package:koaa/app/services/achievements_service.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/smart_financial_brain.dart';
@@ -66,6 +67,7 @@ class ServiceInitializer {
 
     // 5. UI Layer (Parallel)
     _initWidgets(); // Fire and forget or await if critical for first frame
+    print('ServiceInitializer: Initialization DONE.');
   }
 
   /// Initialize notification and background worker
@@ -73,7 +75,6 @@ class ServiceInitializer {
     await NotificationService.initialize();
     Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: false,
     );
     // Register background task
     // Using Future.microtask to not block init
@@ -104,19 +105,15 @@ class ServiceInitializer {
 
     // Open all boxes in parallel to maximize IO throughput
     await Future.wait([
-      // Encrypted boxes (sensitive)
-      Hive.openBox<LocalUser>('userBox', encryptionCipher: _hiveCipher),
-      Hive.openBox<LocalTransaction>('transactionBox',
-          encryptionCipher: _hiveCipher),
-      Hive.openBox<RecurringTransaction>('recurringTransactionBox',
-          encryptionCipher: _hiveCipher),
-      Hive.openBox<Job>('jobBox', encryptionCipher: _hiveCipher),
-      Hive.openBox<SavingsGoal>('savingsGoalBox',
-          encryptionCipher: _hiveCipher),
-      Hive.openBox<Budget>('budgetBox', encryptionCipher: _hiveCipher),
-      Hive.openBox<Debt>('debtBox', encryptionCipher: _hiveCipher),
-      Hive.openBox<FinancialGoal>('financialGoalBox',
-          encryptionCipher: _hiveCipher),
+      // Encrypted boxes (sensitive) - with fallback for legacy unencrypted data
+      _openBoxSafe<LocalUser>('userBox'),
+      _openBoxSafe<LocalTransaction>('transactionBox'),
+      _openBoxSafe<RecurringTransaction>('recurringTransactionBox'),
+      _openBoxSafe<Job>('jobBox'),
+      _openBoxSafe<SavingsGoal>('savingsGoalBox'),
+      _openBoxSafe<Budget>('budgetBox'),
+      _openBoxSafe<Debt>('debtBox'),
+      _openBoxSafe<FinancialGoal>('financialGoalBox'),
 
       // Non-sensitive boxes
       Hive.openBox<Category>('categoryBox'),
@@ -126,6 +123,13 @@ class ServiceInitializer {
       Hive.openBox<UserBadge>('userBadgeBox'),
       Hive.openBox<AILearningProfile>('aiLearningBox'),
     ]);
+
+    // Apply saved dark mode immediately after Hive init
+    final settingsBox = Hive.box('settingsBox');
+    final savedIsDark = settingsBox.get('isDarkMode');
+    if (savedIsDark != null) {
+      Get.changeThemeMode(savedIsDark ? ThemeMode.dark : ThemeMode.light);
+    }
   }
 
   /// Run data migrations
@@ -161,7 +165,18 @@ class ServiceInitializer {
 
       debugPrint(
           '[Migration] Migrating ${transactions.length} transactions...');
-      IsarService.addTransactions(transactions);
+
+      // Optimize: Process in chunks to avoid blocking UI (Splash animation)
+      const chunkSize = 200;
+      for (var i = 0; i < transactions.length; i += chunkSize) {
+        final end = (i + chunkSize < transactions.length)
+            ? i + chunkSize
+            : transactions.length;
+        final chunk = transactions.sublist(i, end);
+        IsarService.addTransactions(chunk); // Removed await (sync method)
+        // Yield to allow UI frame rendering
+        await Future.delayed(Duration.zero);
+      }
 
       await _secureStorage.write(key: 'isar_tx_migration_v1', value: 'true');
       debugPrint(
@@ -184,6 +199,7 @@ class ServiceInitializer {
     try {
       final allTx = await IsarService.getAllTransactions();
       int fixed = 0;
+      int processed = 0;
 
       for (final tx in allTx) {
         bool needsUpdate = false;
@@ -223,8 +239,14 @@ class ServiceInitializer {
         }
 
         if (needsUpdate) {
-          IsarService.updateTransaction(tx);
+          IsarService.updateTransaction(tx); // Removed await (sync method)
           fixed++;
+        }
+
+        processed++;
+        // Yield every 50 items to keep animation smooth
+        if (processed % 50 == 0) {
+          await Future.delayed(Duration.zero);
         }
       }
 
@@ -252,6 +274,7 @@ class ServiceInitializer {
     Get.lazyPut(() => SettingsController(), fenix: true);
     Get.put<PinService>(PinService(), permanent: true);
     Get.put<SecurityService>(SecurityService(), permanent: true);
+    Get.put<AchievementsService>(AchievementsService(), permanent: true);
 
     // Heavy ML Services - Parallelize initialization
     await Future.wait([
@@ -286,12 +309,32 @@ class ServiceInitializer {
     // Don't await updateAllWidgets in critical path
     WidgetService.updateAllWidgets();
   }
+
+  /// Helper to safely open a box with encryption fallback
+  static Future<Box<T>> _openBoxSafe<T>(String name) async {
+    try {
+      return await Hive.openBox<T>(name, encryptionCipher: _hiveCipher);
+    } catch (e) {
+      debugPrint(
+          'Warning: Failed to open encrypted box "$name" ($e). Attempting fallback to unencrypted.');
+      try {
+        // Fallback: Try opening without encryption (legacy data support)
+        return await Hive.openBox<T>(name);
+      } catch (e2) {
+        debugPrint(
+            'Critical: Failed to open box "$name" even without encryption: $e2');
+        rethrow;
+      }
+    }
+  }
 }
 
 /// App lifecycle observer for background tasks
 class KoalaLifecycleObserver extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    NotificationService.isForeground = (state == AppLifecycleState.resumed);
+
     if (state == AppLifecycleState.paused) {
       _scheduleWelcomeNotification();
     } else if (state == AppLifecycleState.resumed) {
