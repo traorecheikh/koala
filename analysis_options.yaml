@@ -23,7 +23,7 @@ linter:
   rules:
     avoid_print: false
     annotate_overrides: false
-    must_call_super: false
+
     unnecessary_brace_in_string_interps: false
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
