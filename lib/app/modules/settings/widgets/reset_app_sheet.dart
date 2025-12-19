@@ -62,7 +62,7 @@ class _ResetAppSheetState extends State<_ResetAppSheet> {
           Container(
             padding: EdgeInsets.all(20.w),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: Colors.red.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
