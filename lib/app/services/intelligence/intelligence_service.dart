@@ -10,6 +10,7 @@ import 'package:koaa/app/services/ml/models/behavior_profiler.dart';
 import 'package:koaa/app/services/ml/models/financial_health_scorer.dart';
 import 'package:koaa/app/services/ml/smart_financial_brain.dart';
 import 'package:koaa/app/services/intelligence/ai_learning_service.dart';
+import 'package:hive_ce/hive.dart';
 
 class ProactiveAlert {
   final String id;
@@ -18,7 +19,10 @@ class ProactiveAlert {
   final AlertSeverity severity;
   final DateTime timestamp;
   final String actionSuggestion;
-  final dynamic icon;
+  final dynamic
+      icon; // IconData is not easily serializable, store code or ignore? Store codePoint?
+  // We will ignore icon for serialization and re-derive or use generic.
+  bool isRead; // Mutable for read status
 
   ProactiveAlert({
     required this.id,
@@ -28,10 +32,37 @@ class ProactiveAlert {
     required this.timestamp,
     this.actionSuggestion = '',
     this.icon,
+    this.isRead = false,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'message': message,
+        'severity': severity.index,
+        'timestamp': timestamp.toIso8601String(),
+        'actionSuggestion': actionSuggestion,
+        'isRead': isRead,
+        // Icon not serialized
+      };
+
+  factory ProactiveAlert.fromJson(Map<String, dynamic> json) {
+    return ProactiveAlert(
+      id: json['id'],
+      title: json['title'],
+      message: json['message'],
+      severity: AlertSeverity.values[json['severity'] ?? 0],
+      timestamp: DateTime.parse(json['timestamp']),
+      actionSuggestion: json['actionSuggestion'] ?? '',
+      isRead: json['isRead'] ?? false,
+      icon: CupertinoIcons.exclamationmark_circle, // Default icon
+    );
+  }
 }
 
 enum AlertSeverity { critical, high, medium, low, positive, info }
+
+// Duplicate IntelligenceService removed.
 
 class CategorySuggestion {
   final String? categoryId;
@@ -135,6 +166,8 @@ class IntelligenceService extends GetxService {
   final forecast = Rxn<CashFlowForecast>();
   final RxList<ProactiveAlert> highPriorityAlerts = <ProactiveAlert>[].obs;
 
+  Box? _insightsBox; // Hive Box
+
   // Reactive health score
   late Rx<IntelligenceSummary> _summary;
 
@@ -150,6 +183,14 @@ class IntelligenceService extends GetxService {
   @override
   Future<void> onInit() async {
     super.onInit();
+
+    // Open/Get the box
+    if (Hive.isBoxOpen('insightsBox')) {
+      _insightsBox = Hive.box('insightsBox');
+    }
+
+    // Load persisted alerts
+    _loadPersistedAlerts();
 
     // Initialize summary with default values
     _summary = IntelligenceSummary(
@@ -170,12 +211,11 @@ class IntelligenceService extends GetxService {
     _profiler = BehaviorProfiler();
 
     // REFACTORED: Listen to SmartFinancialBrain's intelligence output
-    // instead of duplicating listeners on FinancialContextService
-    // This eliminates race conditions and duplicate calculations
+    // instead of duplicating listeners on FinancialContextService.
+    // We don't need to manually call _calculateHealthScore() here because
+    // the listener below will likely fire immediately with the current behavior subject value,
+    // or very soon after when the brain finishes its initial analysis.
     _workers.add(ever(_brain.intelligence, (_) => _scheduleRecalculation()));
-
-    // Initial calculation
-    await _calculateHealthScore();
   }
 
   @override
@@ -185,6 +225,32 @@ class IntelligenceService extends GetxService {
     }
     _workers.clear();
     super.onClose();
+  }
+
+  void _loadPersistedAlerts() {
+    if (_insightsBox == null) return;
+
+    final List<dynamic>? rawAlerts = _insightsBox!.get('alerts');
+    if (rawAlerts != null) {
+      highPriorityAlerts.assignAll(rawAlerts
+          .map((e) => ProactiveAlert.fromJson(Map<String, dynamic>.from(e)))
+          .toList());
+    }
+  }
+
+  void _saveAlerts() {
+    if (_insightsBox == null) return;
+    final data = highPriorityAlerts.map((a) => a.toJson()).toList();
+    _insightsBox!.put('alerts', data);
+  }
+
+  void markAsRead(String id) {
+    final alert = highPriorityAlerts.firstWhereOrNull((a) => a.id == id);
+    if (alert != null) {
+      alert.isRead = true;
+      highPriorityAlerts.refresh();
+      _saveAlerts();
+    }
   }
 
   // Debounce recalculations to avoid excessive CPU usage
@@ -294,18 +360,15 @@ class IntelligenceService extends GetxService {
   }
 
   void _generateAlertsFromPenalties(List<HealthPenalty> penalties) {
-    highPriorityAlerts.clear();
-    final learningService =
-        Get.find<AILearningService>(); // Get learning service
+    final learningService = Get.find<AILearningService>();
+
+    // Temporary list of new alerts
+    List<ProactiveAlert> newAlerts = [];
 
     for (var penalty in penalties) {
-      final alertType =
-          _getPenaltyTitle(penalty.reason); // Use title as type key for now
+      final alertType = _getPenaltyTitle(penalty.reason);
 
-      // Check if user has muted this alert type
-      if (!learningService.shouldShowAlert(alertType)) {
-        continue;
-      }
+      if (!learningService.shouldShowAlert(alertType)) continue;
 
       AlertSeverity severity;
       IconData icon;
@@ -321,16 +384,25 @@ class IntelligenceService extends GetxService {
         icon = CupertinoIcons.info_circle_fill;
       }
 
-      highPriorityAlerts.add(ProactiveAlert(
-        id: 'penalty_${penalty.reason.hashCode}', // Unique ID for this instance
+      final id = 'penalty_${penalty.reason.hashCode}';
+
+      // Check if exists
+      final existing = highPriorityAlerts.firstWhereOrNull((a) => a.id == id);
+
+      newAlerts.add(ProactiveAlert(
+        id: id,
         title: alertType,
         message: penalty.reason,
         severity: severity,
-        timestamp: DateTime.now(),
+        timestamp: existing?.timestamp ?? DateTime.now(),
         actionSuggestion: _getPenaltyAction(penalty.reason),
         icon: icon,
+        isRead: existing?.isRead ?? false, // Preserve read status
       ));
     }
+
+    highPriorityAlerts.assignAll(newAlerts);
+    _saveAlerts(); // SAVE TO HIVE
   }
 
   String _getPenaltyTitle(String reason) {
@@ -366,6 +438,7 @@ class IntelligenceService extends GetxService {
 
       // Remove locally
       highPriorityAlerts.remove(alert);
+      _saveAlerts();
     }
   }
 }
