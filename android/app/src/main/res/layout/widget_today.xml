@@ -2,24 +2,48 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="12dp"
-    android:background="@drawable/widget_background">
+    android:background="@drawable/widget_background_dark"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="16dp">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Dépenses du jour"
-        android:textColor="#AAAAAA"
-        android:textSize="11sp" />
+        android:layout_weight="1"
+        android:orientation="vertical">
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DÉPENSES DU JOUR"
+            android:textSize="11sp"
+            android:textColor="#8E8E93"
+            android:textStyle="bold"
+            android:letterSpacing="0.05" />
+
+        <TextView
+            android:id="@+id/value_today"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 F"
+            android:textSize="24sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+
+    <!-- Icon Container -->
+    <!-- Approximating opacity/circle with a simple colored text or shape if possible. 
+         Using a simple TextView with background for now as vector assets aren't checked. -->
     <TextView
-        android:id="@+id/today_spending"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0 F"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:layout_width="40dp"
+        android:layout_height="40dp" 
+        android:text="📊"
+        android:textSize="20sp"
+        android:gravity="center"
+        android:background="@drawable/widget_action_expense" 
+        android:textColor="#FFFFFF"/>
 
 </LinearLayout>
