@@ -7,8 +7,38 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/ml/financial_intelligence.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
+import 'package:koaa/app/services/ml/koala_ml_engine.dart';
+import 'package:koaa/app/services/ml/models/time_series_engine.dart';
+import 'package:koaa/app/services/ml/contextual_brain.dart'; // Fixed: Added import
 import 'package:logger/logger.dart';
 import 'dart:math';
+
+/// DTO for passing data to the background isolate
+class AnalysisInput {
+  final List<LocalTransaction> transactions;
+  final List<Debt> debts;
+  final List<FinancialGoal> goals;
+  final List<Budget> budgets;
+  final List<Job> jobs;
+  final List<RecurringTransaction> recurringTransactions;
+  final double currentBalance;
+  final double monthlyIncome;
+  final double monthlyExpenses;
+  final ForecastResult? forecast;
+
+  AnalysisInput({
+    required this.transactions,
+    required this.debts,
+    required this.goals,
+    required this.budgets,
+    required this.jobs,
+    required this.recurringTransactions,
+    required this.currentBalance,
+    required this.monthlyIncome,
+    required this.monthlyExpenses,
+    this.forecast,
+  });
+}
 
 /// The Smart Financial Brain - Central intelligence for all financial insights
 /// This is the core AI/ML engine that powers all smart features in the app
@@ -42,54 +72,121 @@ class SmartFinancialBrain extends GetxService {
   }
 
   Future<void> _recalculate() async {
-    _logger.d('SmartFinancialBrain: Recalculating intelligence...');
-
-    // Yield to UI thread before starting heavy work
+    // Yield to UI thread before starting setup
     await Future.delayed(Duration.zero);
 
-    final transactions = _context.allTransactions.toList();
-    final debts = _context.allDebts.toList();
-    final goals = _context.allGoals.toList();
-    final budgets = _context.allBudgets.toList();
-    final balance = _context.currentBalance.value;
-    final monthlyIncome = _context.totalMonthlyIncome.value;
+    // Check if ML Engine is available and get forecast
+    ForecastResult? forecast;
+    try {
+      if (Get.isRegistered<KoalaMLEngine>()) {
+        final mlEngine = Get.find<KoalaMLEngine>();
 
-    intelligence.value = FinancialIntelligence(
+        // TRIGGER RETRAINING if data changed (debounced)
+        // We do this non-blocking or awaited?
+        // Awaiting ensures forecast is fresh for the analysis below.
+        if (_context.allTransactions.isNotEmpty) {
+          await mlEngine.refreshModels(_context.allTransactions.toList());
+        }
+
+        forecast = mlEngine.currentForecast;
+      }
+
+      // Check for ContextualBrain separately as it drives the UI auto-complete
+      if (Get.isRegistered<ContextualBrain>()) {
+        // Fire and forget to not block main analysis
+        Get.find<ContextualBrain>().refresh();
+      }
+    } catch (_) {}
+
+    // Prepare data for the isolate
+    // We create a snapshot of the current state
+    final effectiveMonthlyIncome = max(
+      _context.totalMonthlyIncome.value,
+      _calculateProjectedIncomeForMonth(
+        DateTime.now(),
+        _context.allJobs.toList(),
+        _context.allRecurringTransactions.toList(),
+      ),
+    );
+
+    final input = AnalysisInput(
+      transactions: _context.allTransactions.toList(),
+      debts: _context.allDebts.toList(),
+      goals: _context.allGoals.toList(),
+      budgets: _context.allBudgets.toList(),
+      jobs: _context.allJobs.toList(),
+      recurringTransactions: _context.allRecurringTransactions.toList(),
+      currentBalance: _context.currentBalance.value,
+      monthlyIncome: effectiveMonthlyIncome,
+      monthlyExpenses: _context.totalMonthlyExpenses.value,
+      forecast: forecast,
+    );
+
+    if (input.transactions.isEmpty && input.jobs.isEmpty) {
+      _logger.w('SmartFinancialBrain: No transactions or jobs to analyze.');
+      // We still run analysis to get "0" states instead of returning nothing?
+      // If we return, intelligence remains empty.
+      // Let's proceed even if empty to update UI to "Safe/Neutral" instead of stale.
+    }
+
+    try {
+      _logger.i('SmartFinancialBrain: Starting analysis... '
+          'Income: ${input.monthlyIncome}, Jobs: ${input.jobs.length}, TXs: ${input.transactions.length}');
+
+      // Running on main thread to avoid Isolate serialization issues with Hive objects
+      final result = _runPrimaryAnalysis(input);
+      intelligence.value = result;
+
+      _logger.i(
+          'SmartFinancialBrain: Intelligence updated successfully. Score: ${result.overallRiskLevel.name}');
+    } catch (e, st) {
+      _logger.e('SmartFinancialBrain: Analysis failed',
+          error: e, stackTrace: st);
+    }
+  }
+
+  /// Static entry point for the background isolate
+  static FinancialIntelligence _runPrimaryAnalysis(AnalysisInput input) {
+    return FinancialIntelligence(
       // Core metrics
-      spendingBehavior: _analyzeSpendingBehavior(transactions, monthlyIncome),
-      debtStrategy: _analyzeDebtStrategy(debts, monthlyIncome, balance),
-      goalProgress: _analyzeGoalProgress(goals, monthlyIncome, balance),
-      budgetHealth: _analyzeBudgetHealth(budgets, transactions),
-      cashFlowPrediction:
-          _predictCashFlow(transactions, debts, monthlyIncome, balance),
-      netWorthAnalysis: _calculateNetWorth(balance, debts, goals),
+      spendingBehavior:
+          _analyzeSpendingBehavior(input.transactions, input.monthlyIncome),
+      debtStrategy: _analyzeDebtStrategy(
+          input.debts, input.monthlyIncome, input.currentBalance),
+      goalProgress: _analyzeGoalProgress(
+          input.goals, input.monthlyIncome, input.currentBalance),
+      budgetHealth: _analyzeBudgetHealth(input.budgets, input.transactions),
+      cashFlowPrediction: _predictCashFlow(input.transactions, input.debts,
+          input.monthlyIncome, input.currentBalance, input.forecast),
+      netWorthAnalysis:
+          _calculateNetWorth(input.currentBalance, input.debts, input.goals),
 
       // Smart recommendations
       recommendations: _generateRecommendations(
-        transactions,
-        debts,
-        goals,
-        budgets,
-        balance,
-        monthlyIncome,
-      ),
+          input.transactions,
+          input.debts,
+          input.goals,
+          input.budgets,
+          input.currentBalance,
+          input.monthlyIncome,
+          input.forecast),
 
       // Risk assessment
       overallRiskLevel: _calculateOverallRisk(
-        transactions,
-        debts,
-        goals,
-        balance,
-        monthlyIncome,
+        input.transactions,
+        input.debts,
+        input.goals,
+        input.currentBalance,
+        input.monthlyIncome,
       ),
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SPENDING BEHAVIOR ANALYSIS
+  // SPENDING BEHAVIOR ANALYSIS (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  SpendingBehavior _analyzeSpendingBehavior(
+  static SpendingBehavior _analyzeSpendingBehavior(
       List<LocalTransaction> transactions, double monthlyIncome) {
     if (transactions.isEmpty || monthlyIncome <= 0) {
       return SpendingBehavior.empty();
@@ -110,8 +207,6 @@ class SmartFinancialBrain extends GetxService {
         thisMonthExpenses.fold(0.0, (sum, t) => sum + t.amount);
 
     // Spending velocity (how fast you're spending)
-    // Formula: (Spent / DaysPassed) * DaysInMonth = Projected
-    // Ratio: Projected / Income
     final avgDailySpending =
         totalSpentThisMonth / (dayOfMonth > 0 ? dayOfMonth : 1);
     final projectedSpending = avgDailySpending * daysInMonth;
@@ -195,10 +290,10 @@ class SmartFinancialBrain extends GetxService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // DEBT STRATEGY ANALYSIS
+  // DEBT STRATEGY ANALYSIS (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  DebtStrategy _analyzeDebtStrategy(
+  static DebtStrategy _analyzeDebtStrategy(
       List<Debt> debts, double monthlyIncome, double balance) {
     if (debts.isEmpty) {
       return DebtStrategy.empty();
@@ -262,10 +357,10 @@ class SmartFinancialBrain extends GetxService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // GOAL PROGRESS ANALYSIS
+  // GOAL PROGRESS ANALYSIS (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  GoalProgressAnalysis _analyzeGoalProgress(
+  static GoalProgressAnalysis _analyzeGoalProgress(
       List<FinancialGoal> goals, double monthlyIncome, double balance) {
     if (goals.isEmpty) {
       return GoalProgressAnalysis.empty();
@@ -350,10 +445,10 @@ class SmartFinancialBrain extends GetxService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // BUDGET HEALTH ANALYSIS
+  // BUDGET HEALTH ANALYSIS (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  BudgetHealth _analyzeBudgetHealth(
+  static BudgetHealth _analyzeBudgetHealth(
       List<Budget> budgets, List<LocalTransaction> transactions) {
     if (budgets.isEmpty) {
       return BudgetHealth.empty();
@@ -435,24 +530,33 @@ class SmartFinancialBrain extends GetxService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CASH FLOW PREDICTION
+  // CASH FLOW PREDICTION (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  CashFlowPrediction _predictCashFlow(
+  static CashFlowPrediction _predictCashFlow(
     List<LocalTransaction> transactions,
     List<Debt> debts,
     double monthlyIncome,
     double balance,
+    ForecastResult? forecast, // Passed as argument
   ) {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // HYBRID FORECAST APPROACH
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 1. Always calculate manual forecast first (it's our baseline)
+    // 2. Check if ML can be trusted (sufficient data + reasonable prediction)
+    // 3. If ML is valid and close to manual, use ML (it captures trends better)
+    // 4. Otherwise, use manual (more predictable)
+    // ═══════════════════════════════════════════════════════════════════════════
+
     final now = DateTime.now();
     final dayOfMonth = now.day;
     final int daysRemaining = 30; // Rolling 30-day window
-
-    // 1. Calculate Variable Daily Spending (Excluding Recurring/Fixed)
     final monthStart = DateTime(now.year, now.month, 1);
 
-    // Filter out recurring transactions from the average calculation
-    // to avoid double counting fixed costs
+    // ─────────────────────────────────────────────────────────────────────────
+    // STEP 1: Calculate Manual Forecast (always)
+    // ─────────────────────────────────────────────────────────────────────────
     final variableExpenses = transactions.where((t) =>
         t.type == TransactionType.expense &&
         !t.isRecurring && // Skip recurring (rent, subs)
@@ -463,152 +567,103 @@ class SmartFinancialBrain extends GetxService {
         variableExpenses.fold(0.0, (sum, t) => sum + t.amount);
     final avgDailyVariableSpending =
         dayOfMonth > 0 ? totalVariableSpent / dayOfMonth : 0;
-
-    // 2. Predict Remaining Variable Spending (For next 30 days)
     final predictedVariableSpending = avgDailyVariableSpending * daysRemaining;
 
-    // 3. Detect Already-Processed Items (Consistency with SimulatorEngine)
-    final allTxs = _context.allTransactions;
-
-    // Pre-calculate last processed dates for Jobs and RTs
-    final lastJobs = <String, DateTime>{};
-    final lastRTs = <String, DateTime>{};
-
-    for (var tx in allTxs) {
-      if (tx.linkedJobId != null) {
-        final last = lastJobs[tx.linkedJobId!];
-        if (last == null || tx.date.isAfter(last)) {
-          lastJobs[tx.linkedJobId!] = tx.date;
-        }
-      }
-      if (tx.linkedRecurringId != null) {
-        final last = lastRTs[tx.linkedRecurringId!];
-        if (last == null || tx.date.isAfter(last)) {
-          lastRTs[tx.linkedRecurringId!] = tx.date;
-        }
-      }
-    }
-
-    // 4. Calculate Upcoming Fixed Expenses (Recurring + Debts)
     double upcomingDebtPayments = 0.0;
-    double upcomingDebtCollections = 0.0;
-
     for (var debt in debts) {
-      if (debt.isPaidOff) continue;
-      if (debt.type == DebtType.borrowed) {
+      if (!debt.isPaidOff && debt.type == DebtType.borrowed) {
         upcomingDebtPayments += debt.minPayment;
-      } else {
-        upcomingDebtCollections += debt.minPayment;
       }
     }
 
-    // 4b. Recurring Expenses (with history check)
-    final allRecurring = _context.allRecurringTransactions;
-    double upcomingRecurringExpenses = 0.0;
-    double upcomingRecurringIncome = 0.0;
-
-    for (final recurring in allRecurring) {
-      if (!recurring.isActive) continue;
-
-      // Check if already done this month (simplified monthly check)
-      if (recurring.frequency == Frequency.monthly) {
-        final lastProcessed = lastRTs[recurring.id];
-        final alreadyDone = lastProcessed != null &&
-            lastProcessed.month == now.month &&
-            lastProcessed.year == now.year;
-
-        if (alreadyDone) continue;
-
-        if (recurring.type == TransactionType.expense) {
-          upcomingRecurringExpenses += recurring.amount;
-        } else {
-          upcomingRecurringIncome += recurring.amount;
-        }
-      } else {
-        // For other frequencies, assume at least one occurrence in 30 days if not monthly
-        // (Simplified for Brain summary, deep simulation handles daily/weekly better)
-        if (recurring.type == TransactionType.expense) {
-          upcomingRecurringExpenses += recurring.amount;
-        } else {
-          upcomingRecurringIncome += recurring.amount;
-        }
-      }
-    }
-
-    // 5. Calculate Upcoming Job Income
-    double upcomingJobIncome = 0;
-    for (final job in _context.allJobs) {
-      if (!job.isActive) continue;
-
-      final lastProcessed = lastJobs[job.id];
-      final alreadyPaid = lastProcessed != null &&
-          lastProcessed.month == now.month &&
-          lastProcessed.year == now.year;
-
-      if (alreadyPaid) continue;
-
-      upcomingJobIncome += job.amount;
-    }
-
-    // 6. Final Prediction
-    final totalUpcomingIncome = upcomingJobIncome + upcomingRecurringIncome;
-
-    final predictedMonthEnd = balance +
-        totalUpcomingIncome +
-        upcomingDebtCollections -
+    final manualPrediction = balance -
         predictedVariableSpending -
-        upcomingDebtPayments -
-        upcomingRecurringExpenses;
+        upcomingDebtPayments +
+        monthlyIncome;
 
-    _logger.i('''
-🧮 PROJECTION MATH DEBUG (ROLLING 30 DAYS):
-----------------------------------------
-   Current Balance:      ${balance.toStringAsFixed(2)}
-+  Upcoming Income:      ${totalUpcomingIncome.toStringAsFixed(2)}
-+  Debt Collections:     ${upcomingDebtCollections.toStringAsFixed(2)}
--  Variable Spending:    ${predictedVariableSpending.toStringAsFixed(2)}
--  Debt Payments:        ${upcomingDebtPayments.toStringAsFixed(2)}
--  Recurring Expenses:   ${upcomingRecurringExpenses.toStringAsFixed(2)}
-----------------------------------------
-=  PREDICTED (+30d):     ${predictedMonthEnd.toStringAsFixed(2)}
-''');
+    print(
+        '🔮 [CASHFLOW] MANUAL: $balance - $predictedVariableSpending - $upcomingDebtPayments + $monthlyIncome = $manualPrediction');
 
-    // daysUntilBroke calculation
-    int? daysUntilBroke;
-    final effectiveBalance = balance +
-        totalUpcomingIncome +
-        upcomingDebtCollections -
-        upcomingDebtPayments -
-        upcomingRecurringExpenses;
+    // ─────────────────────────────────────────────────────────────────────────
+    // STEP 2: Check if ML can be trusted
+    // ─────────────────────────────────────────────────────────────────────────
+    bool useML = false;
+    double? mlPrediction;
 
-    if (avgDailyVariableSpending > 0 && effectiveBalance > 0) {
-      daysUntilBroke = (effectiveBalance / avgDailyVariableSpending).floor();
+    if (forecast != null && forecast.forecasts.isNotEmpty) {
+      mlPrediction = forecast.forecasts.last.predictedBalance;
+
+      // Criteria for trusting ML:
+      // 1. Sufficient data: at least 60 transactions
+      // 2. Sufficient history: at least 60 days of data
+      // 3. Reasonable prediction: within 30% of manual calculation
+
+      final hasEnoughTransactions = transactions.length >= 60;
+
+      DateTime? oldestDate;
+      if (transactions.isNotEmpty) {
+        oldestDate = transactions
+            .map((t) => t.date)
+            .reduce((a, b) => a.isBefore(b) ? a : b);
+      }
+      final hasEnoughHistory =
+          oldestDate != null && now.difference(oldestDate).inDays >= 60;
+
+      // Check if ML prediction is "reasonable" (within 30% of manual)
+      final isReasonable = manualPrediction > 0
+          ? (mlPrediction - manualPrediction).abs() / manualPrediction < 0.30
+          : mlPrediction.abs() < 100000; // Fallback check for edge cases
+
+      useML = hasEnoughTransactions && hasEnoughHistory && isReasonable;
+
+      print(
+          '🔮 [CASHFLOW] ML CHECK: txs=${transactions.length}(need 60), history=${oldestDate != null ? now.difference(oldestDate).inDays : 0}d(need 60), '
+          'mlPred=$mlPrediction, manualPred=$manualPrediction, diff=${manualPrediction > 0 ? ((mlPrediction - manualPrediction).abs() / manualPrediction * 100).toStringAsFixed(1) : "N/A"}%(max 30%), USE_ML=$useML');
     }
 
-    // Safe daily spending
-    final buffer = monthlyIncome * 0.10;
-    final safeDailySpending = daysRemaining > 0
-        ? max(0, (effectiveBalance - buffer) / daysRemaining)
-        : 0;
+    // ─────────────────────────────────────────────────────────────────────────
+    // STEP 3: Return the appropriate prediction
+    // ─────────────────────────────────────────────────────────────────────────
+    if (useML && mlPrediction != null) {
+      // Use ML forecast (captures trends and seasonality)
+      final avgDaily = predictedVariableSpending / daysRemaining;
 
-    return CashFlowPrediction(
-      currentBalance: balance,
-      predictedMonthEndBalance: predictedMonthEnd,
-      avgDailySpending: avgDailyVariableSpending.toDouble(),
-      safeDailySpending: safeDailySpending.toDouble(),
-      daysUntilBroke: daysUntilBroke,
-      upcomingDebtPayments: upcomingDebtPayments + upcomingRecurringExpenses,
-      daysRemainingInMonth: daysRemaining,
-      willSurviveMonth: predictedMonthEnd > 0,
-      upcomingIncome: totalUpcomingIncome,
-    );
+      print('🔮 [CASHFLOW] ✅ USING ML FORECAST: $mlPrediction');
+
+      return CashFlowPrediction(
+        currentBalance: balance,
+        predictedMonthEndBalance: mlPrediction,
+        avgDailySpending: avgDaily,
+        safeDailySpending: max(0, mlPrediction / 30),
+        daysUntilBroke: forecast?.daysUntilZero,
+        upcomingDebtPayments: upcomingDebtPayments,
+        daysRemainingInMonth: daysRemaining,
+        willSurviveMonth: mlPrediction > 0,
+        upcomingIncome: monthlyIncome,
+      );
+    } else {
+      // Use manual calculation (more predictable)
+      print('🔮 [CASHFLOW] ✅ USING MANUAL CALC: $manualPrediction');
+
+      return CashFlowPrediction(
+        currentBalance: balance,
+        predictedMonthEndBalance: manualPrediction,
+        avgDailySpending: avgDailyVariableSpending.toDouble(),
+        safeDailySpending: max(0, manualPrediction / 30),
+        daysUntilBroke: null,
+        upcomingDebtPayments: upcomingDebtPayments,
+        daysRemainingInMonth: daysRemaining,
+        willSurviveMonth: manualPrediction > 0,
+        upcomingIncome: monthlyIncome,
+      );
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // NET WORTH ANALYSIS
+  // NET WORTH ANALYSIS (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  NetWorthAnalysis _calculateNetWorth(
+  static NetWorthAnalysis _calculateNetWorth(
     double currentBalance,
     List<Debt> debts,
     List<FinancialGoal> goals,
@@ -642,13 +697,17 @@ class SmartFinancialBrain extends GetxService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MULTI-MONTH PROJECTIONS
+  // MULTI-MONTH PROJECTIONS (REMAIN INSTANCE METHODS, CALLING HELPERS)
   // ═══════════════════════════════════════════════════════════════════════════
+  // Note: projectNextMonths is likely called from UI explicitly, so it can remain on main thread
+  // or be moved later. For now, we leave it as instance member logic if it wasn't called in _recalculate.
+  // BUT `_recalculate` logic above doesn't call `projectNextMonths`.
+  // However, I must keep the method available for the controller.
 
   /// Calculate projected income for a specific future month
   /// This accounts for time-limited jobs and recurring income that may end
-  double _getProjectedIncomeForMonth(DateTime targetMonth, List<Job> jobs,
-      List<RecurringTransaction> recurringIncome) {
+  static double _calculateProjectedIncomeForMonth(DateTime targetMonth,
+      List<Job> jobs, List<RecurringTransaction> recurringIncome) {
     double projectedIncome = 0.0;
 
     // Income from jobs that are still active in the target month
@@ -684,6 +743,27 @@ class SmartFinancialBrain extends GetxService {
       } else if (recurring.frequency == Frequency.daily) {
         monthlyAmount = recurring.amount * 30; // Average days per month
       }
+
+      // Check if this recurring transaction duplicates a Job (same amount AND frequency)
+      // This prevents double counting if the user manually added a recurring transaction for their salary
+      final isDuplicateJob = jobs.any((job) {
+        if (!job.isActive) return false;
+
+        // Check amount match (exact or very close)
+        if ((job.amount - recurring.amount).abs() > 0.01) return false;
+
+        // Check frequency match
+        if (job.frequency.name.toLowerCase() == 'monthly' &&
+            recurring.frequency.name.toLowerCase() == 'monthly') return true;
+        if (job.frequency.name.toLowerCase() == 'weekly' &&
+            recurring.frequency.name.toLowerCase() == 'weekly') return true;
+        if (job.frequency.name.toLowerCase().contains('bi') &&
+            recurring.frequency.name.toLowerCase().contains('bi')) return true;
+
+        return false;
+      });
+
+      if (isDuplicateJob) continue;
 
       projectedIncome += monthlyAmount;
     }
@@ -739,7 +819,7 @@ class SmartFinancialBrain extends GetxService {
       final futureMonth = DateTime(now.year, now.month + i, 1);
 
       // Use dynamic income calculation that respects endDate
-      final projectedIncome = _getProjectedIncomeForMonth(
+      final projectedIncome = _calculateProjectedIncomeForMonth(
         futureMonth,
         jobs,
         recurringTransactions,
@@ -811,16 +891,17 @@ class SmartFinancialBrain extends GetxService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SMART RECOMMENDATIONS
+  // SMART RECOMMENDATIONS (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  List<SmartRecommendation> _generateRecommendations(
+  static List<SmartRecommendation> _generateRecommendations(
     List<LocalTransaction> transactions,
     List<Debt> debts,
     List<FinancialGoal> goals,
     List<Budget> budgets,
     double balance,
     double monthlyIncome,
+    ForecastResult? forecast, // Passed as argument
   ) {
     final recommendations = <SmartRecommendation>[];
 
@@ -829,7 +910,7 @@ class SmartFinancialBrain extends GetxService {
     final goalProgress = _analyzeGoalProgress(goals, monthlyIncome, balance);
     final budgetHealth = _analyzeBudgetHealth(budgets, transactions);
     final cashFlow =
-        _predictCashFlow(transactions, debts, monthlyIncome, balance);
+        _predictCashFlow(transactions, debts, monthlyIncome, balance, forecast);
 
     // Priority 1: Immediate survival
     if (!cashFlow.willSurviveMonth) {
@@ -927,10 +1008,10 @@ class SmartFinancialBrain extends GetxService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // OVERALL RISK CALCULATION
+  // OVERALL RISK CALCULATION (STATIC)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  RiskLevel _calculateOverallRisk(
+  static RiskLevel _calculateOverallRisk(
     List<LocalTransaction> transactions,
     List<Debt> debts,
     List<FinancialGoal> goals,
@@ -952,32 +1033,36 @@ class SmartFinancialBrain extends GetxService {
     double velocityScore = 100;
     if (spending.velocityRatio > 1.2) {
       velocityScore = 0;
-    } else if (spending.velocityRatio > 1.0)
+    } else if (spending.velocityRatio > 1.0) {
       velocityScore = 40;
-    else if (spending.velocityRatio > 0.9)
+    } else if (spending.velocityRatio > 0.9) {
       velocityScore = 70;
-    else
+    } else {
       velocityScore = 100;
+    }
 
     // Debt Score (Burden): Target is < 20% DTI
     final debtStrategy = _analyzeDebtStrategy(debts, monthlyIncome, balance);
     double debtScore = 100;
     if (debtStrategy.paymentBurden > 0.50) {
       debtScore = 0;
-    } else if (debtStrategy.paymentBurden > 0.35)
+    } else if (debtStrategy.paymentBurden > 0.35) {
       debtScore = 30;
-    else if (debtStrategy.paymentBurden > 0.20)
+    } else if (debtStrategy.paymentBurden > 0.20) {
       debtScore = 60;
-    else
+    } else {
       debtScore = 100;
+    }
 
     // Impulsive Score (Behavior): Target 0
     double behaviorScore = 100;
     if (spending.impulsiveTransactionCount > 3) {
       behaviorScore = 20;
-    } else if (spending.impulsiveTransactionCount > 1)
+    } else if (spending.impulsiveTransactionCount > 1) {
       behaviorScore = 60;
-    else if (spending.impulsiveTransactionCount > 0) behaviorScore = 80;
+    } else if (spending.impulsiveTransactionCount > 0) {
+      behaviorScore = 80;
+    }
 
     // 2. Weighted Average
     // Spending (35%) + Debt (35%) + Balance (15%) + Behavior (15%)
