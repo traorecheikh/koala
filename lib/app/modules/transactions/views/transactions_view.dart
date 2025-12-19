@@ -138,7 +138,6 @@ class _Header extends StatelessWidget {
                   style: KoalaTypography.heading3(context),
                 ),
                 Obx(() {
-                  final count = controller.displayedTransactions.length;
                   final total = controller.transactions.length;
                   final displayTotal = total > 0 ? total : 0;
                   return Text(
@@ -260,7 +259,7 @@ class _FilterChip extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         decoration: BoxDecoration(
           color: isSelected
-              ? activeColor.withOpacity(0.1)
+              ? activeColor.withValues(alpha: 0.1)
               : KoalaColors.surface(context),
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
@@ -306,7 +305,7 @@ class _ActiveFiltersBar extends GetView<TransactionsController> {
         margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
-          color: KoalaColors.primaryUi(context).withOpacity(0.1),
+          color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
@@ -396,7 +395,7 @@ class _EnhancedTransactionCard extends StatelessWidget {
                   width: 56.w,
                   height: 56.w,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16.r),
                   ),
                   child: Icon(icon, color: color, size: 28.sp),
@@ -424,7 +423,7 @@ class _EnhancedTransactionCard extends StatelessWidget {
                           ),
                           SizedBox(width: 4.w),
                           Text(
-                            transaction.category?.displayName ?? 'Non classé',
+                            transaction.category.displayName,
                             style: KoalaTypography.caption(context).copyWith(
                               color: KoalaColors.textSecondary(context),
                             ),
@@ -462,7 +461,7 @@ class _EnhancedTransactionCard extends StatelessWidget {
                     Text(
                       'FCFA',
                       style: KoalaTypography.caption(context).copyWith(
-                        color: color.withOpacity(0.7),
+                        color: color.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -715,7 +714,7 @@ class _SortChip extends GetView<TransactionsController> {
         HapticFeedback.selectionClick();
         controller.setSort(option);
       },
-      selectedColor: KoalaColors.primaryUi(context).withOpacity(0.1),
+      selectedColor: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
       checkmarkColor: KoalaColors.primaryUi(context),
       backgroundColor: KoalaColors.surface(context),
       labelStyle: KoalaTypography.bodySmall(context).copyWith(
