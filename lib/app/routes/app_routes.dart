@@ -19,6 +19,7 @@ abstract class Routes {
   static const goals = _Paths.goals;
   static const intelligence = _Paths.intelligence;
   static const insights = _Paths.insights; // Insights
+  static const splash = _Paths.splash;
   static const challenges = _Paths.challenges;
 }
 
@@ -40,5 +41,6 @@ abstract class _Paths {
   static const goals = '/goals';
   static const intelligence = '/intelligence';
   static const insights = '/insights'; // Insights Path
+  static const splash = '/splash';
   static const challenges = '/challenges';
 }
