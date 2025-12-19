@@ -92,8 +92,115 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 600),
         child: (_isRevealed && _profile != null)
-            ? _buildPersonaDetails(_profile!)
+            ? _buildContent(_profile!)
             : _buildRevealScreen(isAnalyzing: _isAnalyzing),
+      ),
+    );
+  }
+
+  Widget _buildContent(UserFinancialProfile profile) {
+    // Check if we have enough data to show a meaningful profile
+    if (profile.dataQuality == 'low' ||
+        profile.personaType.toLowerCase() == 'unknown' ||
+        profile.transactionCount < 5) {
+      return _buildLearningState(profile);
+    }
+    return _buildPersonaDetails(profile);
+  }
+
+  Widget _buildLearningState(UserFinancialProfile profile) {
+    final progress = (profile.transactionCount / 30).clamp(0.0, 1.0);
+    final remaining = (30 - profile.transactionCount).clamp(0, 30);
+
+    return Scaffold(
+      backgroundColor: KoalaColors.background(context),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(CupertinoIcons.xmark, color: KoalaColors.text(context)),
+          onPressed: () => NavigationHelper.safeBack(),
+        ),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(24.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(30.w),
+              decoration: BoxDecoration(
+                color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                CupertinoIcons.graph_circle,
+                size: 60.sp,
+                color: KoalaColors.primaryUi(context),
+              ),
+            ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+            SizedBox(height: 32.h),
+            Text(
+              'Apprentissage en cours...',
+              style: KoalaTypography.heading2(context),
+              textAlign: TextAlign.center,
+            ).animate().fadeIn().slideY(begin: 0.2, end: 0),
+            SizedBox(height: 16.h),
+            Text(
+              'L\'IA a besoin d\'un peu plus de données pour identifier votre profil financier avec précision.',
+              style: KoalaTypography.bodyMedium(context).copyWith(
+                color: KoalaColors.textSecondary(context),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ).animate().fadeIn(delay: 200.ms),
+            SizedBox(height: 48.h),
+
+            // Progress Section
+            Container(
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: KoalaColors.surface(context),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: KoalaColors.border(context)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Données analysées',
+                        style: KoalaTypography.caption(context),
+                      ),
+                      Text(
+                        '${profile.transactionCount}/30',
+                        style: KoalaTypography.heading4(context),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12.h),
+                  LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: KoalaColors.background(context),
+                    color: KoalaColors.primaryUi(context),
+                    minHeight: 8.h,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  SizedBox(height: 12.h),
+                  Text(
+                    'Encore $remaining transactions pour débloquer votre profil détaillé.',
+                    style: KoalaTypography.caption(context).copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: KoalaColors.primaryUi(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+          ],
+        ),
       ),
     );
   }
