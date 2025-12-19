@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:koaa/app/services/financial_context_service.dart'; // New Import
+
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/simulator_engine.dart';
 
@@ -11,12 +11,10 @@ class SimulatorController extends GetxController {
   final selectedScenario = SimulationScenario().obs; // Default scenario
   final isAmountValid = false.obs;
 
-  late FinancialContextService _financialContextService; // Injected
-
   @override
   void onInit() {
     super.onInit();
-    _financialContextService = Get.find<FinancialContextService>();
+
     amountController.addListener(() {
       isAmountValid.value = amountController.text.isNotEmpty;
     });
@@ -35,16 +33,18 @@ class SimulatorController extends GetxController {
   void simulate() async {
     final amount = double.tryParse(amountController.text);
     if (amount == null || amount <= 0) {
-      Get.snackbar('Erreur', 'Veuillez entrer un montant valide pour la simulation.');
+      Get.snackbar(
+          'Erreur', 'Veuillez entrer un montant valide pour la simulation.');
       return;
     }
 
     isLoading.value = true;
-    await Future.delayed(const Duration(milliseconds: 500)); // Small delay for UX
+    await Future.delayed(
+        const Duration(milliseconds: 500)); // Small delay for UX
 
     try {
       final engine = Get.find<KoalaMLEngine>();
-      
+
       // Create a scenario based on the purchase amount
       final scenario = selectedScenario.value.copyWith(
         purchaseAmount: amount,
@@ -68,5 +68,3 @@ class SimulatorController extends GetxController {
     }
   }
 }
-
-
