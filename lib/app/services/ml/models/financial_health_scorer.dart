@@ -29,17 +29,31 @@ class FinancialHealthScorer {
     // 1. BUDGET ADHERENCE (15%) - Enhanced with overspending severity
     // ═══════════════════════════════════════════════════════════════════
     final budgetResult = _calculateBudgetScore(context);
-    _logger.d(
-        'Budget Score: ${budgetResult.score} (Overspent categories: ${budgetResult.overSpentCount})');
-    factors.add(HealthFactor(
-      name: 'Budgets',
-      score: budgetResult.score,
-      weight: 0.15,
-      description: budgetResult.overSpentCount > 0
-          ? '${budgetResult.overSpentCount} catégorie(s) dépassée(s)'
-          : 'Budgets respectés',
-    ));
-    totalScore += budgetResult.score * 0.15;
+
+    // Handle N/D (Non Disponible) case - don't include in total if no budgets
+    if (budgetResult.isAvailable && budgetResult.score != null) {
+      _logger.d(
+          'Budget Score: ${budgetResult.score} (Overspent categories: ${budgetResult.overSpentCount})');
+      factors.add(HealthFactor(
+        name: 'Budgets',
+        score: budgetResult.score!,
+        weight: 0.15,
+        description: budgetResult.overSpentCount > 0
+            ? '${budgetResult.overSpentCount} catégorie(s) dépassée(s)'
+            : 'Budgets respectés',
+      ));
+      totalScore += budgetResult.score! * 0.15;
+    } else {
+      // N/D - Add with score of -1 to indicate unavailable
+      _logger.d('Budget Score: N/D (Aucun budget configuré)');
+      factors.add(HealthFactor(
+        name: 'Budgets',
+        score: -1, // Special value for N/D
+        weight: 0.15,
+        description: 'N/D - Aucun budget configuré',
+      ));
+      // Don't add to total - redistribute weight to other factors
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // 2. GOAL PROGRESS (15%)
@@ -158,7 +172,9 @@ class FinancialHealthScorer {
   // ═══════════════════════════════════════════════════════════════════════
   _BudgetScoreResult _calculateBudgetScore(FinancialContextService context) {
     if (context.allBudgets.isEmpty) {
-      return _BudgetScoreResult(score: 50.0, overSpentCount: 0);
+      // No budgets configured - show N/D (Non Disponible)
+      return _BudgetScoreResult(
+          score: null, overSpentCount: 0, isAvailable: false);
     }
 
     final now = DateTime.now();
@@ -167,7 +183,9 @@ class FinancialHealthScorer {
         .toList();
 
     if (currentBudgets.isEmpty) {
-      return _BudgetScoreResult(score: 50.0, overSpentCount: 0);
+      // No budgets for current month - show N/D
+      return _BudgetScoreResult(
+          score: null, overSpentCount: 0, isAvailable: false);
     }
 
     double totalBudgetScore = 0;
@@ -200,7 +218,8 @@ class FinancialHealthScorer {
     }
 
     final avgScore = totalBudgetScore / currentBudgets.length;
-    return _BudgetScoreResult(score: avgScore, overSpentCount: overSpentCount);
+    return _BudgetScoreResult(
+        score: avgScore, overSpentCount: overSpentCount, isAvailable: true);
   }
 
   double _calculateGoalScore(FinancialContextService context) {
@@ -563,9 +582,13 @@ class FinancialHealthScorer {
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _BudgetScoreResult {
-  final double score;
+  final double? score; // null means N/D (Non Disponible)
   final int overSpentCount;
-  _BudgetScoreResult({required this.score, required this.overSpentCount});
+  final bool isAvailable;
+  _BudgetScoreResult(
+      {required this.score,
+      required this.overSpentCount,
+      required this.isAvailable});
 }
 
 class _DebtScoreResult {
@@ -663,4 +686,3 @@ class HealthPenalty {
 
   HealthPenalty({required this.reason, required this.points});
 }
-
