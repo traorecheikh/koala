@@ -20,8 +20,7 @@ class GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = Color(goal.colorValue ?? KoalaColors.primary.value);
+    final color = Color(goal.colorValue ?? KoalaColors.primary.toARGB32());
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -39,7 +38,7 @@ class GoalCard extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(KoalaRadius.xs),
                 ),
                 child: Icon(
@@ -122,7 +121,7 @@ class GoalCard extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: KoalaColors.success.withOpacity(0.1),
+                  color: KoalaColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(KoalaRadius.xs),
                 ),
                 child: Text(
