@@ -102,14 +102,14 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
       if (widget.category != null) {
         widget.category!.name = _nameController.text.trim();
         widget.category!.icon = _selectedIconKey;
-        widget.category!.colorValue = _selectedColor.value;
+        widget.category!.colorValue = _selectedColor.toARGB32();
         widget.category!.type = _selectedType;
         await _controller.updateCategory(widget.category!);
       } else {
         await _controller.addCategory(
           name: _nameController.text.trim(),
           icon: _selectedIconKey,
-          colorValue: _selectedColor.value,
+          colorValue: _selectedColor.toARGB32(),
           type: _selectedType,
         );
       }
@@ -166,10 +166,10 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                     width: 72.w,
                     height: 72.w,
                     decoration: BoxDecoration(
-                      color: _selectedColor.withOpacity(0.1),
+                      color: _selectedColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: _selectedColor.withOpacity(0.5),
+                        color: _selectedColor.withValues(alpha: 0.5),
                         width: 2,
                       ),
                     ),
@@ -181,7 +181,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                     ),
                   ).animate(key: ValueKey(_selectedIconKey)).shimmer(
                         duration: 800.ms,
-                        color: _selectedColor.withOpacity(0.2),
+                        color: _selectedColor.withValues(alpha: 0.2),
                       ),
                 ),
                 SizedBox(width: 20.w),
@@ -263,7 +263,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
                 runSpacing: 16.w,
                 alignment: WrapAlignment.center,
                 children: _colors.map((color) {
-                  final isSelected = _selectedColor.value == color.value;
+                  final isSelected =
+                      _selectedColor.toARGB32() == color.toARGB32();
                   return Tooltip(
                     message: _getColorName(color),
                     child: GestureDetector(
