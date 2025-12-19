@@ -36,14 +36,20 @@ class BehaviorProfiler {
     'Assurance',
   };
 
+  // Minimum transactions for reliable persona classification
+  static const int _minTransactions = 30;
+
   UserFinancialProfile createProfile(List<LocalTransaction> transactions) {
-    if (transactions.isEmpty) {
+    // Check minimum data requirement
+    if (transactions.length < _minTransactions) {
       return UserFinancialProfile(
-        personaType: FinancialPersona.planner.name, // Default
+        personaType: 'unknown', // Not enough data to classify
         savingsRate: 0,
         consistencyScore: 0,
         categoryPreferences: {},
         detectedPatterns: [],
+        dataQuality: 'low', // Flag that this is unreliable
+        transactionCount: transactions.length,
       );
     }
 
@@ -68,8 +74,18 @@ class BehaviorProfiler {
             .key
         : 'Autre';
 
+    // Determine data quality based on transaction count
+    String dataQuality;
+    if (transactions.length >= 100) {
+      dataQuality = 'high';
+    } else if (transactions.length >= 50) {
+      dataQuality = 'medium';
+    } else {
+      dataQuality = 'low';
+    }
+
     return UserFinancialProfile(
-      personaType: persona.name, // Now uses REAL ML classification
+      personaType: persona.name,
       savingsRate: savingsRate,
       consistencyScore: consistency,
       categoryPreferences: categoryPreferences,
@@ -78,6 +94,8 @@ class BehaviorProfiler {
       nightRatio: nightRatio,
       dominantCategory: dominantCategory,
       averageAmount: avgAmount,
+      dataQuality: dataQuality,
+      transactionCount: transactions.length,
     );
   }
 
@@ -178,7 +196,7 @@ class BehaviorProfiler {
     for (final tx in txs) {
       if (tx.type != TransactionType.expense) continue;
 
-      final categoryName = tx.category?.displayName ?? 'Autre';
+      final categoryName = tx.category.displayName;
       totalSpending += tx.amount;
 
       // If NOT in essential categories, it's discretionary
@@ -239,7 +257,7 @@ class BehaviorProfiler {
 
     for (var tx in txs) {
       if (tx.type == TransactionType.expense) {
-        final cat = tx.category?.displayName ?? 'Autre';
+        final cat = tx.category.displayName;
         totals[cat] = (totals[cat] ?? 0) + tx.amount;
         grandTotal += tx.amount;
       }
