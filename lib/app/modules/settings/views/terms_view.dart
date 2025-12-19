@@ -34,7 +34,7 @@ class TermsView extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -125,13 +125,13 @@ class TermsView extends StatelessWidget {
         borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
         ),
       ),
       child: Row(
@@ -142,7 +142,7 @@ class TermsView extends StatelessWidget {
             style: TextStyle(
               fontSize: 48.sp,
               fontWeight: FontWeight.w900,
-              color: theme.primaryColor.withOpacity(0.1),
+              color: theme.primaryColor.withValues(alpha: 0.1),
               height: 0.8,
             ),
           ),
