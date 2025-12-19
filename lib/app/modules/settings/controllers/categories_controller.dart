@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
@@ -8,7 +7,6 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/settings/views/categories/add_category_dialog.dart'
     as styled;
 import 'package:uuid/uuid.dart';
-import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
 class CategoriesController extends GetxController {
@@ -68,7 +66,7 @@ class CategoriesController extends GetxController {
         id: const Uuid().v4(),
         name: cat.displayName,
         icon: cat.icon,
-        colorValue: Colors.green.value, // Default green for income
+        colorValue: Colors.green.toARGB32(), // Default green for income
         type: TransactionType.income,
         isDefault: true,
       ));
@@ -83,7 +81,7 @@ class CategoriesController extends GetxController {
         name: cat.displayName,
         icon: cat.icon,
         colorValue:
-            Colors.primaries[colorIndex % Colors.primaries.length].value,
+            Colors.primaries[colorIndex % Colors.primaries.length].toARGB32(),
         type: TransactionType.expense,
         isDefault: true,
       ));
