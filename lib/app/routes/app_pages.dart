@@ -21,6 +21,8 @@ import 'package:koaa/app/modules/intelligence/views/intelligence_view.dart';
 import 'package:koaa/app/modules/challenges/views/challenges_view.dart';
 import 'package:koaa/app/modules/challenges/bindings/challenges_binding.dart';
 import 'package:koaa/app/modules/home/views/insights_view.dart'; // New Import
+import 'package:koaa/app/modules/splash/views/splash_view.dart';
+import 'package:koaa/app/modules/splash/bindings/splash_binding.dart'; // Added Import
 
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
@@ -124,6 +126,12 @@ class AppPages {
     GetPage(
       name: Routes.insights,
       page: () => const InsightsView(),
+    ),
+    GetPage(
+      name: Routes.splash,
+      page: () => const SplashView(),
+      binding: SplashBinding(),
+      transition: Transition.fade,
     ),
   ];
 }
