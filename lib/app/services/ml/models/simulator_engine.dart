@@ -5,7 +5,7 @@ import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/services/financial_context_service.dart'; // New import
-import 'package:koaa/app/services/ml/models/time_series_engine.dart';
+
 import 'package:intl/intl.dart';
 import 'dart:math'; // For min/max
 import 'package:logger/logger.dart';
@@ -100,11 +100,10 @@ class CashFlowEvent {
 }
 
 class SimulatorEngine {
-  final TimeSeriesEngine _timeSeriesEngine;
   final FinancialContextService _financialContextService; // Injected
   final _logger = Logger();
 
-  SimulatorEngine(this._timeSeriesEngine, this._financialContextService);
+  SimulatorEngine(this._financialContextService);
 
   /// Simulate cash flow over a period, considering all financial contexts.
   SimulationReport simulateWithContext({
@@ -434,8 +433,6 @@ class SimulatorEngine {
     final now = DateTime.now();
     final monthStart = DateTime(now.year, now.month, 1);
     final dayOfMonth = now.day;
-    final daysRemainingInMonth =
-        DateTime(now.year, now.month + 1, 0).day - dayOfMonth;
 
     // Check spending velocity this month
     final thisMonthExpenses = recentHistory
