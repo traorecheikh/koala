@@ -8,6 +8,7 @@ import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/hive_registrar.g.dart'; // Import generated Hive adapters
 import 'package:koaa/app/services/encryption_service.dart'; // Import encryption service
 import 'package:koaa/app/services/notification_service.dart'; // NEW: Import NotificationService
+import 'package:koaa/app/services/intelligence/intelligence_service.dart'; // Import for ProactiveAlert logic
 import 'package:logger/logger.dart'; // For logging within the background task
 
 const String kDailyCheckTask = "dailyCheckTask";
@@ -52,10 +53,45 @@ void callbackDispatcher() {
               encryptionCipher: hiveCipher);
       final Box settingsBox =
           await Hive.openBox('settingsBox'); // Needed for welcomeShown flag
+      final Box insightsBox = await Hive.openBox('insightsBox',
+          compactionStrategy: (entries, deletedEntries) => deletedEntries > 50);
 
       switch (task) {
         case kDailyCheckTask:
           logger.d("Executing daily check task...");
+
+          // ... (existing logs) ...
+
+          // Check for unread insights
+          try {
+            final rawAlerts = insightsBox.get('alerts');
+            if (rawAlerts != null) {
+              // Use dynamic map to be safe with Hive types
+              final alerts = (rawAlerts as List).map((e) {
+                // Manual deserialization safe-guard or use model
+                return ProactiveAlert.fromJson(Map<String, dynamic>.from(e));
+              }).toList();
+
+              final unreadHighPriority = alerts
+                  .where((a) =>
+                      !a.isRead &&
+                      (a.severity == AlertSeverity.critical ||
+                          a.severity == AlertSeverity.high))
+                  .toList();
+
+              if (unreadHighPriority.isNotEmpty) {
+                final alert = unreadHighPriority.first;
+                logger.d("Found unread insight: ${alert.title}");
+                await NotificationService.showNotification(
+                  id: alert.id.hashCode,
+                  title: "⚠️ ${alert.title}",
+                  body: alert.message,
+                );
+              }
+            }
+          } catch (e) {
+            logger.e("Error checking insights: $e");
+          }
 
           logger.d("Transaction count: ${transactionBox.length}");
           logger.d("Budget count: ${budgetBox.length}");
