@@ -5,7 +5,7 @@ part 'user_financial_profile.g.dart';
 @HiveType(typeId: 31)
 class UserFinancialProfile extends HiveObject {
   @HiveField(0)
-  String personaType; // Saver, Spender, Planner, etc.
+  String personaType; // Saver, Spender, Planner, etc. or 'unknown'
 
   @HiveField(1)
   double savingsRate;
@@ -31,6 +31,12 @@ class UserFinancialProfile extends HiveObject {
   @HiveField(8)
   double averageAmount;
 
+  @HiveField(9)
+  String dataQuality; // 'high', 'medium', 'low' - indicates data reliability
+
+  @HiveField(10)
+  int transactionCount; // Number of transactions used for profiling
+
   UserFinancialProfile({
     required this.personaType,
     required this.savingsRate,
@@ -41,6 +47,7 @@ class UserFinancialProfile extends HiveObject {
     this.nightRatio = 0.0,
     this.dominantCategory = 'Autre',
     this.averageAmount = 0.0,
+    this.dataQuality = 'low',
+    this.transactionCount = 0,
   });
 }
-
