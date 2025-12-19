@@ -5,16 +5,23 @@ import 'package:hive_ce/hive.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
 enum FilterType { all, income, expense }
-enum SortOption { dateNewest, dateOldest, amountHighest, amountLowest, description }
+
+enum SortOption {
+  dateNewest,
+  dateOldest,
+  amountHighest,
+  amountLowest,
+  description
+}
 
 class TransactionsController extends GetxController {
   final transactions = <LocalTransaction>[].obs;
   final displayedTransactions = <LocalTransaction>[].obs;
-  
+
   final isLoading = false.obs;
   final hasMore = false.obs;
   final scrollController = ScrollController();
-  
+
   // Filters & Search
   final searchController = TextEditingController();
   final currentFilter = FilterType.all.obs;
@@ -27,14 +34,15 @@ class TransactionsController extends GetxController {
   void onInit() {
     super.onInit();
     _loadTransactions();
-    
+
     // Listeners
     searchController.addListener(_filterAndSort);
     scrollController.addListener(_onScroll);
-    
+
     // Watch Hive box for changes and store the subscription
     final box = Hive.box<LocalTransaction>('transactionBox');
-    _transactionBoxSubscription = box.watch().listen((_) => _loadTransactions());
+    _transactionBoxSubscription =
+        box.watch().listen((_) => _loadTransactions());
   }
 
   @override
@@ -54,7 +62,8 @@ class TransactionsController extends GetxController {
   }
 
   void _filterAndSort() {
-    var result = List<LocalTransaction>.from(transactions.where((t) => !t.isHidden));
+    var result =
+        List<LocalTransaction>.from(transactions.where((t) => !t.isHidden));
 
     // 1. Filter by Type
     if (currentFilter.value == FilterType.income) {
@@ -66,8 +75,9 @@ class TransactionsController extends GetxController {
     // 2. Filter by Date Range
     if (dateRange.value != null) {
       result = result.where((t) {
-        return t.date.isAfter(dateRange.value!.start.subtract(const Duration(days: 1))) &&
-               t.date.isBefore(dateRange.value!.end.add(const Duration(days: 1)));
+        return t.date.isAfter(
+                dateRange.value!.start.subtract(const Duration(days: 1))) &&
+            t.date.isBefore(dateRange.value!.end.add(const Duration(days: 1)));
       }).toList();
     }
 
@@ -76,8 +86,8 @@ class TransactionsController extends GetxController {
       final query = searchController.text.toLowerCase();
       result = result.where((t) {
         return t.description.toLowerCase().contains(query) ||
-               t.amount.toString().contains(query) ||
-               (t.category?.displayName.toLowerCase().contains(query) ?? false);
+            t.amount.toString().contains(query) ||
+            t.category.displayName.toLowerCase().contains(query);
       }).toList();
     }
 
@@ -132,8 +142,7 @@ class TransactionsController extends GetxController {
 
   bool get hasActiveFilters {
     return currentFilter.value != FilterType.all ||
-           dateRange.value != null ||
-           searchController.text.isNotEmpty;
+        dateRange.value != null ||
+        searchController.text.isNotEmpty;
   }
 }
-
