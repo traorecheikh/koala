@@ -66,6 +66,9 @@ class RecurringTransaction extends HiveObject {
   @HiveField(12)
   DateTime createdAt;
 
+  // For compatibility with logic expecting startDate
+  DateTime get startDate => createdAt;
+
   RecurringTransaction({
     String? id,
     required this.amount,
