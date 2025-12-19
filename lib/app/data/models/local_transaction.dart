@@ -377,7 +377,7 @@ class LocalTransaction {
       'date': date.toIso8601String(),
       'type': type.toString().split('.').last,
       'isRecurring': isRecurring,
-      'category': category?.toString().split('.').last,
+      'category': category.toString().split('.').last,
       'categoryId': categoryId,
       'isHidden': isHidden,
       'linkedDebtId': linkedDebtId,
