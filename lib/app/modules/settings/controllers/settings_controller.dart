@@ -5,7 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart'; // Changed import
+// Changed import
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
@@ -174,7 +174,6 @@ class SettingsController extends GetxController {
 
   Future<void> _loadCurrentVersion() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
       // currentVersion.value = packageInfo.version;
       currentVersion.value = '1.0.0'; // MOCK FOR TESTING UPDATE FLOW
     } catch (e) {
@@ -294,7 +293,8 @@ class SettingsController extends GetxController {
             borderRadius: BorderRadius.circular(20), // Slightly reduced radius
             boxShadow: KoalaColors.shadowMedium,
             border: Border.all(
-                color: KoalaColors.primaryUi(Get.context!).withOpacity(0.1)),
+                color:
+                    KoalaColors.primaryUi(Get.context!).withValues(alpha: 0.1)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -303,7 +303,8 @@ class SettingsController extends GetxController {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: KoalaColors.primaryUi(Get.context!).withOpacity(0.1),
+                  color: KoalaColors.primaryUi(Get.context!)
+                      .withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -331,7 +332,7 @@ class SettingsController extends GetxController {
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: KoalaColors.textSecondary(Get.context!)
-                            .withOpacity(0.05),
+                            .withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -455,7 +456,7 @@ class SettingsController extends GetxController {
                               strokeCap: StrokeCap.round,
                               backgroundColor:
                                   KoalaColors.primaryUi(Get.context!)
-                                      .withOpacity(0.1),
+                                      .withValues(alpha: 0.1),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                   KoalaColors.primaryUi(Get.context!)),
                             )),
@@ -513,7 +514,7 @@ class SettingsController extends GetxController {
           await file.delete();
           Get.snackbar('Erreur de sécurité',
               'Le fichier téléchargé est corrompu ou invalide.',
-              backgroundColor: KoalaColors.destructive.withOpacity(0.1),
+              backgroundColor: KoalaColors.destructive.withValues(alpha: 0.1),
               colorText: KoalaColors.destructive,
               duration: const Duration(seconds: 5));
           return;
