@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/ml/user_financial_profile.dart';
-import 'package:koaa/app/services/ml/feature_extractor.dart';
 
 /// ML-enhanced Anomaly Detector
 /// Uses multiple detection strategies:
@@ -11,9 +10,10 @@ import 'package:koaa/app/services/ml/feature_extractor.dart';
 /// 3. Frequency burst detection (too many transactions)
 /// 4. Multi-dimensional isolation scoring
 class AnomalyDetector {
-  final FeatureExtractor _featureExtractor;
+  AnomalyDetector();
 
-  AnomalyDetector(this._featureExtractor);
+  // Minimum history required for reliable anomaly detection
+  static const int _minHistoryTransactions = 20;
 
   List<SpendingAnomaly> detectAnomalies(
     List<LocalTransaction> recentTransactions,
@@ -21,6 +21,12 @@ class AnomalyDetector {
     UserFinancialProfile? userProfile,
   ) {
     final anomalies = <SpendingAnomaly>[];
+
+    // Check minimum history - don't flag anomalies for new users
+    if (history.length < _minHistoryTransactions) {
+      // Not enough data to detect anomalies reliably
+      return anomalies;
+    }
 
     // Build statistical models from history
     final categoryStats = _buildCategoryStats(history);
@@ -31,7 +37,7 @@ class AnomalyDetector {
     for (final tx in recentTransactions) {
       if (tx.type != TransactionType.expense) continue;
 
-      final category = tx.category?.displayName ?? 'Autre';
+      final category = tx.category.displayName;
 
       // 1. Amount-based anomaly (Z-score)
       final amountAnomaly = _detectAmountAnomaly(tx, category, categoryStats);
@@ -68,8 +74,8 @@ class AnomalyDetector {
       List<LocalTransaction> history) {
     final stats = <String, _CategoryStats>{};
     for (final tx in history) {
-      if (tx.type == TransactionType.expense && tx.category != null) {
-        final cat = tx.category!.displayName;
+      if (tx.type == TransactionType.expense) {
+        final cat = tx.category.displayName;
         stats.putIfAbsent(cat, () => _CategoryStats());
         stats[cat]!.add(tx.amount);
       }
@@ -82,8 +88,8 @@ class AnomalyDetector {
       List<LocalTransaction> history) {
     final profiles = <String, _TemporalProfile>{};
     for (final tx in history) {
-      if (tx.type == TransactionType.expense && tx.category != null) {
-        final cat = tx.category!.displayName;
+      if (tx.type == TransactionType.expense) {
+        final cat = tx.category.displayName;
         profiles.putIfAbsent(cat, () => _TemporalProfile());
         profiles[cat]!.add(tx.date);
       }
@@ -234,7 +240,7 @@ class AnomalyDetector {
     int factors = 0;
 
     // Factor 1: Amount deviation
-    final category = tx.category?.displayName ?? 'Autre';
+    final category = tx.category.displayName;
     final catStats = stats[category];
     if (catStats != null && catStats.count > 3) {
       final zScore = (tx.amount - catStats.mean) / catStats.stdDev;
@@ -246,7 +252,7 @@ class AnomalyDetector {
     final categoryCount = history
         .where((t) =>
             t.type == TransactionType.expense &&
-            t.category?.displayName == category)
+            t.category.displayName == category)
         .length;
     final totalExpenses =
         history.where((t) => t.type == TransactionType.expense).length;
@@ -381,7 +387,7 @@ class SpendingAnomaly {
 
   double get amount => transaction.amount;
   DateTime get date => transaction.date;
-  String get categoryName => transaction.category?.displayName ?? 'Autre';
+  String get categoryName => transaction.category.displayName;
 }
 
 enum AnomalySeverity { low, medium, high }
