@@ -326,7 +326,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                 height: 4.h,
                 margin: EdgeInsets.only(top: 12.h),
                 decoration: BoxDecoration(
-                  color: KoalaColors.textSecondary(context).withOpacity(0.3),
+                  color: KoalaColors.textSecondary(context).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -345,7 +345,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     Container(
                       padding: EdgeInsets.all(12.w),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -369,7 +369,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                           Text(
                             categoryName,
                             style: KoalaTypography.bodyMedium(context).copyWith(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],
@@ -565,8 +565,8 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                   padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
                     color: widget.type == TransactionType.income
-                        ? KoalaColors.success.withOpacity(0.1)
-                        : KoalaColors.destructive.withOpacity(0.1),
+                        ? KoalaColors.success.withValues(alpha: 0.1)
+                        : KoalaColors.destructive.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(KoalaRadius.lg),
                   ),
                   child: Icon(
@@ -735,7 +735,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                               decoration: BoxDecoration(
                                 color: _selectedCategory != null
                                     ? Color(_selectedCategory!.colorValue)
-                                        .withOpacity(0.2)
+                                        .withValues(alpha: 0.2)
                                     : Colors.transparent,
                                 shape: BoxShape.circle,
                               ),
@@ -861,7 +861,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                                         style: TextStyle(
                                           fontSize: 17.sp,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.white.withOpacity(0.8),
+                                          color: Colors.white.withValues(alpha: 0.8),
                                         ),
                                       ),
                                     ],
@@ -1039,7 +1039,7 @@ class _PremiumBudgetRow extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(8.w),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: iconColor, size: 18.sp),
