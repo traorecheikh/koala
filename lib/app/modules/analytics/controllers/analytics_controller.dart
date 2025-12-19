@@ -249,8 +249,8 @@ class AnalyticsController extends GetxController {
           final cat = categoriesController.categories
               .firstWhereOrNull((c) => c.id == transaction.categoryId);
           if (cat != null) categoryName = cat.name;
-        } else if (transaction.category != null) {
-          categoryName = transaction.category!.displayName;
+        } else {
+          categoryName = transaction.category.displayName;
         }
 
         categories.update(
@@ -471,7 +471,7 @@ class AnalyticsController extends GetxController {
         targetAmount: goal.targetAmount,
         currentAmount: goal.currentAmount,
         progressPercentage: goal.progressPercentage,
-        colorValue: goal.colorValue ?? Get.theme.primaryColor.value,
+        colorValue: goal.colorValue ?? Get.theme.primaryColor.toARGB32(),
         targetDate: goal.targetDate,
       ));
     }
@@ -531,7 +531,6 @@ class AnalyticsController extends GetxController {
 
   void navigatePrevious() {
     final minYear = 2020; // Prevent navigating to very old dates
-    final currentYear = DateTime.now().year;
 
     if (selectedTimeRange.value == TimeRange.month) {
       // Prevent going before minYear
