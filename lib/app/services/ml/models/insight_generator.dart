@@ -30,29 +30,55 @@ class InsightGenerator {
   }) {
     final insights = <MLInsight>[];
 
+    // Calculate data confidence based on transaction count and profile quality
+    final txCount = context.allTransactions.length;
+    double dataConfidence;
+    if (txCount >= 100) {
+      dataConfidence = 1.0;
+    } else if (txCount >= 50) {
+      dataConfidence = 0.8;
+    } else if (txCount >= 20) {
+      dataConfidence = 0.5;
+    } else {
+      dataConfidence = 0.2;
+    }
+
+    // If data quality is very low, add a meta-insight about it
+    if (dataConfidence < 0.5) {
+      insights.add(MLInsight(
+        id: 'data_quality_low',
+        title: 'Continuez d\'utiliser Koala',
+        description:
+            'Plus vous ajoutez de transactions, plus les conseils seront personnalisés et précis.',
+        type: InsightType.info,
+        priority: 50,
+        confidence: 1.0, // This insight itself is high confidence
+      ));
+    }
+
     // 1. Critical Alerts (Immediate action needed)
-    _addAnomalyInsights(insights, anomalies, profile);
-    _addForecastAlerts(insights, forecast);
+    _addAnomalyInsights(insights, anomalies, profile, dataConfidence);
+    _addForecastAlerts(insights, forecast, dataConfidence);
 
     // 2. Cross-Feature Insights (Holistic view)
-    _addCrossFeatureInsights(insights, context);
+    _addCrossFeatureInsights(insights, context, dataConfidence);
 
     // 3. Persona-based Coaching (Long-term behavioral change)
-    _addPersonaCoaching(insights, profile);
+    _addPersonaCoaching(insights, profile, dataConfidence);
 
     // 4. Pattern-based Insights (Operational improvements)
-    _addPatternInsights(insights, patterns);
+    _addPatternInsights(insights, patterns, dataConfidence);
 
     // 5. Health-based Celebration/Warning (Motivation)
-    _addHealthInsights(insights, health);
+    _addHealthInsights(insights, health, dataConfidence);
 
     // Sort by priority and limit to top 5 to avoid overwhelming user
     insights.sort((a, b) => b.priority.compareTo(a.priority));
     return insights.take(5).toList();
   }
 
-  void _addCrossFeatureInsights(
-      List<MLInsight> insights, FinancialContextService context) {
+  void _addCrossFeatureInsights(List<MLInsight> insights,
+      FinancialContextService context, double dataConfidence) {
     // 1. Budget Surplus -> Goal Contribution
     final now = DateTime.now();
     for (var budget in context.allBudgets) {
@@ -121,6 +147,7 @@ class InsightGenerator {
     List<MLInsight> insights,
     List<SpendingAnomaly> anomalies,
     UserFinancialProfile profile,
+    double dataConfidence,
   ) {
     for (final anomaly in anomalies) {
       if (anomaly.severity == AnomalySeverity.high) {
@@ -132,6 +159,7 @@ class InsightGenerator {
           priority: 10,
           actionLabel: 'Voir le détail',
           relatedData: {'anomaly_amount': anomaly.amount},
+          confidence: dataConfidence,
         ));
       }
     }
@@ -148,7 +176,8 @@ class InsightGenerator {
     return 'Dépense de ${anomaly.amount.toStringAsFixed(0)} FCFA détectée, bien au-dessus de la moyenne pour ${anomaly.categoryName}.';
   }
 
-  void _addForecastAlerts(List<MLInsight> insights, ForecastResult? forecast) {
+  void _addForecastAlerts(List<MLInsight> insights, ForecastResult? forecast,
+      double dataConfidence) {
     if (forecast == null) return;
 
     if (forecast.riskLevel == ForecastRiskLevel.high) {
@@ -160,12 +189,13 @@ class InsightGenerator {
         type: InsightType.warning,
         priority: 9,
         actionLabel: 'Réduire les dépenses',
+        confidence: dataConfidence,
       ));
     }
   }
 
-  void _addPersonaCoaching(
-      List<MLInsight> insights, UserFinancialProfile profile) {
+  void _addPersonaCoaching(List<MLInsight> insights,
+      UserFinancialProfile profile, double dataConfidence) {
     // We don't have a 'confidence' field in UserFinancialProfile yet, simplified for now
 
     final adviceList = _profiler.getAdviceForPersona(profile.personaType);
@@ -183,8 +213,8 @@ class InsightGenerator {
     ));
   }
 
-  void _addPatternInsights(
-      List<MLInsight> insights, List<FinancialPattern> patterns) {
+  void _addPatternInsights(List<MLInsight> insights,
+      List<FinancialPattern> patterns, double dataConfidence) {
     // Recurring expenses
     final recurringCount = patterns
         .where((p) => p.patternType == PatternType.recurringExpense.name)
@@ -248,15 +278,16 @@ class InsightGenerator {
     }
   }
 
-  void _addHealthInsights(
-      List<MLInsight> insights, FinancialHealthScore health) {
+  void _addHealthInsights(List<MLInsight> insights, FinancialHealthScore health,
+      double dataConfidence) {
     // First, check penalties and add specific warnings
     for (var penalty in health.penalties) {
       if (penalty.reason.contains('impulsive')) {
         insights.add(MLInsight(
           id: 'penalty_reckless_${DateTime.now().day}',
           title: '⚠️ Dépenses impulsives détectées',
-          description: '${penalty.reason}. Une grosse dépense (>30% du revenu) en une seule fois peut déséquilibrer votre budget.',
+          description:
+              '${penalty.reason}. Une grosse dépense (>30% du revenu) en une seule fois peut déséquilibrer votre budget.',
           type: InsightType.warning,
           priority: 9,
           actionLabel: 'Voir mes dépenses',
@@ -265,7 +296,8 @@ class InsightGenerator {
         insights.add(MLInsight(
           id: 'penalty_velocity_${DateTime.now().day}',
           title: '🚀 Vous dépensez trop vite',
-          description: '${penalty.reason}. Essayez de répartir vos dépenses sur tout le mois.',
+          description:
+              '${penalty.reason}. Essayez de répartir vos dépenses sur tout le mois.',
           type: InsightType.warning,
           priority: 8,
         ));
@@ -273,7 +305,8 @@ class InsightGenerator {
         insights.add(MLInsight(
           id: 'penalty_debt_${DateTime.now().day}',
           title: '💳 Niveau de dette élevé',
-          description: '${penalty.reason}. Considérez un plan de remboursement accéléré.',
+          description:
+              '${penalty.reason}. Considérez un plan de remboursement accéléré.',
           type: InsightType.warning,
           priority: 9,
           actionLabel: 'Gérer mes dettes',
@@ -356,8 +389,11 @@ class MLInsight {
   final InsightType type;
   final int priority;
   final String? actionLabel;
+  final String? actionRoute;
   final Map<String, dynamic>? relatedData;
   final DateTime createdAt;
+  final double confidence; // 0.0-1.0 - how reliable is this insight
+  bool isRead; // Mutable read status
 
   MLInsight({
     required this.id,
@@ -366,8 +402,11 @@ class MLInsight {
     required this.type,
     required this.priority,
     this.actionLabel,
+    this.actionRoute,
     this.relatedData,
     DateTime? createdAt,
+    this.isRead = false,
+    this.confidence = 1.0, // Default to high confidence
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -377,8 +416,11 @@ class MLInsight {
         'type': type.index,
         'priority': priority,
         'actionLabel': actionLabel,
+        'actionRoute': actionRoute,
         'relatedData': relatedData,
         'createdAt': createdAt.toIso8601String(),
+        'isRead': isRead,
+        'confidence': confidence,
       };
 
   factory MLInsight.fromJson(Map<String, dynamic> json) => MLInsight(
@@ -388,10 +430,13 @@ class MLInsight {
         type: InsightType.values[json['type'] ?? 0],
         priority: json['priority'],
         actionLabel: json['actionLabel'],
+        actionRoute: json['actionRoute'],
         relatedData: json['relatedData'],
         createdAt: json['createdAt'] != null
             ? DateTime.parse(json['createdAt'])
             : null,
+        isRead: json['isRead'] ?? false,
+        confidence: (json['confidence'] ?? 1.0).toDouble(),
       );
 }
 
