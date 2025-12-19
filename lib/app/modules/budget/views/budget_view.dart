@@ -145,7 +145,7 @@ class BudgetView extends GetView<BudgetController> {
                               Container(
                                 padding: EdgeInsets.all(6.w),
                                 decoration: BoxDecoration(
-                                  color: Color(cat.colorValue).withOpacity(0.2),
+                                  color: Color(cat.colorValue).withValues(alpha: 0.2),
                                   shape: BoxShape.circle,
                                 ),
                                 child: CategoryIcon(
@@ -317,7 +317,7 @@ class _GlobalBudgetCard extends StatelessWidget {
                           strokeWidth: 10.w,
                           backgroundColor: Colors.transparent,
                           valueColor: AlwaysStoppedAnimation(
-                              Colors.white.withOpacity(0.2)),
+                              Colors.white.withValues(alpha: 0.2)),
                           strokeCap: StrokeCap.round,
                         ),
                       ),
@@ -432,7 +432,7 @@ class _GlobalBudgetCard extends StatelessWidget {
                         padding: EdgeInsets.symmetric(
                             horizontal: 12.w, vertical: 8.h),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                         child: Row(
@@ -537,23 +537,23 @@ class _BudgetCard extends StatelessWidget {
     switch (budgetStatus) {
       case BudgetStatus.safe:
         statusColor = KoalaColors.success;
-        statusBgColor = KoalaColors.success.withOpacity(0.1);
+        statusBgColor = KoalaColors.success.withValues(alpha: 0.1);
         statusIcon = CupertinoIcons.checkmark_circle_fill;
         break;
       case BudgetStatus.warning:
         statusColor = KoalaColors.warning;
-        statusBgColor = KoalaColors.warning.withOpacity(0.1);
+        statusBgColor = KoalaColors.warning.withValues(alpha: 0.1);
         statusIcon = CupertinoIcons.exclamationmark_circle_fill;
         break;
       case BudgetStatus.exceeded:
       case BudgetStatus.critical:
         statusColor = KoalaColors.destructive;
-        statusBgColor = KoalaColors.destructive.withOpacity(0.1);
+        statusBgColor = KoalaColors.destructive.withValues(alpha: 0.1);
         statusIcon = CupertinoIcons.exclamationmark_triangle_fill;
         break;
     }
 
-    final categoryColor = Color(category?.colorValue ?? Colors.grey.value);
+    final categoryColor = Color(category?.colorValue ?? Colors.grey.toARGB32());
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -580,7 +580,7 @@ class _BudgetCard extends StatelessWidget {
                       width: 44.w,
                       height: 44.w,
                       decoration: BoxDecoration(
-                        color: categoryColor.withOpacity(0.12),
+                        color: categoryColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14.r),
                       ),
                       child: Center(
