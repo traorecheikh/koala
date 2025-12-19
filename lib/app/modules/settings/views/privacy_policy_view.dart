@@ -34,7 +34,7 @@ class PrivacyPolicyView extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
+                        color: theme.primaryColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -118,13 +118,13 @@ class PrivacyPolicyView extends StatelessWidget {
         borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
         ),
       ),
       child: Column(
