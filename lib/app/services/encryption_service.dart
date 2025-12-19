@@ -13,6 +13,7 @@ class EncryptionService {
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
+      // ignore: deprecated_member_use
       encryptedSharedPreferences: true,
     ),
     iOptions: IOSOptions(
@@ -25,7 +26,8 @@ class EncryptionService {
   Future<List<int>> getEncryptionKey() async {
     try {
       // Try to retrieve existing key
-      final existingKey = await _secureStorage.read(key: _encryptionKeyStorageKey);
+      final existingKey =
+          await _secureStorage.read(key: _encryptionKeyStorageKey);
 
       if (existingKey != null) {
         // Decode existing key from base64
@@ -55,7 +57,8 @@ class EncryptionService {
 
     // Additional entropy from time-based salt
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    final combinedData = randomBytes + utf8.encode(timestamp + _secureKeyDerivationSalt);
+    final combinedData =
+        randomBytes + utf8.encode(timestamp + _secureKeyDerivationSalt);
 
     // Hash to ensure proper key length and distribution
     final digest = sha256.convert(combinedData);
@@ -129,7 +132,8 @@ class EncryptionService {
 
     final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
 
-    return encrypter.decrypt(enc.Encrypted(Uint8List.fromList(encryptedData)), iv: iv);
+    return encrypter.decrypt(enc.Encrypted(Uint8List.fromList(encryptedData)),
+        iv: iv);
   }
 
   /// Securely wipe sensitive data from memory
@@ -149,5 +153,3 @@ class EncryptionException implements Exception {
   @override
   String toString() => 'EncryptionException: $message';
 }
-
-
