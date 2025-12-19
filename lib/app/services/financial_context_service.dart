@@ -116,15 +116,31 @@ class FinancialContextService extends GetxService {
         .watch()
         .listen((_) => _loadRecurringTransactions()));
 
-    // Recalculate computed metrics whenever underlying data changes
-    _workers.add(everAll([
+    // Targeted updates with debounce
+    // 1. Transactions change -> Balance, Income, Savings, and Debt Reconciliation
+    debounce(
       allTransactions,
-      allJobs,
-      allBudgets,
+      (_) async {
+        await _calculateCurrentBalance();
+        _calculateMonthlyIncomeAndExpenses();
+        _calculateAverageMonthlySavings();
+        _reconcileDebtAmounts();
+      },
+      time: const Duration(milliseconds: 500),
+    );
+
+    // 2. Debts change -> Debt Totals and Validation
+    debounce(
       allDebts,
-      allGoals,
-      allRecurringTransactions
-    ], (_) => _recalculateMetrics()));
+      (_) {
+        _calculateDebtTotals();
+        // Also reconcile to ensure originalAmount/remaining consistency
+        // But doing it here might trigger another update if we save.
+        // The logic in _reconcileDebtAmounts checks for diff > 0.01, so it stabilizes.
+        _reconcileDebtAmounts();
+      },
+      time: const Duration(milliseconds: 500),
+    );
   }
 
   Future<void> _loadAllData() async {
