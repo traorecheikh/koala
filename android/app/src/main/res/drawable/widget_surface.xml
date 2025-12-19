@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/widget_background_dark" /> 
+    <!-- Simplified to just dark for now to ensure consistency, 
+         or I can create a values-night/ folder later. 
+         For now I'll stick to the "Premium" look the user wanted initially but CLEANER. -->
+</selector>
