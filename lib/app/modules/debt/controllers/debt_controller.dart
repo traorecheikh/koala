@@ -132,9 +132,6 @@ class DebtController extends GetxController {
         _financialContextService.totalOutstandingDebt.value;
     final totalMonthlyDebtPayments =
         _financialContextService.totalMonthlyDebtPayments.value;
-    final debtsToConsider = debts
-        .where((d) => !d.isPaidOff && d.type == DebtType.borrowed)
-        .toList();
 
     DateTime? projectedPayoffDate;
     if (totalOutstandingDebt > 0 && totalMonthlyDebtPayments > 0) {
