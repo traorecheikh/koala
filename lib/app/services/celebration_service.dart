@@ -63,7 +63,7 @@ class CelebrationService extends GetxService {
       title,
       message,
       icon: Icon(icon, color: Colors.white, size: 32),
-      backgroundColor: color.withOpacity(0.9),
+      backgroundColor: color.withValues(alpha: 0.9),
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
       margin: const EdgeInsets.all(16),
@@ -75,7 +75,7 @@ class CelebrationService extends GetxService {
       forwardAnimationCurve: Curves.easeOutBack,
       boxShadows: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.2),
+          color: Colors.black.withValues(alpha: 0.2),
           blurRadius: 8,
           offset: const Offset(0, 4),
         ),
