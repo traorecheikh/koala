@@ -7,8 +7,8 @@ class NavigationHelper {
   static void safeBack({dynamic result}) {
     // 1. Try Navigator first (Most reliable)
     if (Get.context != null && Navigator.of(Get.context!).canPop()) {
-       Navigator.of(Get.context!).pop(result);
-       return;
+      Navigator.of(Get.context!).pop(result);
+      return;
     }
 
     // 2. Fallback to Get.back
@@ -19,8 +19,11 @@ class NavigationHelper {
       try {
         if (Get.isDialogOpen ?? false) {
           Get.back();
-        } else if (Get.isBottomSheetOpen ?? false) Get.back();
-        else if (Get.isSnackbarOpen) Get.closeCurrentSnackbar();
+        } else if (Get.isBottomSheetOpen ?? false) {
+          Get.back();
+        } else if (Get.isSnackbarOpen) {
+          Get.closeCurrentSnackbar();
+        }
       } catch (_) {}
     }
   }
@@ -52,5 +55,3 @@ class NavigationHelper {
     return Get.toNamed(page, arguments: arguments);
   }
 }
-
-
