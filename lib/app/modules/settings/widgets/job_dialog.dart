@@ -115,7 +115,7 @@ class _JobDialogState extends State<_JobDialog> {
     } catch (e) {
       Get.snackbar('Erreur', 'Sauvegarde impossible: $e',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: KoalaColors.destructive.withOpacity(0.1),
+          backgroundColor: KoalaColors.destructive.withValues(alpha: 0.1),
           colorText: KoalaColors.destructive);
     }
   }
@@ -420,7 +420,7 @@ class _JobDialogState extends State<_JobDialog> {
                         EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     decoration: BoxDecoration(
                       color:
-                          KoalaColors.inputBackground(context).withOpacity(0.5),
+                          KoalaColors.inputBackground(context).withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(KoalaRadius.md),
                     ),
                     child: SwitchListTile.adaptive(
@@ -428,7 +428,7 @@ class _JobDialogState extends State<_JobDialog> {
                       onChanged: (v) => setState(() => _isActive = v),
                       title: Text('Revenu actif',
                           style: KoalaTypography.bodyMedium(context)),
-                      activeColor: KoalaColors.primaryUi(context),
+                      activeTrackColor: KoalaColors.primaryUi(context),
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                       shape: RoundedRectangleBorder(
