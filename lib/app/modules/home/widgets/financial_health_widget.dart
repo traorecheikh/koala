@@ -125,7 +125,7 @@ class _SmartScoreCard extends StatelessWidget {
                     padding:
                         EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(KoalaRadius.full),
                     ),
                     child: Row(
@@ -210,7 +210,7 @@ class _SolidScoreRing extends StatelessWidget {
               value: 1,
               strokeWidth: 8.w,
               color:
-                  KoalaColors.border(context).withOpacity(0.5), // Subtle track
+                  KoalaColors.border(context).withValues(alpha: 0.5), // Subtle track
             ),
           ),
           // Progress
