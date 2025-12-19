@@ -69,7 +69,6 @@ class _AddGoalViewState extends State<AddGoalView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       height: 0.9.sh, // Take up 90% of screen
@@ -86,7 +85,7 @@ class _AddGoalViewState extends State<AddGoalView> {
               width: 40.w,
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.3),
+                color: Colors.grey.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -109,7 +108,7 @@ class _AddGoalViewState extends State<AddGoalView> {
                   icon: Container(
                     padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(CupertinoIcons.xmark, size: 18),
@@ -119,7 +118,7 @@ class _AddGoalViewState extends State<AddGoalView> {
             ),
           ),
 
-          Divider(height: 1, color: Colors.grey.withOpacity(0.1)),
+          Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
 
           Expanded(
             child: SingleChildScrollView(
@@ -206,8 +205,8 @@ class _AddGoalViewState extends State<AddGoalView> {
                         decoration: BoxDecoration(
                           color: theme.cardColor,
                           borderRadius: BorderRadius.circular(16.r),
-                          border:
-                              Border.all(color: Colors.grey.withOpacity(0.1)),
+                          border: Border.all(
+                              color: Colors.grey.withValues(alpha: 0.1)),
                         ),
                         child: Row(
                           children: [
@@ -256,7 +255,8 @@ class _AddGoalViewState extends State<AddGoalView> {
                       decoration: BoxDecoration(
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                        border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.1)),
                       ),
                       child: Row(
                         children: [
@@ -301,7 +301,7 @@ class _AddGoalViewState extends State<AddGoalView> {
               color: theme.scaffoldBackgroundColor,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -350,70 +350,6 @@ class _AddGoalViewState extends State<AddGoalView> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    required ThemeData theme,
-    bool isNumber = false,
-    String? suffix,
-    bool isBig = false,
-  }) {
-    return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: 16.w, vertical: isBig ? 8.h : 4.h),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(icon, color: theme.primaryColor, size: 20.sp),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType:
-                  isNumber ? TextInputType.number : TextInputType.text,
-              style: TextStyle(
-                fontSize: isBig ? 24.sp : 16.sp,
-                fontWeight: isBig ? FontWeight.bold : FontWeight.w600,
-              ),
-              decoration: InputDecoration(
-                hintText: hint,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                suffixText: suffix,
-                suffixStyle: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTypeChip(GoalType type, ThemeData theme) {
     final isSelected = selectedType == type;
     return GestureDetector(
@@ -425,13 +361,14 @@ class _AddGoalViewState extends State<AddGoalView> {
           color: isSelected ? theme.primaryColor : theme.cardColor,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color:
-                isSelected ? theme.primaryColor : Colors.grey.withOpacity(0.2),
+            color: isSelected
+                ? theme.primaryColor
+                : Colors.grey.withValues(alpha: 0.2),
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: theme.primaryColor.withOpacity(0.3),
+                    color: theme.primaryColor.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
@@ -473,7 +410,7 @@ class _AddGoalViewState extends State<AddGoalView> {
         separatorBuilder: (_, __) => SizedBox(width: 12.w),
         itemBuilder: (context, index) {
           final color = colors[index];
-          final isSelected = selectedColor.value == color.value;
+          final isSelected = selectedColor.toARGB32() == color.toARGB32();
           return GestureDetector(
             onTap: () => setState(() => selectedColor = color),
             child: AnimatedContainer(
@@ -488,7 +425,7 @@ class _AddGoalViewState extends State<AddGoalView> {
                     : null,
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.4),
+                    color: color.withValues(alpha: 0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -522,12 +459,13 @@ class _AddGoalViewState extends State<AddGoalView> {
               height: 60.w,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? selectedColor.withOpacity(0.1)
+                    ? selectedColor.withValues(alpha: 0.1)
                     : theme.cardColor,
                 borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(
-                  color:
-                      isSelected ? selectedColor : Colors.grey.withOpacity(0.2),
+                  color: isSelected
+                      ? selectedColor
+                      : Colors.grey.withValues(alpha: 0.2),
                   width: isSelected ? 2.w : 1.w,
                 ),
               ),
@@ -562,7 +500,7 @@ class _AddGoalViewState extends State<AddGoalView> {
         'Manquant',
         'Veuillez entrer un titre et un montant.',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.9),
+        backgroundColor: Colors.red.withValues(alpha: 0.9),
         colorText: Colors.white,
         margin: EdgeInsets.all(16.w),
       );
@@ -582,7 +520,7 @@ class _AddGoalViewState extends State<AddGoalView> {
       createdAt: widget.goalToEdit?.createdAt,
       targetDate: selectedDate,
       iconKey: selectedIcon,
-      colorValue: selectedColor.value,
+      colorValue: selectedColor.toARGB32(),
       linkedCategoryId: selectedCategory?.id,
     );
 
