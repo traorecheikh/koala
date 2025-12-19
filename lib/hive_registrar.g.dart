@@ -33,6 +33,8 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(FinancialPatternAdapter());
     registerAdapter(FrequencyAdapter());
     registerAdapter(GoalMilestoneAdapter());
+    registerAdapter(GoalStatusAdapter());
+    registerAdapter(GoalTypeAdapter());
     registerAdapter(JobAdapter());
     registerAdapter(LocalTransactionAdapter());
     registerAdapter(LocalUserAdapter());
@@ -63,6 +65,8 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(FinancialPatternAdapter());
     registerAdapter(FrequencyAdapter());
     registerAdapter(GoalMilestoneAdapter());
+    registerAdapter(GoalStatusAdapter());
+    registerAdapter(GoalTypeAdapter());
     registerAdapter(JobAdapter());
     registerAdapter(LocalTransactionAdapter());
     registerAdapter(LocalUserAdapter());
