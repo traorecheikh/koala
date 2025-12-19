@@ -194,7 +194,7 @@ class _FrontCard extends GetView<HomeController> {
                     Text(
                       'Appuyez pour voir les détails', // Translated from 'Tap to view details'
                       style: KoalaTypography.caption(context).copyWith(
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -340,7 +340,7 @@ class _SummaryItem extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(8.w),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12.r),
           ),
           child: Icon(icon, size: 18.sp, color: Colors.white),
@@ -378,50 +378,5 @@ class _SummaryItem extends StatelessWidget {
         .animate()
         .fadeIn(duration: 400.ms, delay: 200.ms)
         .slideX(begin: -0.2, end: 0, duration: 400.ms, delay: 200.ms);
-  }
-}
-
-/// Mini chart widget showing last 7 days activity (Preserved for future use or if used elsewhere)
-class _MiniChart extends StatelessWidget {
-  final List<double> data;
-
-  const _MiniChart({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    if (data.isEmpty) {
-      return Container(height: 40.h);
-    }
-    final maxValue = data.reduce(math.max);
-
-    return Container(
-      height: 40.h,
-      padding: EdgeInsets.symmetric(horizontal: 8.w),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(7, (index) {
-          final value = data[index];
-          final heightPercent = maxValue > 0 ? value / maxValue : 0.0;
-
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 2.w),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                height: (heightPercent * 40.h).clamp(2.0, 40.h),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
-              )
-                  .animate(delay: (index * 50).ms)
-                  .fadeIn(duration: 300.ms)
-                  .slideY(begin: 1, end: 0, duration: 400.ms),
-            ),
-          );
-        }),
-      ),
-    );
   }
 }
