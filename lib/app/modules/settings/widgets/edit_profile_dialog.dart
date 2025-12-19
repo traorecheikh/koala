@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:hive_ce/hive.dart'; // Added Hive import
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
@@ -63,13 +64,21 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
       await Future.delayed(const Duration(milliseconds: 800));
 
+      final currentUser = _homeController.user.value;
+
       final updatedUser = LocalUser(
         fullName: _fullNameController.text,
         salary: double.parse(_salaryController.text),
         payday: int.parse(_paydayController.text),
         age: int.parse(_ageController.text),
         budgetingType: _budgetingType,
+        firstLaunchDate: currentUser?.firstLaunchDate,
+        hasCompletedCatchUp: currentUser?.hasCompletedCatchUp ?? false,
       );
+
+      final userBox = Hive.box<LocalUser>('userBox');
+      await userBox.put('currentUser', updatedUser);
+
       _homeController.user.value = updatedUser;
 
       if (mounted) {
@@ -329,7 +338,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
