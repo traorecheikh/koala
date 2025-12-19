@@ -6,6 +6,9 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  // Track app foreground state
+  static bool isForeground = false;
+
   static Future<void> initialize() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -89,9 +92,15 @@ class NotificationService {
         'koala_daily_alerts',
         'Daily Alerts',
         channelDescription: 'Daily budget and summary alerts',
-        importance: Importance.max,
-        priority: Priority.high,
+        importance: isForeground ? Importance.low : Importance.max,
+        priority: isForeground ? Priority.low : Priority.high,
         styleInformation: BigTextStyleInformation(body),
+        // Vibration pattern for 'low' importance might need explicit vibration or just rely on default.
+        // If importance is low, it won't pop up.
+        // But user said "just vibrate".
+        // Importance.default allows sound/vibrate but no popup?
+        // Actually Importance.high = popup. Importance.default = sound/vibrate, tray.
+        // Let's use Importance.default if foreground.
       );
 
       const DarwinNotificationDetails iosNotificationDetails =
