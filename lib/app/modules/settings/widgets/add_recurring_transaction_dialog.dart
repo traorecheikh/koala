@@ -45,7 +45,6 @@ class _AddRecurringTransactionSheetState
   final List<int> _selectedDays = [];
   int _dayOfMonth = 1;
   bool _loading = false;
-  bool _buttonPressed = false;
 
   // New fields
   TransactionType _selectedType = TransactionType.expense;
@@ -77,16 +76,6 @@ class _AddRecurringTransactionSheetState
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
-  }
-
-  String _formatAmount(String value) {
-    String digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
-    if (digitsOnly.isEmpty) return '';
-    final number = int.parse(digitsOnly);
-    return number.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match match) => '${match[1]} ',
-        );
   }
 
   Future<void> _addTransaction() async {
@@ -329,7 +318,7 @@ class _AddRecurringTransactionSheetState
                     border: Border.all(color: KoalaColors.border(context)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -396,9 +385,7 @@ class _AddRecurringTransactionSheetState
                 onPressed: _loading
                     ? () {}
                     : () async {
-                        setState(() => _buttonPressed = true);
                         await Future.delayed(const Duration(milliseconds: 100));
-                        setState(() => _buttonPressed = false);
                         _addTransaction();
                       },
                 isLoading: _loading,
