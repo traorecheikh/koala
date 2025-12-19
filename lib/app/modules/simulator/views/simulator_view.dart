@@ -145,7 +145,7 @@ class _AmountInput extends StatelessWidget {
         decoration: InputDecoration(
           hintText: '0',
           hintStyle: TextStyle(
-              color: KoalaColors.textSecondary(context).withOpacity(0.3)),
+              color: KoalaColors.textSecondary(context).withValues(alpha: 0.3)),
           border: InputBorder.none,
           suffixText: 'F',
           suffixStyle: KoalaTypography.heading2(context).copyWith(
@@ -178,9 +178,9 @@ class _SimulationResultView extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(20.w),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(KoalaRadius.lg),
-            border: Border.all(color: color.withOpacity(0.2)),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -479,7 +479,7 @@ class _MetricCard extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 18.sp, color: color),
