@@ -4,20 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:koaa/app/data/models/challenge.dart';
 import 'package:koaa/app/data/models/challenge_definitions.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/services/achievements_service.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 
 class ChallengesController extends GetxController {
   late FinancialContextService _financialContext;
+  late AchievementsService _achievementsService;
   late Box<UserChallenge> _userChallengeBox;
   late Box<UserBadge> _userBadgeBox;
 
   // Observable state
   final activeChallenges = <UserChallenge>[].obs;
   final completedChallenges = <UserChallenge>[].obs;
-  final earnedBadges = <UserBadge>[].obs;
+  // Use service's earned badges and streak
+  RxList<UserBadge> get earnedBadges => _achievementsService.earnedBadges;
+  RxInt get currentStreak => _achievementsService.currentStreak;
+
   final availableChallenges = <Challenge>[].obs;
   final totalPoints = 0.obs;
-  final currentStreak = 0.obs;
 
   // All predefined challenges
   List<Challenge> get allChallenges => ChallengeDefinitions.all;
@@ -26,11 +30,12 @@ class ChallengesController extends GetxController {
   void onInit() {
     super.onInit();
     _financialContext = Get.find<FinancialContextService>();
+    _achievementsService = Get.find<AchievementsService>();
     _initializeBoxes();
     _loadUserData();
 
-    // React to transaction changes to update challenge progress
-    ever(_financialContext.allTransactions, (_) => evaluateAllChallenges());
+    // React to service updates
+    ever(earnedBadges, (_) => _calculateTotalPoints());
   }
 
   Future<void> _initializeBoxes() async {
@@ -375,7 +380,7 @@ class ChallengesController extends GetxController {
     Get.snackbar(
       'Défi Complété! 🎉',
       challenge.title,
-      backgroundColor: Colors.green.withOpacity(0.9),
+      backgroundColor: Colors.green.withValues(alpha: 0.9),
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
       margin: const EdgeInsets.all(16),
