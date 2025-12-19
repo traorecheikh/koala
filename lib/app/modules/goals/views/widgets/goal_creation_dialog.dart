@@ -146,7 +146,7 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
                         padding: EdgeInsets.all(8.w),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? _selectedColor.withOpacity(0.2)
+                              ? _selectedColor.withValues(alpha: 0.2)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8.r),
                           border: isSelected
@@ -186,7 +186,7 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
                         type: _selectedGoalType,
                         targetDate: _selectedTargetDate,
                         iconKey: _selectedIconKey,
-                        colorValue: _selectedColor.value,
+                        colorValue: _selectedColor.toARGB32(),
                       );
 
                       await _goalsController.addGoal(newGoal);
