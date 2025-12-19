@@ -8,7 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/modules/settings/views/subscriptions_view.dart';
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
-import 'package:koaa/app/modules/settings/widgets/edit_profile_dialog.dart';
+import 'package:koaa/app/modules/settings/views/profile_view.dart';
 import 'package:koaa/app/modules/settings/widgets/reset_app_sheet.dart';
 import 'package:koaa/app/modules/settings/views/privacy_policy_view.dart';
 import 'package:koaa/app/modules/settings/views/terms_view.dart';
@@ -56,7 +56,7 @@ class SettingsView extends GetView<SettingsController> {
                 trailing: Obx(
                   () => CupertinoSwitch(
                     value: controller.isDarkMode.value,
-                    activeColor: KoalaColors.primaryUi(context),
+                    activeTrackColor: KoalaColors.primaryUi(context),
                     onChanged: controller.toggleTheme,
                   ),
                 ),
@@ -125,7 +125,7 @@ class SettingsView extends GetView<SettingsController> {
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.flame_fill,
-                title: 'Défis & Badges',
+                title: 'Mes Accomplissements',
                 iconColor: const Color(0xFFFF9500),
                 onTap: () => Get.toNamed(Routes.challenges),
               ),
@@ -140,7 +140,7 @@ class SettingsView extends GetView<SettingsController> {
                 context,
                 icon: CupertinoIcons.person_alt_circle_fill,
                 title: 'Profil',
-                onTap: () => showEditProfileDialog(context),
+                onTap: () => Get.to(() => const ProfileView()),
               ),
               _buildSettingsItem(
                 context,
@@ -323,7 +323,8 @@ class SettingsView extends GetView<SettingsController> {
               if (onTap != null && trailing == null)
                 Icon(
                   CupertinoIcons.chevron_right,
-                  color: KoalaColors.textSecondary(context).withOpacity(0.5),
+                  color:
+                      KoalaColors.textSecondary(context).withValues(alpha: 0.5),
                   size: 16,
                 ),
             ],
