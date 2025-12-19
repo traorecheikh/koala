@@ -116,9 +116,9 @@ class _RiskBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -192,12 +192,12 @@ class _RecommendationCard extends StatelessWidget {
           color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: priorityColor.withOpacity(0.2),
+            color: priorityColor.withValues(alpha: 0.2),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: priorityColor.withOpacity(0.08),
+              color: priorityColor.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -211,7 +211,7 @@ class _RecommendationCard extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
-                    color: priorityColor.withOpacity(0.1),
+                    color: priorityColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Icon(icon, color: priorityColor, size: 20.sp),
@@ -263,7 +263,7 @@ class _RecommendationCard extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
               decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.white.withOpacity(0.05)
+                    ? Colors.white.withValues(alpha: 0.05)
                     : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(8.r),
               ),
@@ -330,7 +330,7 @@ class CashFlowPredictionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20.r),
           boxShadow: [
             BoxShadow(
-              color: gradientColors.first.withOpacity(0.3),
+              color: gradientColors.first.withValues(alpha: 0.3),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
@@ -352,7 +352,7 @@ class CashFlowPredictionCard extends StatelessWidget {
                 Text(
                   'Prévision fin de mois',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                   ),
@@ -374,7 +374,7 @@ class CashFlowPredictionCard extends StatelessWidget {
                   ? 'Solde prévu dans ${prediction.daysRemainingInMonth} jours'
                   : '⚠️ Risque de découvert détecté',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 13.sp,
               ),
             ),
@@ -391,7 +391,7 @@ class CashFlowPredictionCard extends StatelessWidget {
                 Container(
                   width: 1,
                   height: 30.h,
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                 ),
                 Expanded(
                   child: _PredictionStat(
@@ -403,7 +403,7 @@ class CashFlowPredictionCard extends StatelessWidget {
                   Container(
                     width: 1,
                     height: 30.h,
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
                   Expanded(
                     child: _PredictionStat(
@@ -443,7 +443,7 @@ class _PredictionStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             fontSize: 10.sp,
           ),
           textAlign: TextAlign.center,
@@ -508,7 +508,7 @@ class SpendingVelocityGauge extends StatelessWidget {
           borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -519,7 +519,7 @@ class SpendingVelocityGauge extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
-                color: patternColor.withOpacity(0.1),
+                color: patternColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(patternIcon, color: patternColor, size: 24.sp),
