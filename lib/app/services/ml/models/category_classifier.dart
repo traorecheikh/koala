@@ -36,25 +36,108 @@ class CategoryClassifier {
     'Remboursement': ['remboursement', 'refund', 'retour'],
 
     // Expenses
-    'Restaurant': ['restaurant', 'resto', 'manger', 'dejeuner', 'diner', 'cafe', 'maquis', 'dibiterie', 'garba', 'allocodrome', 'grillades'],
-    'Transport': ['taxi', 'uber', 'yango', 'bolt', 'essence', 'carburant', 'parking', 'sotrama', 'gbaka', 'woro', 'bus', 'metro', 'peage'],
+    'Restaurant': [
+      'restaurant',
+      'resto',
+      'manger',
+      'dejeuner',
+      'diner',
+      'cafe',
+      'maquis',
+      'dibiterie',
+      'garba',
+      'allocodrome',
+      'grillades'
+    ],
+    'Transport': [
+      'taxi',
+      'uber',
+      'yango',
+      'bolt',
+      'essence',
+      'carburant',
+      'parking',
+      'sotrama',
+      'gbaka',
+      'woro',
+      'bus',
+      'metro',
+      'peage'
+    ],
     'Shopping': ['achat', 'magasin', 'boutique', 'marche', 'jumia', 'shopping'],
-    'Divertissement': ['cinema', 'concert', 'sortie', 'bar', 'boite', 'fete', 'loisir', 'jeu'],
-    'Factures': ['facture', 'orange', 'mtn', 'moov', 'airtel', 'internet', 'telephone', 'abonnement', 'canal'],
-    'Santé': ['pharmacie', 'medicament', 'docteur', 'hopital', 'clinique', 'consultation', 'labo', 'analyse'],
-    'Éducation': ['ecole', 'scolarite', 'formation', 'cours', 'livre', 'universite', 'inscription'],
+    'Divertissement': [
+      'cinema',
+      'concert',
+      'sortie',
+      'bar',
+      'boite',
+      'fete',
+      'loisir',
+      'jeu'
+    ],
+    'Factures': [
+      'facture',
+      'orange',
+      'mtn',
+      'moov',
+      'airtel',
+      'internet',
+      'telephone',
+      'abonnement',
+      'canal'
+    ],
+    'Santé': [
+      'pharmacie',
+      'medicament',
+      'docteur',
+      'hopital',
+      'clinique',
+      'consultation',
+      'labo',
+      'analyse'
+    ],
+    'Éducation': [
+      'ecole',
+      'scolarite',
+      'formation',
+      'cours',
+      'livre',
+      'universite',
+      'inscription'
+    ],
     'Loyer': ['loyer', 'location', 'appartement', 'maison', 'bail'],
-    'Courses': ['supermarche', 'carrefour', 'casino', 'auchan', 'prix import', 'epicerie', 'marche'],
+    'Courses': [
+      'supermarche',
+      'carrefour',
+      'casino',
+      'auchan',
+      'prix import',
+      'epicerie',
+      'marche'
+    ],
     'Services': ['cie', 'sodeci', 'senelec', 'electricite', 'eau', 'gaz'],
     'Assurance': ['assurance', 'mutuelle', 'sanlam', 'nsia', 'allianz'],
     'Voyage': ['voyage', 'billet', 'avion', 'hotel', 'train', 'vacances'],
     'Vêtements': ['vetement', 'chaussure', 'sac', 'habit', 'mode', 'friperie'],
     'Fitness': ['gym', 'sport', 'fitness', 'salle', 'musculation'],
-    'Beauté': ['coiffure', 'beaute', 'salon', 'manucure', 'maquillage', 'parfum'],
+    'Beauté': [
+      'coiffure',
+      'beaute',
+      'salon',
+      'manucure',
+      'maquillage',
+      'parfum'
+    ],
     'Cadeaux': ['cadeau', 'anniversaire', 'mariage', 'naissance'],
     'Charité': ['don', 'zakat', 'charite', 'aumone', 'eglise', 'mosquee'],
     'Abonnements': ['netflix', 'spotify', 'dstv', 'canal', 'youtube', 'prime'],
-    'Entretien': ['reparation', 'entretien', 'mecanique', 'plombier', 'electricien'],
+    'Entretien': [
+      'reparation',
+      'entretien',
+      'mecanique',
+      'plombier',
+      'electricien'
+    ],
   };
 
   static const String _modelName = 'category_classifier_v1';
@@ -80,13 +163,14 @@ class CategoryClassifier {
     for (final tx in transactions) {
       if (tx.type != TransactionType.expense) continue;
 
-      final categoryName = tx.category?.displayName ?? 'Autre Dépense';
+      final categoryName = tx.category.displayName;
       final categoryIndex = _categoryToIndex[categoryName];
       if (categoryIndex == null) continue;
 
       // Extract description-based features for classification
-      final descFeatures = _extractClassificationFeatures(tx.description, tx.amount, tx.date);
-      
+      final descFeatures =
+          _extractClassificationFeatures(tx.description, tx.amount, tx.date);
+
       // Combine features and label
       final row = [...descFeatures, categoryIndex];
       dataRows.add(row);
@@ -100,8 +184,9 @@ class CategoryClassifier {
       // Target is 'target'
       final featureCount = dataRows.first.length - 1;
       final header = List.generate(featureCount, (i) => 'f$i')..add('target');
-      
-      final dataFrame = DataFrame(dataRows, headerExists: false, columnNames: header);
+
+      final dataFrame =
+          DataFrame(dataRows, headerExists: false, columnNames: header);
 
       // Train SoftmaxRegressor
       _model = SoftmaxRegressor(
@@ -144,7 +229,8 @@ class CategoryClassifier {
 
     // 2. Use ML model if trained
     if (_modelTrained && _model != null && type == TransactionType.expense) {
-      final mlPrediction = _predictWithML(normalizedDesc, 10000, DateTime.now());
+      final mlPrediction =
+          _predictWithML(normalizedDesc, 10000, DateTime.now());
       if (mlPrediction.confidence > 0.6) {
         return mlPrediction;
       }
@@ -158,16 +244,16 @@ class CategoryClassifier {
 
     // 4. Default category
     return CategoryPrediction(
-      categoryName: type == TransactionType.income ? 'Autre Revenu' : 'Autre Dépense',
+      categoryName:
+          type == TransactionType.income ? 'Autre Revenu' : 'Autre Dépense',
       confidence: 0.1,
       source: PredictionSource.fallback,
     );
   }
 
-
   /// Learn from a user's explicit category choice
   void learnFromTransaction(LocalTransaction tx) {
-    final categoryName = tx.category?.displayName ?? 'Autre';
+    final categoryName = tx.category.displayName;
     final keywords = _extractKeywords(tx.description);
 
     for (final keyword in keywords) {
@@ -195,8 +281,8 @@ class CategoryClassifier {
 
     final categorySet = <String>{};
     for (final tx in transactions) {
-      if (tx.type == TransactionType.expense && tx.category != null) {
-        categorySet.add(tx.category!.displayName);
+      if (tx.type == TransactionType.expense) {
+        categorySet.add(tx.category.displayName);
       }
     }
 
@@ -206,7 +292,8 @@ class CategoryClassifier {
     }
   }
 
-  List<double> _extractClassificationFeatures(String description, double amount, DateTime date) {
+  List<double> _extractClassificationFeatures(
+      String description, double amount, DateTime date) {
     final normalized = description.toLowerCase().trim();
     final words = _extractKeywords(normalized);
 
@@ -222,7 +309,8 @@ class CategoryClassifier {
     // Amount features
     features.add(log(amount + 1) / 15.0); // Log-normalized
     // Use FeatureExtractor for consistent amount bucket
-    features.add(_featureExtractor.extractAmountFeatures(amount, 'unknown', {}, 10000)[1]); 
+    features.add(_featureExtractor.extractAmountFeatures(
+        amount, 'unknown', {}, 10000)[1]);
 
     // Temporal features
     features.add(date.weekday / 7.0);
@@ -231,7 +319,8 @@ class CategoryClassifier {
     return features;
   }
 
-  CategoryPrediction? _matchLearnedPatterns(String description, TransactionType type) {
+  CategoryPrediction? _matchLearnedPatterns(
+      String description, TransactionType type) {
     final keywords = _extractKeywords(description);
     final categoryCounts = <String, int>{};
 
@@ -239,7 +328,8 @@ class CategoryClassifier {
       final patterns = _learnedPatterns[keyword];
       if (patterns != null) {
         for (final entry in patterns.entries) {
-          categoryCounts[entry.key] = (categoryCounts[entry.key] ?? 0) + entry.value;
+          categoryCounts[entry.key] =
+              (categoryCounts[entry.key] ?? 0) + entry.value;
         }
       }
     }
@@ -261,17 +351,20 @@ class CategoryClassifier {
     );
   }
 
-  CategoryPrediction _predictWithML(String description, double amount, DateTime date) {
+  CategoryPrediction _predictWithML(
+      String description, double amount, DateTime date) {
     final features = _extractClassificationFeatures(description, amount, date);
     // Create DataFrame for prediction
     // Header must match training header minus target
     final featureCount = features.length;
     final header = List.generate(featureCount, (i) => 'f$i');
-    
-    final featureDataFrame = DataFrame([features], headerExists: false, columnNames: header);
+
+    final featureDataFrame =
+        DataFrame([features], headerExists: false, columnNames: header);
 
     try {
-      final probabilitiesDataFrame = _model!.predictProbabilities(featureDataFrame);
+      final probabilitiesDataFrame =
+          _model!.predictProbabilities(featureDataFrame);
       final probsRow = probabilitiesDataFrame.rows.first;
       final probs = probsRow.map((e) => e as double).toList();
 
@@ -305,8 +398,24 @@ class CategoryClassifier {
 
     // Filter keywords by type
     final relevantCategories = isIncome
-        ? ['Salaire', 'Freelance', 'Investissement', 'Business', 'Cadeau Reçu', 'Bonus', 'Remboursement']
-        : _categoryKeywords.keys.where((k) => !['Salaire', 'Freelance', 'Investissement', 'Business', 'Cadeau Reçu', 'Bonus', 'Remboursement'].contains(k));
+        ? [
+            'Salaire',
+            'Freelance',
+            'Investissement',
+            'Business',
+            'Cadeau Reçu',
+            'Bonus',
+            'Remboursement'
+          ]
+        : _categoryKeywords.keys.where((k) => ![
+              'Salaire',
+              'Freelance',
+              'Investissement',
+              'Business',
+              'Cadeau Reçu',
+              'Bonus',
+              'Remboursement'
+            ].contains(k));
 
     for (final category in relevantCategories) {
       final keywords = _categoryKeywords[category];
@@ -356,10 +465,8 @@ class CategoryPrediction {
 
 /// Source of the prediction
 enum PredictionSource {
-  ml,       // From trained ML model
-  learned,  // From user corrections
-  keyword,  // From keyword matching
+  ml, // From trained ML model
+  learned, // From user corrections
+  keyword, // From keyword matching
   fallback, // Default when nothing matches
 }
-
-
