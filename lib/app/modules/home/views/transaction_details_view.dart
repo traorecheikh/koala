@@ -31,10 +31,8 @@ class TransactionDetailsView extends StatelessWidget {
           .firstWhereOrNull((c) => c.id == transaction.categoryId);
 
       // If not found, try matching by category name (for catch-up transactions)
-      if (cat == null) {
-        cat = categoriesController.categories.firstWhereOrNull((c) =>
+      cat ??= categoriesController.categories.firstWhereOrNull((c) =>
             c.name.toLowerCase() == transaction.categoryId!.toLowerCase());
-      }
 
       if (cat != null) {
         categoryIconKey = cat.icon;
@@ -44,9 +42,9 @@ class TransactionDetailsView extends StatelessWidget {
     }
 
     // Fallback to transaction.category enum if no match found
-    if (categoryIconKey == 'other' && transaction.category != null) {
-      categoryIconKey = transaction.category!.iconKey;
-      categoryName = transaction.category!.displayName;
+    if (categoryIconKey == 'other') {
+      categoryIconKey = transaction.category.iconKey;
+      categoryName = transaction.category.displayName;
     }
 
     return Scaffold(
@@ -85,7 +83,7 @@ class TransactionDetailsView extends StatelessWidget {
               width: 80.w,
               height: 80.w,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Center(
