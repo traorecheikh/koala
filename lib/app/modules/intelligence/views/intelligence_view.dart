@@ -194,7 +194,7 @@ class IntelligenceView extends StatelessWidget {
       label = 'Excellent';
       icon = CupertinoIcons.checkmark_shield_fill;
     } else if (score >= 60) {
-      color = KoalaColors.success.withOpacity(0.8);
+      color = KoalaColors.success.withValues(alpha: 0.8);
       label = 'Bon';
       icon = CupertinoIcons.checkmark_circle_fill;
     } else if (score >= 40) {
@@ -225,7 +225,7 @@ class IntelligenceView extends StatelessWidget {
             width: 70.w,
             height: 70.w,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -359,7 +359,7 @@ class IntelligenceView extends StatelessWidget {
         label = 'Dépenses agressives';
         break;
       case SpendingPattern.atRisk:
-        color = KoalaColors.warning.withOpacity(0.8);
+        color = KoalaColors.warning.withValues(alpha: 0.8);
         label = 'À surveiller';
         break;
       case SpendingPattern.balanced:
@@ -388,7 +388,7 @@ class IntelligenceView extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(KoalaRadius.sm)),
                   child: Icon(CupertinoIcons.flame, color: color, size: 20.sp),
                 ),
@@ -574,7 +574,7 @@ class IntelligenceView extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1), shape: BoxShape.circle),
+                  color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(icon, color: color, size: 18.sp),
             ),
             SizedBox(height: 8.h),
@@ -619,14 +619,14 @@ class IntelligenceView extends StatelessWidget {
         decoration: BoxDecoration(
           color: KoalaColors.surface(context),
           borderRadius: BorderRadius.circular(KoalaRadius.md),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
             Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(KoalaRadius.xs)),
               child: Icon(icon, color: color, size: 18.sp),
             ),
