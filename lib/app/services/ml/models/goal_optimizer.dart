@@ -2,14 +2,12 @@ import 'dart:math';
 
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
-import 'package:koaa/app/services/ml/models/time_series_engine.dart';
 
 class GoalOptimizer {
-  final TimeSeriesEngine _timeSeriesEngine;
+  GoalOptimizer();
 
-  GoalOptimizer(this._timeSeriesEngine);
-
-  List<OptimizationSuggestion> optimizeGoals(List<SavingsGoal> goals, List<LocalTransaction> history) {
+  List<OptimizationSuggestion> optimizeGoals(
+      List<SavingsGoal> goals, List<LocalTransaction> history) {
     if (goals.isEmpty) return [];
 
     final suggestions = <OptimizationSuggestion>[];
@@ -31,10 +29,11 @@ class GoalOptimizer {
     // 3. Compare
     if (totalRequired > monthlySavings * 1.1) {
       // Unrealistic
-      final deficit = totalRequired - monthlySavings;
+
       suggestions.add(OptimizationSuggestion(
         title: 'Objectifs ambitieux',
-        description: 'Vous visez ${totalRequired.toStringAsFixed(0)} FCFA/mois, mais votre moyenne est de ${monthlySavings.toStringAsFixed(0)} FCFA.',
+        description:
+            'Vous visez ${totalRequired.toStringAsFixed(0)} FCFA/mois, mais votre moyenne est de ${monthlySavings.toStringAsFixed(0)} FCFA.',
         action: 'Ajuster les échéances',
         type: SuggestionType.adjustment,
       ));
@@ -54,7 +53,7 @@ class GoalOptimizer {
   double _calculateAverageMonthlySavings(List<LocalTransaction> history) {
     // Simple: Income - Expense averaged over months
     if (history.isEmpty) return 0;
-    
+
     // Group by month
     final monthlyNet = <String, double>{};
     for (var tx in history) {
@@ -92,5 +91,3 @@ class OptimizationSuggestion {
 }
 
 enum SuggestionType { adjustment, opportunity, warning }
-
-
