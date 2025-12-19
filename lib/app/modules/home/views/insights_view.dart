@@ -49,7 +49,7 @@ class InsightsView extends GetView<HomeController> {
                 Icon(
                   CupertinoIcons.lightbulb_slash,
                   size: 64.sp,
-                  color: KoalaColors.textSecondary(context).withOpacity(0.3),
+                  color: KoalaColors.textSecondary(context).withValues(alpha: 0.3),
                 ),
                 SizedBox(height: 16.h),
                 Text(
@@ -137,7 +137,7 @@ class _InsightDetailCard extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.all(12.w),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(icon, color: color, size: 24.sp),
@@ -220,7 +220,7 @@ class _InsightDetailCard extends StatelessWidget {
               width: 40.w,
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.3),
+                color: Colors.grey.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2.r),
               ),
               margin: EdgeInsets.only(bottom: 24.h),
