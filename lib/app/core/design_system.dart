@@ -100,7 +100,7 @@ class KoalaColors {
   // Shadows
   static List<BoxShadow> get shadowSubtle => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 10,
           offset: const Offset(0, 4),
         ),
@@ -108,7 +108,7 @@ class KoalaColors {
 
   static List<BoxShadow> get shadowMedium => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
+          color: Colors.black.withValues(alpha: 0.08),
           blurRadius: 15,
           offset: const Offset(0, 5),
         ),
@@ -200,7 +200,7 @@ class KoalaRadius {
 class KoalaShadows {
   static List<BoxShadow> xs = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.02),
+      color: Colors.black.withValues(alpha: 0.02),
       blurRadius: 4,
       offset: const Offset(0, 2),
     ),
@@ -208,7 +208,7 @@ class KoalaShadows {
 
   static List<BoxShadow> sm = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.03),
+      color: Colors.black.withValues(alpha: 0.03),
       blurRadius: 8,
       offset: const Offset(0, 4),
     ),
@@ -216,7 +216,7 @@ class KoalaShadows {
 
   static List<BoxShadow> md = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
       blurRadius: 12,
       offset: const Offset(0, 6),
     ),
@@ -224,7 +224,7 @@ class KoalaShadows {
 
   static List<BoxShadow> lg = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.08),
+      color: Colors.black.withValues(alpha: 0.08),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
@@ -232,7 +232,7 @@ class KoalaShadows {
 
   static List<BoxShadow> xl = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.1),
+      color: Colors.black.withValues(alpha: 0.1),
       blurRadius: 20,
       offset: const Offset(0, 10),
     ),
@@ -287,7 +287,7 @@ class KoalaTextField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: isAmount ? '0.00' : label,
               hintStyle: KoalaTypography.bodyMedium(context).copyWith(
-                color: KoalaColors.textSecondary(context).withOpacity(0.5),
+                color: KoalaColors.textSecondary(context).withValues(alpha: 0.5),
               ),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
@@ -381,7 +381,7 @@ class _KoalaButtonState extends State<KoalaButton>
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isDestructive
-        ? KoalaColors.destructive.withOpacity(0.1)
+        ? KoalaColors.destructive.withValues(alpha: 0.1)
         : (widget.backgroundColor ?? KoalaColors.primaryUi(context));
 
     final adaptiveTextColor = Theme.of(context).brightness == Brightness.dark
@@ -668,7 +668,7 @@ class KoalaBottomSheet extends StatelessWidget {
                   Container(
                     padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
-                      color: KoalaColors.primaryUi(context).withOpacity(0.1),
+                      color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Icon(icon,
