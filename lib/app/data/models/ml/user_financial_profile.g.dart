@@ -26,13 +26,15 @@ class UserFinancialProfileAdapter extends TypeAdapter<UserFinancialProfile> {
       nightRatio: fields[6] == null ? 0.0 : (fields[6] as num).toDouble(),
       dominantCategory: fields[7] == null ? 'Autre' : fields[7] as String,
       averageAmount: fields[8] == null ? 0.0 : (fields[8] as num).toDouble(),
+      dataQuality: fields[9] == null ? 'low' : fields[9] as String,
+      transactionCount: fields[10] == null ? 0 : (fields[10] as num).toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, UserFinancialProfile obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.personaType)
       ..writeByte(1)
@@ -50,7 +52,11 @@ class UserFinancialProfileAdapter extends TypeAdapter<UserFinancialProfile> {
       ..writeByte(7)
       ..write(obj.dominantCategory)
       ..writeByte(8)
-      ..write(obj.averageAmount);
+      ..write(obj.averageAmount)
+      ..writeByte(9)
+      ..write(obj.dataQuality)
+      ..writeByte(10)
+      ..write(obj.transactionCount);
   }
 
   @override
