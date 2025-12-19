@@ -3,14 +3,14 @@ import 'package:get/get.dart';
 import 'package:koaa/app/services/pin_service.dart';
 import 'package:koaa/app/modules/lock/views/pin_lock_view.dart';
 
-/// Security service - uses app PIN first, biometric is optional bypass
+/// Security service - biometric is now PRIMARY, PIN is fallback
 /// No phone lock required - we have our own PIN system
 class SecurityService extends GetxService with WidgetsBindingObserver {
   bool _isLockScreenShowing = false;
 
-  // Track pause time
+  // Track pause time - 5 minutes before requiring re-auth
   DateTime? _pausedAt;
-  static const _lockThresholdSeconds = 60;
+  static const _lockThresholdSeconds = 300; // 5 minutes (was 60)
 
   PinService get _pinService => Get.find<PinService>();
 
@@ -25,7 +25,7 @@ class SecurityService extends GetxService with WidgetsBindingObserver {
     super.onReady();
     // Show lock on app start if PIN is set
     if (_pinService.isPinEnabled.value && _pinService.isPinSet.value) {
-      _showPinLockScreen();
+      _tryBiometricThenPin();
     }
   }
 
@@ -46,14 +46,32 @@ class SecurityService extends GetxService with WidgetsBindingObserver {
           !_isLockScreenShowing) {
         final pauseDuration = DateTime.now().difference(_pausedAt!).inSeconds;
         if (pauseDuration > _lockThresholdSeconds) {
-          _showPinLockScreen();
+          _tryBiometricThenPin();
         }
       }
       _pausedAt = null;
     }
   }
 
-  /// Show PIN lock screen
+  /// Try biometric FIRST, only show PIN if biometric fails/unavailable
+  Future<void> _tryBiometricThenPin() async {
+    if (_isLockScreenShowing) return;
+
+    // Try biometric first (silent attempt)
+    final biometricAvailable = await _pinService.isBiometricAvailable();
+    if (biometricAvailable) {
+      final didAuth = await _pinService.authenticateWithBiometric();
+      if (didAuth) {
+        // Success! No need to show PIN screen
+        return;
+      }
+    }
+
+    // Biometric failed or unavailable - show PIN screen
+    _showPinLockScreen();
+  }
+
+  /// Show PIN lock screen (fallback)
   void _showPinLockScreen() {
     if (_isLockScreenShowing) return;
     _isLockScreenShowing = true;
@@ -67,7 +85,7 @@ class SecurityService extends GetxService with WidgetsBindingObserver {
             Get.back();
           },
           onBiometricRequest: () async {
-            // Optional biometric bypass
+            // Manual biometric retry button
             final didAuth = await _pinService.authenticateWithBiometric();
             if (didAuth) {
               _isLockScreenShowing = false;
