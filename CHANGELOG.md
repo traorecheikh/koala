@@ -1,34 +1,20 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
-## [1.3.0] - 2025-12-16
+## [1.3.5] - 2024-05-21
 
 ### Added
-- **Animation Overhaul**: Integrated `flutter_animate` for a comprehensive animation update.
-- **Micro-interactions**: Added subtle scale-on-tap effects to `KoalaButton` and actionable cards.
-- **Entry Animations**: 
-    - Implemented staggered list animations for `SettingsView`, `RecurringTransactionsView`, `SubscriptionsView`, `BudgetView`, and `GoalsView`.
-    - Added fade-in and slide-up effects to `KoalaBottomSheet` content.
-    - Added animated entry for `AnalyticsView` tabs (Overview, Budgets, Debts).
-- **Visual Polish**:
-    - Refined `EnhancedBalanceCard` animations (flip, sparkles, countups).
-    - Standardized animation curves and durations via `KoalaAnim` class in `design_system.dart`.
 
-## [1.2.0]
-- **Subscriptions Tracker**: New view with logo support.
-- **Home Screen Widgets**: Added 7 Android widgets.
-- **Changelog System**: In-app "What's New" dialog.
-- **Dark Mode Fixes**: Improved color contrast and legibility.
+- New "Apple-style" minimalist splash screen with 3D-like logo animation.
+- Adaptive theming for splash screen (Light/Dark mode support).
+- Improved startup performance.
+- Enhanced financial insight notifications.
+- Background worker now checks for critical financial insights.
+- Larger notification badge for better visibility.
 
-## [1.1.0]
-- **Financial Challenges**: Added challenges and badge system.
-- **Smart Personas**: AI-driven financial profiling.
-- **Expense Catch-up**: Feature to add initial expenses easily.
+### Fixed
 
-## [1.0.4]
-- Performance improvements.
-- Dark mode corrections.
-
-## [1.0.0]
-- Initial release.
+- Resolved splash screen overflow issues on smaller screens.
+- Fixed duration extension ambiguity in animations.
+- Improved foreground notification behavior (less intrusive).
+ (vibration focus).
+- **Version Tracking**: Updated version metadata.
