@@ -229,6 +229,11 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         hasCompletedCatchUp: _shouldShowCatchUpStep,
       );
 
+      final userBox = Hive.box<LocalUser>('userBox');
+      await userBox.put('currentUser', newUser);
+
+      Hive.box('settingsBox').put('hasUser', true);
+
       homeController.user.value = newUser;
 
       // Generate initial transactions based on new jobs
@@ -478,7 +483,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                               backgroundColor: _canContinue
                                   ? KoalaColors.primaryUi(context)
                                   : KoalaColors.primaryUi(context)
-                                      .withOpacity(0.5),
+                                      .withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -570,7 +575,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                     Container(
                       padding: EdgeInsets.all(10.w),
                       decoration: BoxDecoration(
-                        color: KoalaColors.primaryUi(context).withOpacity(0.1),
+                        color: KoalaColors.primaryUi(context)
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(KoalaRadius.sm),
                       ),
                       child: Icon(CupertinoIcons.briefcase_fill,
@@ -596,7 +602,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                     IconButton(
                       icon: Icon(CupertinoIcons.delete,
                           color: KoalaColors.textSecondary(context)
-                              .withOpacity(0.5),
+                              .withValues(alpha: 0.5),
                           size: 20.sp),
                       onPressed: () {
                         setState(() => _jobs.removeAt(index));
@@ -744,7 +750,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                 onPressed: _canAddJob() ? _addJob : () {},
                 backgroundColor: _canAddJob()
                     ? KoalaColors.primaryUi(context)
-                    : KoalaColors.primaryUi(context).withOpacity(0.3),
+                    : KoalaColors.primaryUi(context).withValues(alpha: 0.3),
               ),
             ],
           ),
@@ -796,7 +802,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                   padding: EdgeInsets.all(16.w),
                   itemCount: _jobTitles.length,
                   separatorBuilder: (_, __) => Divider(
-                      color: KoalaColors.border(context).withOpacity(0.5)),
+                      color:
+                          KoalaColors.border(context).withValues(alpha: 0.5)),
                   itemBuilder: (context, index) {
                     final title = _jobTitles[index];
                     final isSelected = _selectedJobTitle == title;
@@ -958,7 +965,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: KoalaColors.primary.withOpacity(0.2),
+                      color: KoalaColors.primary.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 4))
                 ]
@@ -1049,9 +1056,10 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         Container(
           padding: EdgeInsets.all(KoalaSpacing.md),
           decoration: BoxDecoration(
-            color: KoalaColors.primary.withOpacity(0.1),
+            color: KoalaColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(KoalaRadius.md),
-            border: Border.all(color: KoalaColors.primary.withOpacity(0.3)),
+            border:
+                Border.all(color: KoalaColors.primary.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -1097,7 +1105,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                   width: 44.w,
                   height: 44.w,
                   decoration: BoxDecoration(
-                    color: Color(category.colorValue).withOpacity(0.2),
+                    color: Color(category.colorValue).withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
