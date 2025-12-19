@@ -118,6 +118,47 @@ class ChallengesView extends GetView<ChallengesController> {
               }),
             ),
 
+            // COMPLETED CHALLENGES (New Section)
+            if (controller.completedChallenges.isNotEmpty) ...[
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(20.w, 32.h, 20.w, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionTitle(title: 'SUCCÈS TERMINÉS'),
+                      SizedBox(height: 16.h),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      // Show newest first
+                      final challengeData = controller
+                          .completedChallenges.reversed
+                          .toList()[index];
+                      final challenge = controller
+                          .getChallengeById(challengeData.challengeId);
+                      if (challenge == null) return const SizedBox.shrink();
+
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 12.h),
+                        child: _CompletedAchievementCard(
+                          challenge: challenge,
+                          completedAt: challengeData.completedAt,
+                        ),
+                      );
+                    },
+                    childCount: controller.completedChallenges.length,
+                  ),
+                ),
+              ),
+            ],
+
             // NEXT MILESTONES (Replaces active challenges)
             SliverPadding(
               padding: EdgeInsets.fromLTRB(20.w, 32.h, 20.w, 0),
@@ -500,5 +541,116 @@ class _EarnedBadgeCard extends StatelessWidget {
         .map(
             (w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
         .join(' ');
+  }
+}
+
+class _CompletedAchievementCard extends StatelessWidget {
+  final Challenge challenge;
+  final DateTime? completedAt;
+
+  const _CompletedAchievementCard({
+    required this.challenge,
+    this.completedAt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: KoalaColors.surface(context),
+        borderRadius: BorderRadius.circular(KoalaRadius.lg),
+        border: Border.all(
+          color:
+              KoalaColors.success.withValues(alpha: 0.2), // Subtle green border
+        ),
+        boxShadow: KoalaShadows.xs,
+      ),
+      child: Row(
+        children: [
+          // Icon Container
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: BoxDecoration(
+              color: KoalaColors.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(KoalaRadius.md),
+            ),
+            child: Image.asset(
+              _getChallengeAsset(challenge.type),
+              width: 24.sp,
+              height: 24.sp,
+              color: KoalaColors.success,
+              colorBlendMode: BlendMode.srcIn,
+            ),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  challenge.title,
+                  style: KoalaTypography.bodyMedium(context).copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (completedAt != null) ...[
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Complété le ${_formatDate(completedAt!)}', // Helper needed or inline
+                    style: KoalaTypography.caption(context).copyWith(
+                      color: KoalaColors.success,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: KoalaColors.success,
+              borderRadius: BorderRadius.circular(KoalaRadius.sm),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(CupertinoIcons.checkmark_alt,
+                    color: Colors.white, size: 12.sp),
+                SizedBox(width: 4.w),
+                Text(
+                  '+${challenge.rewardPoints}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideX(begin: 0.05);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _getChallengeAsset(ChallengeType type) {
+    switch (type) {
+      case ChallengeType.spending:
+        return 'assets/achievements/snowflake.png';
+      case ChallengeType.saving:
+        return 'assets/achievements/money_bag_small.png';
+      case ChallengeType.budget:
+        return 'assets/achievements/bullseye.png';
+      case ChallengeType.streak:
+        return 'assets/achievements/fire_7day.png';
+      case ChallengeType.oneTime:
+        return 'assets/achievements/trophy_bronze.png';
+    }
   }
 }

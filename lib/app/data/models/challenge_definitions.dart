@@ -414,7 +414,7 @@ class ChallengeDefinitions {
   static List<Challenge> get streakChallenges => [
         Challenge(
           id: 'st_01',
-          title: 'Premiers Pas',
+          title: 'Mise en Jambe',
           description: 'Enregistrer des dépenses 3 jours de suite',
           type: ChallengeType.streak,
           difficulty: ChallengeDifficulty.easy,
