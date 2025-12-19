@@ -1,10 +1,16 @@
 package com.chouly.koaa
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetProvider
+import java.io.File
+
 
 class BalanceWidgetProvider : HomeWidgetProvider() {
     override fun onUpdate(
@@ -14,10 +20,47 @@ class BalanceWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.widget_balance).apply {
-                val balance = widgetData.getString("balance", "0 F") ?: "0 F"
-                setTextViewText(R.id.balance_value, balance)
+            val views = RemoteViews(context.packageName, R.layout.widget_balance)
+            val balance = widgetData.getString("balance", "0 FCFA") ?: "0 FCFA"
+            
+            // Time of Day Logic
+            val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+            
+            // Gradient Background
+            val backgroundRes = when {
+                hour < 12 -> R.drawable.bg_balance_morning
+                hour < 17 -> R.drawable.bg_balance_afternoon
+                hour < 21 -> R.drawable.bg_balance_evening
+                else -> R.drawable.bg_balance_night
             }
+            views.setInt(R.id.widget_root, "setBackgroundResource", backgroundRes)
+
+            // Greeting Text & Icon
+            val (greeting, icon) = when {
+                hour in 5..11 -> "Bonjour" to "☀️"
+                hour in 12..16 -> "Bon après-midi" to "☀️"
+                hour in 17..20 -> "Bonsoir" to "🌤️"
+                else -> "Bonne nuit" to "🌙"
+            }
+
+            // Bind Data
+            views.setTextViewText(R.id.label_solde, "Votre solde")
+            views.setTextViewText(R.id.balance_value, balance)
+            views.setTextViewText(R.id.greeting_text, greeting)
+            views.setTextViewText(R.id.time_icon, icon)
+
+            val intent = Intent(context, MainActivity::class.java).apply {
+                action = Intent.ACTION_VIEW
+                data = Uri.parse("koala://open_app")
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+            
             appWidgetManager.updateAppWidget(widgetId, views)
         }
     }
@@ -31,7 +74,32 @@ class QuickAddWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.widget_quick_add)
+            val views = RemoteViews(context.packageName, R.layout.widget_quick_add).apply {
+                // Actions handle click directly on buttons
+                val expenseIntent = Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_VIEW
+                    data = Uri.parse("koala://add_expense")
+                }
+                val expensePendingIntent = PendingIntent.getActivity(
+                    context,
+                    1,
+                    expenseIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                setOnClickPendingIntent(R.id.btn_expense, expensePendingIntent)
+
+                val incomeIntent = Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_VIEW
+                    data = Uri.parse("koala://add_income")
+                }
+                val incomePendingIntent = PendingIntent.getActivity(
+                    context,
+                    2,
+                    incomeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                setOnClickPendingIntent(R.id.btn_income, incomePendingIntent)
+            }
             appWidgetManager.updateAppWidget(widgetId, views)
         }
     }
@@ -46,8 +114,20 @@ class TodayWidgetProvider : HomeWidgetProvider() {
     ) {
         appWidgetIds.forEach { widgetId ->
             val views = RemoteViews(context.packageName, R.layout.widget_today).apply {
-                val todaySpending = widgetData.getString("today_spending", "0") ?: "0"
-                setTextViewText(R.id.today_spending, "$todaySpending F")
+                val todaySpending = widgetData.getString("today_spending", "0 F") ?: "0 F"
+                setTextViewText(R.id.value_today, todaySpending)
+
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_VIEW
+                    data = Uri.parse("koala://open_app")
+                }
+                val pendingIntent = PendingIntent.getActivity(
+                    context,
+                    3,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                setOnClickPendingIntent(R.id.value_today, pendingIntent) // Clickable value
             }
             appWidgetManager.updateAppWidget(widgetId, views)
         }
@@ -98,9 +178,7 @@ class BudgetWidgetProvider : HomeWidgetProvider() {
         appWidgetIds.forEach { widgetId ->
             val views = RemoteViews(context.packageName, R.layout.widget_budget).apply {
                 val budgetName = widgetData.getString("budget_name", "Budget") ?: "Budget"
-                val remaining = widgetData.getString("budget_remaining", "0") ?: "0"
                 setTextViewText(R.id.budget_name, budgetName)
-                setTextViewText(R.id.budget_remaining, "$remaining restant")
             }
             appWidgetManager.updateAppWidget(widgetId, views)
         }
@@ -117,15 +195,7 @@ class GoalWidgetProvider : HomeWidgetProvider() {
         appWidgetIds.forEach { widgetId ->
             val views = RemoteViews(context.packageName, R.layout.widget_goal).apply {
                 val goalTitle = widgetData.getString("goal_title", "Objectif") ?: "Objectif"
-                val current = widgetData.getString("goal_current", "0") ?: "0"
-                val target = widgetData.getString("goal_target", "0") ?: "0"
-                val progress = widgetData.getString("goal_progress", "0")?.toFloatOrNull() ?: 0f
-                val percent = (progress * 100).toInt()
-                
                 setTextViewText(R.id.goal_title, goalTitle)
-                setTextViewText(R.id.goal_current, current)
-                setTextViewText(R.id.goal_target, target)
-                setTextViewText(R.id.goal_percent, "$percent%")
             }
             appWidgetManager.updateAppWidget(widgetId, views)
         }
