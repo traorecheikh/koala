@@ -11,6 +11,8 @@ class AILearningService extends GetxService {
   static const String boxName = 'aiLearningBox';
   static const String profileKey = 'user_learning_profile';
 
+  bool _isInitialized = false;
+
   @override
   Future<void> onInit() async {
     super.onInit();
@@ -18,6 +20,8 @@ class AILearningService extends GetxService {
   }
 
   Future<void> _initStorage() async {
+    if (_isInitialized) return;
+
     if (!Hive.isBoxOpen(boxName)) {
       _box = await Hive.openBox<AILearningProfile>(boxName);
     } else {
@@ -30,6 +34,7 @@ class AILearningService extends GetxService {
     } else {
       _profile = _box.get(profileKey) ?? AILearningProfile();
     }
+    _isInitialized = true;
     _logger.i('AILearningService initialized with profile.');
   }
 
