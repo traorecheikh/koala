@@ -49,7 +49,7 @@ class SecuritySettingsView extends GetView<SecuritySettingsController> {
                       : 'Définissez un code PIN pour activer',
                   trailing: CupertinoSwitch(
                     value: controller.isPinEnabled.value,
-                    activeColor: KoalaColors.primaryUi(context),
+                    activeTrackColor: KoalaColors.primaryUi(context),
                     onChanged: controller.togglePinLock,
                   ),
                 ),
@@ -176,7 +176,7 @@ class SecuritySettingsView extends GetView<SecuritySettingsController> {
               if (onTap != null && trailing == null)
                 Icon(
                   CupertinoIcons.chevron_right,
-                  color: KoalaColors.textSecondary(context).withOpacity(0.5),
+                  color: KoalaColors.textSecondary(context).withValues(alpha: 0.5),
                   size: 16.sp,
                 ),
             ],
