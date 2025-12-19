@@ -51,24 +51,22 @@ class _TransactionListItem extends StatelessWidget {
           .firstWhereOrNull((c) => c.id == transaction.categoryId);
 
       // If not found, try matching by category name (for catch-up transactions)
-      if (category == null) {
-        category = categoriesController.categories.firstWhereOrNull((c) =>
-            c.name.toLowerCase() == transaction.categoryId!.toLowerCase());
-      }
+      category ??= categoriesController.categories.firstWhereOrNull(
+          (c) => c.name.toLowerCase() == transaction.categoryId!.toLowerCase());
     }
 
     if (category != null) {
       iconKey = category.icon;
-    } else if (transaction.category != null) {
+    } else {
       // Fallback to enum iconKey
-      iconKey = transaction.category!.iconKey;
+      iconKey = transaction.category.iconKey;
     }
 
     // Determine icon background color based on category color, with subtle opacity
     final categoryColor = category != null
         ? Color(category.colorValue)
         : (isExpense ? KoalaColors.destructive : KoalaColors.success);
-    final containerColor = categoryColor.withOpacity(0.12);
+    final containerColor = categoryColor.withValues(alpha: 0.12);
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
@@ -155,7 +153,6 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
   @override
   ThemeData appBarTheme(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return theme.copyWith(
       appBarTheme: theme.appBarTheme.copyWith(
@@ -171,7 +168,7 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: KoalaColors.primary,
-        selectionColor: KoalaColors.primary.withOpacity(0.2),
+        selectionColor: KoalaColors.primary.withValues(alpha: 0.2),
       ),
       textTheme: theme.textTheme.copyWith(
         titleLarge: KoalaTypography.bodyLarge(context),
@@ -227,8 +224,7 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
 
       final descriptionMatch = tx.description.toLowerCase().contains(q);
       final amountMatch = tx.amount.toString().contains(q);
-      final categoryMatch =
-          tx.category?.displayName.toLowerCase().contains(q) ?? false;
+      final categoryMatch = tx.category.displayName.toLowerCase().contains(q);
 
       return descriptionMatch || amountMatch || categoryMatch;
     }).toList();
@@ -394,8 +390,6 @@ class _QuickActions extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return GridView.count(
       crossAxisCount: 4,
       shrinkWrap: true,
@@ -449,7 +443,7 @@ class _QuickActions extends GetView<HomeController> {
                   onTap: () => isHovered ? {} : _handleTap(actionToShow),
                   onLongPress: () => _showSelectionSheet(context),
                   showBadge: actionToShow == QuickActionType.intelligence &&
-                      controller.insights.isNotEmpty,
+                      controller.insights.any((i) => !i.isRead),
                 ),
               );
             },
@@ -562,6 +556,7 @@ class _QuickActions extends GetView<HomeController> {
         Get.toNamed(Routes.settings);
         break;
       case QuickActionType.intelligence:
+        controller.markInsightsAsRead();
         Get.toNamed(Routes.intelligence);
         break;
       case QuickActionType.challenges:
@@ -571,42 +566,96 @@ class _QuickActions extends GetView<HomeController> {
   }
 
   void _showSelectionSheet(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final padding = 16.w;
+    final availableWidth = screenWidth - (padding * 2);
+    final columns = 4;
+    final itemWidth = availableWidth / columns;
+    final itemHeight = 100.h;
+
     Get.bottomSheet(
-      KoalaBottomSheet(
-        title: 'Choisir un raccourci',
+      Container(
+        decoration: BoxDecoration(
+          color: KoalaColors.surface(context),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24.r),
+            topRight: Radius.circular(24.r),
+          ),
+        ),
         child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Wrap(
-            spacing: 24.w,
-            runSpacing: 24.h,
-            alignment: WrapAlignment.center,
-            children: QuickActionType.values.map((type) {
-              return GestureDetector(
-                onTap: () {
-                  controller.setThirdAction(type);
-                  NavigationHelper.safeBack();
-                },
-                child: Column(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(12.w),
-                      decoration: BoxDecoration(
-                        color: _getColor(type, context).withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(_getIcon(type),
-                          color: _getColor(type, context), size: 28.sp),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(_getLabel(type),
-                        style: KoalaTypography.caption(context)),
-                  ],
-                ),
-              );
-            }).toList(),
+          padding:
+              EdgeInsets.fromLTRB(padding, 16.h, padding, 32.h + bottomPadding),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const KoalaDragHandle(),
+              Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: 8.0.w, vertical: 8.0.h),
+                child: Text('Choisir un raccourci',
+                    style: KoalaTypography.heading3(context)),
+              ),
+              SizedBox(height: 16.h),
+              Obx(() {
+                // Filter out the current third action from options
+                final currentAction = controller.thirdAction.value;
+                final availableActions = QuickActionType.values
+                    .where((type) => type != currentAction)
+                    .toList();
+
+                final rows = (availableActions.length / columns).ceil();
+                final height = rows * itemHeight;
+
+                return SizedBox(
+                  height: height,
+                  child: Wrap(
+                    spacing: 0,
+                    runSpacing: 0,
+                    children: availableActions.map((type) {
+                      return SizedBox(
+                        width: itemWidth,
+                        height: itemHeight,
+                        child: GestureDetector(
+                          onTap: () {
+                            controller.setThirdAction(type);
+                            HapticFeedback.mediumImpact();
+                            NavigationHelper.safeBack();
+                          },
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(14.w),
+                                decoration: BoxDecoration(
+                                  color: _getColor(type, context)
+                                      .withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(_getIcon(type),
+                                    color: _getColor(type, context),
+                                    size: 26.sp),
+                              ),
+                              SizedBox(height: 8.h),
+                              Text(
+                                _getLabel(type),
+                                style: KoalaTypography.caption(context),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
       ),
+      isScrollControlled: true,
     );
   }
 }
@@ -927,8 +976,8 @@ class _AnimatedActionButtonState extends State<_AnimatedActionButton>
                     top: 0,
                     right: 0,
                     child: Container(
-                      width: 10.w,
-                      height: 10.w,
+                      width: 14.w,
+                      height: 14.w,
                       decoration: BoxDecoration(
                         color: KoalaColors.destructive,
                         shape: BoxShape.circle,
@@ -987,7 +1036,7 @@ class _TransactionSliverList extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Obx(() {
       final transactions = controller.transactions
-          .take(controller.displayedTransactionCount.value)
+          .take(controller.displayedTransactionCount)
           .toList();
 
       if (transactions.isEmpty) {
@@ -1081,7 +1130,7 @@ class _BudgetAlertsBanner extends GetView<HomeController> {
                     padding:
                         EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                     decoration: BoxDecoration(
-                      color: KoalaColors.warning.withOpacity(0.15),
+                      color: KoalaColors.warning.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Text(
@@ -1143,7 +1192,7 @@ class _BudgetAlertsBanner extends GetView<HomeController> {
                         borderRadius: BorderRadius.circular(16.r),
                         boxShadow: [
                           BoxShadow(
-                            color: alertColor.withOpacity(0.3),
+                            color: alertColor.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -1215,7 +1264,8 @@ class _BudgetAlertsBanner extends GetView<HomeController> {
                                         vertical: 2.h,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.2),
                                         borderRadius:
                                             BorderRadius.circular(8.r),
                                       ),
@@ -1380,7 +1430,7 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                       width: 40.w,
                       height: 40.w,
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Center(
@@ -1436,7 +1486,7 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                       width: 40.w,
                       height: 40.w,
                       decoration: BoxDecoration(
-                        color: KoalaColors.primary.withOpacity(0.1),
+                        color: KoalaColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Center(
