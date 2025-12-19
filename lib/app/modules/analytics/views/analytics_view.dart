@@ -125,7 +125,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
                     ? [
                         BoxShadow(
                           color:
-                              KoalaColors.primaryUi(context).withOpacity(0.3),
+                              KoalaColors.primaryUi(context).withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         )
@@ -593,7 +593,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
                     : null,
                 color: controller.canNavigate
                     ? KoalaColors.text(context)
-                    : KoalaColors.textSecondary(context).withOpacity(0.5),
+                    : KoalaColors.textSecondary(context).withValues(alpha: 0.5),
               )),
           GestureDetector(
             onTap: () {
@@ -618,7 +618,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
                     : null,
                 color: controller.canNavigate
                     ? KoalaColors.text(context)
-                    : KoalaColors.textSecondary(context).withOpacity(0.5),
+                    : KoalaColors.textSecondary(context).withValues(alpha: 0.5),
               )),
         ],
       ),
@@ -670,7 +670,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
                       color: (controller.netBalance >= 0
                               ? KoalaColors.success
                               : KoalaColors.warning)
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Text(
@@ -730,7 +730,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8.r),
       ),
       child: Row(
@@ -768,7 +768,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
           Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20.sp),
@@ -986,7 +986,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
             Icon(
               CupertinoIcons.chart_bar_alt_fill,
               size: 48.sp,
-              color: KoalaColors.textSecondary(context).withOpacity(0.3),
+              color: KoalaColors.textSecondary(context).withValues(alpha: 0.3),
             ),
             SizedBox(height: 12.h),
             Text(
@@ -1082,7 +1082,7 @@ class _AnalyticsViewState extends State<AnalyticsView>
                       Container(
                         height: 4.h,
                         decoration: BoxDecoration(
-                          color: KoalaColors.destructive.withOpacity(0.3),
+                          color: KoalaColors.destructive.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4.r),
                         ),
                         child: Align(
@@ -1273,8 +1273,8 @@ class _AnalyticsViewState extends State<AnalyticsView>
                           show: true,
                           gradient: LinearGradient(
                             colors: [
-                              Colors.redAccent.withOpacity(0.3),
-                              Colors.red.shade900.withOpacity(0.1),
+                              Colors.redAccent.withValues(alpha: 0.3),
+                              Colors.red.shade900.withValues(alpha: 0.1),
                             ],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
