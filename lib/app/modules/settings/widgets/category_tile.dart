@@ -17,7 +17,7 @@ class CategoryTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Color(category.colorValue).withOpacity(0.1), // Subtler bg
+          color: Color(category.colorValue).withValues(alpha: 0.1), // Subtler bg
           shape: BoxShape.circle,
         ),
         // Use CategoryIcon to render PNG
