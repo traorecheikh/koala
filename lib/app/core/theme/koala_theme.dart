@@ -217,7 +217,7 @@ class KoalaTheme {
     //   elevation: 0,
     //   shape: RoundedRectangleBorder(
     //     borderRadius: BorderRadius.circular(16.r),
-    //     side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.w),
+    //     side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1.w),
     //   ),
     //   margin: EdgeInsets.zero,
     // ),
