@@ -3,24 +3,53 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="@drawable/widget_background">
+    android:background="@drawable/widget_background_dark"
+    android:padding="16dp">
 
-    <TextView
-        android:id="@+id/budget_name"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="📈 Budget"
-        android:textColor="#AAAAAA"
-        android:textSize="12sp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@+id/budget_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="BUDGET"
+            android:textColor="#8E8E93"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05"
+            android:textAllCaps="true" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/budget_remaining"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0 F restant"
-        android:textColor="#4CAF50"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:text="0 F"
+        android:textColor="#32D74B"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:includeFontPadding="false" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Restant ce mois"
+        android:textColor="#636366"
+        android:textSize="11sp"
+        android:layout_marginBottom="8dp"/>
+
+    <ProgressBar
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:progress="0"
+        android:progressDrawable="@drawable/widget_progress_fill"
+        android:background="@drawable/widget_progress_bg" />
 
 </LinearLayout>
