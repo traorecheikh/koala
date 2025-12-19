@@ -44,13 +44,16 @@ class FeatureExtractor {
     double userAverage,
   ) {
     final logAmount = log(amount + 1);
-    
+
     // Determine bucket
     double bucket = 0.0;
     if (amount > 50000) {
       bucket = 3.0; // Very large
-    } else if (amount > 20000) bucket = 2.0; // Large
-    else if (amount > 5000) bucket = 1.0; // Medium
+    } else if (amount > 20000) {
+      bucket = 2.0; // Large
+    } else if (amount > 5000) {
+      bucket = 1.0; // Medium
+    }
     // else Small
 
     double ratioUser = 0.0;
@@ -83,7 +86,7 @@ class FeatureExtractor {
     final words = text.toLowerCase().split(RegExp(r'\s+'));
     final length = words.length.toDouble();
     final hasNumbers = text.contains(RegExp(r'[0-9]')) ? 1.0 : 0.0;
-    
+
     // Just some basic structural features
     return Vector.fromList([
       length,
@@ -91,4 +94,3 @@ class FeatureExtractor {
     ]);
   }
 }
-
