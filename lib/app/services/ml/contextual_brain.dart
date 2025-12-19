@@ -1,23 +1,23 @@
-import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
-import 'package:koaa/app/services/ml/contextual_brain_worker.dart';
 import 'package:logger/logger.dart';
 
 /// The "Contextual Brain" - Smart Autocomplete specific intelligence
-/// Learns patterns like "Monday at 8am = Transport" or "Sunday at 14h = Restaurant"
+/// Learns patterns like "Monday at 8am = Transport (500F)"
 class ContextualBrain extends GetxService {
   final _logger = Logger();
   late FinancialContextService _context;
 
-  // Training Data: Maps features to outcomes
-  // Key: "Day-HourBucket" (e.g., "1-8" for Mon 8am)
-  // Value: Map of CategoryID -> Count
-  Map<String, Map<String, int>> _timeCategoryMatrix = {};
+  // Knowledge Base
+  // Key: "DayOfWeek(1-7)_Hour(0-23)"
+  // Value: Map of CategoryID -> Frequency
+  Map<String, Map<String, int>> _temporalMap = {};
 
-  // Maps "Day-HourBucket-Category" -> List of Amounts (to find avg/median)
-  Map<String, List<double>> _amountHistory = {};
+  // Price Knowledge Base
+  // Key: "CategoryID"
+  // Value: List of historical amounts (to calculate median/mode)
+  Map<String, List<double>> _categoryPriceHistory = {};
 
   final isReady = false.obs;
 
@@ -26,16 +26,21 @@ class ContextualBrain extends GetxService {
     super.onInit();
     _context = Get.find<FinancialContextService>();
 
-    // Debounce training to avoid spamming isolates
+    // Debounce training to avoid spamming
     debounce(_context.allTransactions, (_) => _train(),
-        time: const Duration(seconds: 2));
-
-    // Initial training (Async to not block init)
-    if (_context.allTransactions.isNotEmpty) {
-      // Small delay to let app startup breathe
-      Future.delayed(const Duration(milliseconds: 500), _train);
-    }
+        time: const Duration(seconds: 3));
   }
+
+  /// Trigger a full retraining on ALL available history
+  /// This is critical for "Retroactive Smartness"
+  Future<void> refresh() async {
+    await _train();
+  }
+
+  // Minimum transactions required for reliable predictions
+  static const int _minTransactions = 20;
+  // Minimum data points per time slot for confident predictions
+  static const int _minDataPointsPerSlot = 3;
 
   Future<void> _train() async {
     if (_context.allTransactions.isEmpty) return;
@@ -45,130 +50,136 @@ class ContextualBrain extends GetxService {
           .where((t) => !t.isHidden && t.type == TransactionType.expense)
           .toList();
 
-      if (transactions.isEmpty) return;
+      // Require minimum transactions for reliable learning
+      if (transactions.length < _minTransactions) {
+        _logger.i(
+            '🧠 [CONTEXT-BRAIN] Skipping training: only ${transactions.length} txs (need $_minTransactions)');
+        isReady.value = false;
+        return;
+      }
 
-      // Serialize for isolate
-      final rawData = transactions
-          .map((t) => {
-                'categoryId': t.categoryId,
-                'amount': t.amount,
-                'type': t.type.name, // enum to string
-                'date': t.date.toIso8601String(),
-              })
-          .toList();
+      // Prepare data for heavy lifting
+      // We can run this in an isolate or just async if data isn't huge
+      // For thousands of tx, assume Isolate is safer, but simpler async for now to ensure robustness
 
-      final payload = ContextualTrainPayload(rawData);
+      final tempTemporalMap = <String, Map<String, int>>{};
+      final tempPriceHistory = <String, List<double>>{};
 
-      // Compute in background isolate
-      final result =
-          await compute<ContextualTrainPayload, ContextualTrainResult>(
-        trainContextualBrain,
-        payload,
-      );
+      for (final tx in transactions) {
+        if (tx.categoryId == null) continue;
 
-      // Apply result
-      _timeCategoryMatrix = result.matrix;
-      _amountHistory = result.amountHistory;
+        // 1. Learn Context (When -> What)
+        final key = _makeKey(tx.date);
+
+        if (!tempTemporalMap.containsKey(key)) {
+          tempTemporalMap[key] = {};
+        }
+        final catMap = tempTemporalMap[key]!;
+        catMap[tx.categoryId!] = (catMap[tx.categoryId!] ?? 0) + 1;
+
+        // 2. Learn Price (What -> How much)
+        // We track price globally per category, but could refine to per-time if needed
+        if (!tempPriceHistory.containsKey(tx.categoryId!)) {
+          tempPriceHistory[tx.categoryId!] = [];
+        }
+        tempPriceHistory[tx.categoryId!]!.add(tx.amount);
+      }
+
+      // Atomic swap
+      _temporalMap = tempTemporalMap;
+      _categoryPriceHistory = tempPriceHistory;
       isReady.value = true;
-      _logger.d(
-          'ContextualBrain trained on ${transactions.length} transactions (Isolate).');
+
+      _logger.i(
+          '🧠 [CONTEXT-BRAIN] Trained on ${transactions.length} txs. Learned ${_temporalMap.length} time slots.');
     } catch (e) {
-      _logger.e('Error training ContextualBrain in isolate', error: e);
+      _logger.e('❌ [CONTEXT-BRAIN] Training Error', error: e);
     }
   }
 
   /// Predicts the most likely category and amount for a given time
-  /// Uses a "fuzzy" window (current hour +/- 1) to allow for flexibility
   ContextualPrediction? predict(DateTime timestamp) {
     if (!isReady.value) return null;
 
-    final day = timestamp.weekday;
-    final currentHour = timestamp.hour;
+    final key = _makeKey(timestamp);
 
-    // Hours to check: current, previous, next (handling wrap-around for 0/23)
-    final hoursToCheck = [
-      currentHour,
-      (currentHour - 1) < 0 ? 23 : currentHour - 1,
-      (currentHour + 1) > 23 ? 0 : currentHour + 1
-    ];
+    // Fuzzy matching: Check exact hour, then +/- 1 hour
+    final hours = [0, -1, 1];
+    final candidates = <String, double>{}; // Category -> Score
 
-    final Map<String, double> aggregatedScores = {};
-    double totalWeight = 0;
+    for (var offset in hours) {
+      final searchTime = timestamp.add(Duration(hours: offset));
+      final searchKey = _makeKey(searchTime);
+      final weight = offset == 0 ? 1.0 : 0.5; // Decay for neighbors
 
-    // Aggregate counts from neighbors with weights
-    // Current hour = 1.0 weight
-    // Adjacent hours = 0.5 weight
-    for (final h in hoursToCheck) {
-      final key = '$day-$h';
-      final categoryCounts = _timeCategoryMatrix[key];
-      final weight = (h == currentHour) ? 1.0 : 0.5;
-
-      if (categoryCounts != null) {
-        categoryCounts.forEach((cat, count) {
-          aggregatedScores[cat] =
-              (aggregatedScores[cat] ?? 0) + (count * weight);
-          totalWeight += (count * weight);
+      final knowledge = _temporalMap[searchKey];
+      if (knowledge != null) {
+        knowledge.forEach((cat, freq) {
+          candidates[cat] = (candidates[cat] ?? 0) + (freq * weight);
         });
       }
     }
 
-    if (aggregatedScores.isEmpty) return null;
+    if (candidates.isEmpty) return null;
 
-    // Find top category
-    String? topCategory;
-    double maxScore = 0;
+    // Find Winner
+    var bestCategory = "";
+    var bestScore = -1.0;
 
-    aggregatedScores.forEach((cat, score) {
-      if (score > maxScore) {
-        maxScore = score;
-        topCategory = cat;
+    candidates.forEach((cat, score) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestCategory = cat;
       }
     });
 
-    if (topCategory == null) return null;
-
-    // Calculate confidence
-    final confidence = totalWeight > 0 ? maxScore / totalWeight : 0.0;
-
-    // Threshold check (lower threshold slightly due to fuzzy matching spreading weights)
-    if (maxScore < 1.5) return null;
-
-    // Predict amount (median from the exact current hour if available, else primary training data)
-    // We prioritize the current hour for amount accuracy
-    String amountKey = '$day-$currentHour-$topCategory';
-    List<double> amounts = _amountHistory[amountKey] ?? [];
-
-    // Fallback to neighbors if current hour has no data for this category
-    if (amounts.isEmpty) {
-      for (final h in hoursToCheck) {
-        if (h == currentHour) continue;
-        final fallbackKey = '$day-$h-$topCategory';
-        if (_amountHistory.containsKey(fallbackKey)) {
-          amounts = _amountHistory[fallbackKey]!;
-          amountKey = fallbackKey; // update for logging/debugging if needed
-          break;
-        }
-      }
+    // Require minimum data points for confident prediction
+    if (bestScore < _minDataPointsPerSlot) {
+      return null; // Not enough data for this time slot
     }
 
-    amounts.sort();
-    double predictedAmount = 0;
-    if (amounts.isNotEmpty) {
-      predictedAmount = amounts[amounts.length ~/ 2];
-    }
+    // Contextual Price Prediction
+    // Return Median of history for this category
+    final predictedAmount = _getSmartPrice(bestCategory);
+
+    // Calculate confidence (simple ratio)
+    final totalScore = candidates.values.fold(0.0, (a, b) => a + b);
+    final confidence = bestScore / totalScore;
+
+    // Determine data quality based on how much evidence we have
+    final dataQuality =
+        bestScore >= 10 ? 'high' : (bestScore >= 5 ? 'medium' : 'low');
 
     return ContextualPrediction(
-      categoryId: topCategory!,
+      categoryId: bestCategory,
       amount: predictedAmount,
       confidence: confidence,
       reason: _getReason(timestamp),
+      dataQuality: dataQuality,
     );
   }
 
+  double _getSmartPrice(String categoryId) {
+    final history = _categoryPriceHistory[categoryId];
+    if (history == null || history.isEmpty) return 0.0;
+
+    history.sort();
+    final middle = history.length ~/ 2;
+    // Return Median to avoid massive outliers skewing the "smart" suggestion
+    if (history.length % 2 == 1) {
+      return history[middle];
+    } else {
+      return (history[middle - 1] + history[middle]) / 2.0;
+    }
+  }
+
+  String _makeKey(DateTime d) {
+    // Key: "Weekday-Hour" e.g. "1-14" for Mon 2pm
+    return '${d.weekday}-${d.hour}';
+  }
+
   String _getReason(DateTime date) {
-    final hour = date.hour;
-    // Format to look nice, e.g., "vers 14h"
-    return 'Basé sur vos habitudes vers ${hour}h';
+    return 'Habitude détectée vers ${date.hour}h';
   }
 }
 
@@ -177,11 +188,13 @@ class ContextualPrediction {
   final double amount;
   final double confidence;
   final String reason;
+  final String dataQuality; // 'high', 'medium', 'low'
 
   ContextualPrediction({
     required this.categoryId,
     required this.amount,
     required this.confidence,
     required this.reason,
+    required this.dataQuality,
   });
 }
