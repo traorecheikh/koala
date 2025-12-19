@@ -3,16 +3,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:gravity="center"
-    android:background="@drawable/widget_background_streak">
+    android:background="@drawable/widget_background_dark"
+    android:padding="16dp"
+    android:gravity="center">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🔥 Serie"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp" />
+    <ImageView
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@android:drawable/btn_star_big_on"
+        android:tint="#FF9F0A"
+        android:layout_marginBottom="4dp"/>
 
     <TextView
         android:id="@+id/streak_value"
@@ -20,14 +20,16 @@
         android:layout_height="wrap_content"
         android:text="0"
         android:textColor="#FFFFFF"
-        android:textSize="32sp"
-        android:textStyle="bold" />
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:includeFontPadding="false" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="jours"
-        android:textColor="#FFCCCC"
-        android:textSize="11sp" />
+        android:text="Jours de série"
+        android:textColor="#8E8E93"
+        android:textSize="12sp"
+        android:layout_marginTop="-4dp"/>
 
 </LinearLayout>
