@@ -11,15 +11,16 @@ class ChangelogService {
   static const String _boxName = 'app_settings';
   static const String _lastSeenVersionKey = 'last_seen_version';
 
-  static String currentVersion = '1.4.0';
+  static String currentVersion = '1.3.5';
   static String currentBuildNumber = '1';
 
   /// Changelog entries - simple text only
   static const Map<String, List<String>> changelog = {
-    '1.4.0': [
-      '• Nouvelle UI d\'ajout de transaction',
-      '• Design plus aéré et moderne',
-      '• Suppression des chevauchements de texte',
+    '1.3.5': [
+      '• Nouvel écran de démarrage minimaliste "Apple-style"',
+      '• Animations 3D du logo',
+      '• Amélioration des performances de démarrage',
+      '• Notifications intelligentes enrichies',
     ],
     '1.3.2': [
       '• Correction de l\'affichage des descriptions longues',
