@@ -311,18 +311,9 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.only(bottom: 20.h),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => NavigationHelper.safeBack(),
-            child: Container(
-              padding: EdgeInsets.all(10.w),
-              decoration: BoxDecoration(
-                color: KoalaColors.surface(context),
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: KoalaShadows.xs,
-              ),
-              child: Icon(CupertinoIcons.back,
-                  size: 20.sp, color: KoalaColors.text(context)),
-            ),
+          IconButton(
+            onPressed: () => NavigationHelper.safeBack(),
+            icon: Icon(CupertinoIcons.back, color: KoalaColors.text(context)),
           ).animate().fadeIn().slideX(begin: -0.1),
           const Spacer(),
           Text('Abonnements', style: KoalaTypography.heading3(context))
@@ -362,40 +353,25 @@ class _StatsCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFFF6B6B),
-            const Color(0xFFFF8E53),
-          ],
-        ),
+        color: KoalaColors.surface(context),
         borderRadius: BorderRadius.circular(KoalaRadius.xl),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF6B6B).withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(color: KoalaColors.border(context)),
+        boxShadow: KoalaShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Cout mensuel',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12.sp,
+            'Coût mensuel',
+            style: KoalaTypography.caption(context).copyWith(
+              color: KoalaColors.textSecondary(context),
             ),
           ),
           SizedBox(height: 4.h),
           Text(
-            '${NumberFormat('#,###', 'fr_FR').format(monthlyTotal)} F',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28.sp,
-              fontWeight: FontWeight.bold,
+            '${NumberFormat('#,###', 'fr_FR').format(monthlyTotal)} FCFA',
+            style: KoalaTypography.heading1(context).copyWith(
+              color: KoalaColors.destructive,
             ),
           ),
           SizedBox(height: 16.h),
@@ -405,11 +381,16 @@ class _StatsCard extends StatelessWidget {
                 icon: CupertinoIcons.calendar,
                 value:
                     '${NumberFormat('#,###', 'fr_FR').format(yearlyTotal)} F/an',
+                backgroundColor:
+                    KoalaColors.primaryUi(context).withValues(alpha: 0.1),
+                textColor: KoalaColors.primaryUi(context),
               ),
               SizedBox(width: 12.w),
               _StatPill(
                 icon: CupertinoIcons.checkmark_circle,
                 value: '$activeCount actifs',
+                backgroundColor: KoalaColors.success.withValues(alpha: 0.1),
+                textColor: KoalaColors.success,
               ),
             ],
           ),
@@ -422,28 +403,36 @@ class _StatsCard extends StatelessWidget {
 class _StatPill extends StatelessWidget {
   final IconData icon;
   final String value;
+  final Color? backgroundColor;
+  final Color? textColor;
 
-  const _StatPill({required this.icon, required this.value});
+  const _StatPill({
+    required this.icon,
+    required this.value,
+    this.backgroundColor,
+    this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bgColor = backgroundColor ?? KoalaColors.surface(context);
+    final fgColor = textColor ?? KoalaColors.text(context);
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white24,
+        color: bgColor,
         borderRadius: BorderRadius.circular(KoalaRadius.full),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14.sp, color: Colors.white),
+          Icon(icon, size: 14.sp, color: fgColor),
           SizedBox(width: 6.w),
           Text(
             value,
             style: TextStyle(
-                color: Colors.white,
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w600),
+                color: fgColor, fontSize: 11.sp, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -586,7 +575,7 @@ class _ServiceIcon extends StatelessWidget {
       width: size.sp,
       height: size.sp,
       decoration: BoxDecoration(
-        color: _getCategoryColor(service.category).withOpacity(0.15),
+        color: _getCategoryColor(service.category).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(size * 0.2),
       ),
       child: Icon(
@@ -844,7 +833,7 @@ class _CategorySection extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: service.needsWhiteBackground
                           ? Colors.white
-                          : _accentColor.withOpacity(0.12),
+                          : _accentColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: _buildServiceIcon(context, service),
