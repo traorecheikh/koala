@@ -1,5 +1,7 @@
+import 'package:isar_plus/isar_plus.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 part 'financial_goal.g.dart';
 
@@ -27,48 +29,65 @@ enum GoalStatus {
   abandoned,
 }
 
+@Collection()
 @HiveType(typeId: 50)
-class FinancialGoal extends HiveObject {
+class FinancialGoal {
+  @Id()
   @HiveField(0)
-  final String id;
+  String id;
+
   @HiveField(1)
   String title;
+
   @HiveField(2)
   String? description;
+
   @HiveField(3)
   double targetAmount;
+
   @HiveField(4)
   double currentAmount;
+
   @HiveField(5)
   GoalType type;
+
   @HiveField(6)
   GoalStatus status;
+
   @HiveField(7)
-  final DateTime createdAt;
+  DateTime createdAt;
+
   @HiveField(8)
   DateTime? targetDate;
+
   @HiveField(9)
   DateTime? completedAt;
+
   @HiveField(10)
   String? linkedDebtId;
+
   @HiveField(11)
-  String? linkedCategoryId; // For purchase goals or specific savings categories
+  String? linkedCategoryId;
+
+  @Ignore()
   @HiveField(12)
   List<GoalMilestone> milestones;
+
   @HiveField(13)
-  int? iconKey; // For custom icons
+  int? iconKey;
+
   @HiveField(14)
-  int? colorValue; // For custom color
+  int? colorValue;
 
   FinancialGoal({
-    String? id,
+    required this.id,
     required this.title,
     this.description,
     required this.targetAmount,
     this.currentAmount = 0.0,
     this.type = GoalType.savings,
     this.status = GoalStatus.active,
-    DateTime? createdAt,
+    required this.createdAt,
     this.targetDate,
     this.completedAt,
     this.linkedDebtId,
@@ -76,9 +95,52 @@ class FinancialGoal extends HiveObject {
     List<GoalMilestone>? milestones,
     this.iconKey,
     this.colorValue,
-  })  : id = id ?? const Uuid().v4(),
-        createdAt = createdAt ?? DateTime.now(),
-        milestones = milestones ?? <GoalMilestone>[];
+  }) : milestones = milestones ?? <GoalMilestone>[];
+
+  /// Factory constructor for creating with auto-generated ID and timestamp
+  factory FinancialGoal.create({
+    required String title,
+    String? description,
+    required double targetAmount,
+    double currentAmount = 0.0,
+    GoalType type = GoalType.savings,
+    GoalStatus status = GoalStatus.active,
+    DateTime? targetDate,
+    DateTime? completedAt,
+    String? linkedDebtId,
+    String? linkedCategoryId,
+    List<GoalMilestone>? milestones,
+    int? iconKey,
+    int? colorValue,
+  }) {
+    return FinancialGoal(
+      id: const Uuid().v4(),
+      title: title,
+      description: description,
+      targetAmount: targetAmount,
+      currentAmount: currentAmount,
+      type: type,
+      status: status,
+      createdAt: DateTime.now(),
+      targetDate: targetDate,
+      completedAt: completedAt,
+      linkedDebtId: linkedDebtId,
+      linkedCategoryId: linkedCategoryId,
+      milestones: milestones,
+      iconKey: iconKey,
+      colorValue: colorValue,
+    );
+  }
+
+  /// Save this goal to Isar
+  Future<void> save() async {
+    IsarService.updateGoal(this);
+  }
+
+  /// Delete this goal from Isar
+  Future<void> delete() async {
+    IsarService.deleteGoal(id);
+  }
 
   double get progressPercentage =>
       (currentAmount / targetAmount * 100).clamp(0.0, 100.0);
