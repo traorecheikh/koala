@@ -4,6 +4,7 @@ import 'package:koaa/app/data/models/financial_goal.dart'; // New import
 import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/services/financial_context_service.dart'; // New import
 import 'package:koaa/app/services/ml_service.dart';
@@ -166,11 +167,11 @@ class AnalyticsController extends GetxController {
   }
 
   void _loadCurrentSavingsGoal() {
-    final savingsBox = Hive.box<SavingsGoal>('savingsGoalBox');
-    final goals = savingsBox.values.where(
-      (g) => g.year == selectedYear.value && g.month == selectedMonth.value,
+    final goal = IsarService.getSavingsGoalByPeriod(
+      selectedYear.value,
+      selectedMonth.value,
     );
-    currentSavingsGoal.value = goals.isEmpty ? null : goals.first;
+    currentSavingsGoal.value = goal;
   }
 
   void _updateCachedData() {
@@ -514,20 +515,19 @@ class AnalyticsController extends GetxController {
     required PaymentFrequency frequency,
     required DateTime paymentDate,
   }) async {
-    final jobBox = Hive.box<Job>('jobBox');
     final job = Job(
       id: const Uuid().v4(),
       name: name,
       amount: amount,
       frequency: frequency,
       paymentDate: paymentDate,
+      createdAt: DateTime.now(),
     );
-    await jobBox.put(job.id, job);
+    IsarService.addJob(job);
   }
 
   Future<void> updateJob(Job job) async {
-    final jobBox = Hive.box<Job>('jobBox');
-    await jobBox.put(job.id, job);
+    IsarService.updateJob(job);
   }
 
   Future<void> deleteJob(String jobId) async {
@@ -539,24 +539,23 @@ class AnalyticsController extends GetxController {
     }
   }
 
+
   Future<void> setSavingsGoal(double targetAmount) async {
-    final savingsBox = Hive.box<SavingsGoal>('savingsGoalBox');
-    final existingGoals = savingsBox.values.where(
-      (g) => g.year == selectedYear.value && g.month == selectedMonth.value,
+    final existingGoal = IsarService.getSavingsGoalByPeriod(
+      selectedYear.value,
+      selectedMonth.value,
     );
-    final existingGoal = existingGoals.isEmpty ? null : existingGoals.first;
 
     if (existingGoal != null) {
       final updated = existingGoal.copyWith(targetAmount: targetAmount);
-      await savingsBox.put(existingGoal.id, updated);
+      await IsarService.updateSavingsGoal(updated);
     } else {
-      final goal = SavingsGoal(
-        id: const Uuid().v4(),
+      final goal = SavingsGoal.create(
         targetAmount: targetAmount,
         year: selectedYear.value,
         month: selectedMonth.value,
       );
-      await savingsBox.put(goal.id, goal);
+      await IsarService.addSavingsGoal(goal);
     }
   }
 
