@@ -138,7 +138,7 @@ class _PinSetupViewState extends State<PinSetupView> {
                 width: 80.w,
                 height: 80.w,
                 decoration: BoxDecoration(
-                  color: KoalaColors.primary,
+                  color: KoalaColors.primaryUi(context),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Center(
@@ -191,7 +191,7 @@ class _PinSetupViewState extends State<PinSetupView> {
                       border: Border.all(
                         color: _isError
                             ? KoalaColors.destructive
-                            : KoalaColors.primary,
+                            : KoalaColors.primaryUi(context),
                         width: 2,
                       ),
                     ),
