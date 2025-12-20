@@ -11,6 +11,7 @@ import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/subscription_assets.dart';
+import 'package:koaa/app/modules/settings/views/suggestion_widgets.dart'; // Added import
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 
@@ -49,6 +50,10 @@ class SubscriptionsView extends GetView<RecurringTransactionsController> {
             ),
 
             // Active Subscriptions
+            SliverToBoxAdapter(
+              child: DetectedSubscriptionsSection(),
+            ),
+
             SliverPadding(
               padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 0),
               sliver: SliverToBoxAdapter(
@@ -249,7 +254,7 @@ class SubscriptionsView extends GetView<RecurringTransactionsController> {
                 ),
                 child: Row(
                   children: [
-                    Icon(CupertinoIcons.calendar, color: KoalaColors.primary),
+                    Icon(CupertinoIcons.calendar, color: KoalaColors.primaryUi(context)),
                     SizedBox(width: 12.w),
                     Text(
                       'Prochain: le ${subscription.dayOfMonth} du mois',
@@ -325,7 +330,7 @@ class _Header extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
-                color: KoalaColors.primary,
+                color: KoalaColors.primaryUi(context),
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(CupertinoIcons.add, size: 20.sp, color: Colors.white),
