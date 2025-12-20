@@ -21,6 +21,7 @@ abstract class Routes {
   static const insights = _Paths.insights; // Insights
   static const splash = _Paths.splash;
   static const challenges = _Paths.challenges;
+  static const envelopes = _Paths.envelopes;
 }
 
 abstract class _Paths {
@@ -43,4 +44,5 @@ abstract class _Paths {
   static const insights = '/insights'; // Insights Path
   static const splash = '/splash';
   static const challenges = '/challenges';
+  static const envelopes = '/envelopes';
 }
