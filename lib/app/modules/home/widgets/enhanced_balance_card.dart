@@ -102,13 +102,19 @@ class _FrontCard extends GetView<HomeController> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Votre solde', // Translated from 'Your Balance'
-                      style: KoalaTypography.bodyLarge(context).copyWith(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Obx(() {
+                      final hasAllocations = (controller.balance.value -
+                                  controller.freeBalance.value)
+                              .abs() >
+                          0.01;
+                      return Text(
+                        hasAllocations ? 'Disponible' : 'Votre solde',
+                        style: KoalaTypography.bodyLarge(context).copyWith(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      );
+                    }),
                     Row(
                       children: [
                         GestureDetector(
@@ -143,35 +149,55 @@ class _FrontCard extends GetView<HomeController> {
                 SizedBox(height: 12.h),
 
                 // Balance display
-                Obx(
-                  () => controller.balanceVisible.value
-                      ? Countup(
-                          begin: 0,
-                          end: controller.balance.value,
-                          duration: const Duration(milliseconds: 800),
-                          separator: ' ',
-                          style: KoalaTypography.heading1(context).copyWith(
-                            fontSize: 42.sp, // Override for Hero size
-                            color: Colors.white,
-                            fontWeight: FontWeight.w300,
-                            letterSpacing: -1,
-                            height: 1.1,
-                          ),
-                          curve: Curves.easeOut,
-                          prefix: 'FCFA ',
-                        )
-                          .animate()
-                          .fadeIn(duration: 400.ms)
-                          .slideY(begin: 0.3, end: 0, duration: 400.ms)
-                      : Text(
-                          '••••••••',
-                          style: KoalaTypography.heading1(context).copyWith(
-                            fontSize: 42.sp,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w300,
-                          ),
+                Obx(() {
+                  final isHidden = !controller.balanceVisible.value;
+                  final balance = controller.balance.value;
+                  final freeBalance = controller.freeBalance.value;
+                  final hasAllocations = (balance - freeBalance).abs() > 0.01;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      isHidden
+                          ? Text(
+                              '••••••••',
+                              style: KoalaTypography.heading1(context).copyWith(
+                                fontSize: 42.sp,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w300,
+                              ),
+                            )
+                          : Countup(
+                              begin: 0,
+                              end: hasAllocations ? freeBalance : balance,
+                              duration: const Duration(milliseconds: 800),
+                              separator: ' ',
+                              style: KoalaTypography.heading1(context).copyWith(
+                                fontSize: 42.sp,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w300,
+                                letterSpacing: -1,
+                                height: 1.1,
+                              ),
+                              curve: Curves.easeOut,
+                              prefix: 'FCFA ',
+                            )
+                              .animate()
+                              .fadeIn(duration: 400.ms)
+                              .slideY(begin: 0.3, end: 0, duration: 400.ms),
+                      if (!isHidden && hasAllocations)
+                        Padding(
+                          padding: EdgeInsets.only(top: 4.h),
+                          child: Text(
+                            'Total: ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(balance)}',
+                            style: KoalaTypography.bodySmall(context).copyWith(
+                              color: Colors.white70,
+                            ),
+                          ).animate().fadeIn(delay: 200.ms),
                         ),
-                ),
+                    ],
+                  );
+                }),
 
                 const Spacer(),
 
