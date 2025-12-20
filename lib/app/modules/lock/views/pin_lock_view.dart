@@ -184,7 +184,7 @@ class _PinLockViewState extends State<PinLockView>
                 width: 80.w,
                 height: 80.w,
                 decoration: BoxDecoration(
-                  color: KoalaColors.primary,
+                  color: KoalaColors.primaryUi(context),
                   borderRadius: BorderRadius.circular(KoalaRadius.lg),
                 ),
                 child: Center(
