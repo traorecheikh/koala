@@ -76,7 +76,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         hasCompletedCatchUp: currentUser?.hasCompletedCatchUp ?? false,
       );
 
-      final userBox = Hive.box<LocalUser>('userBox');
+      // Using IsarService
       await userBox.put('currentUser', updatedUser);
 
       _homeController.user.value = updatedUser;
