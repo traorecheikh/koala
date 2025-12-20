@@ -1,12 +1,11 @@
 import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/envelope.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:logger/logger.dart';
 
 class EnvelopeService extends GetxService {
   final _logger = Logger();
-  late final Box<Envelope> _envelopeBox;
 
   final envelopes = <Envelope>[].obs;
   final totalAllocated = 0.0.obs;
@@ -20,25 +19,21 @@ class EnvelopeService extends GetxService {
 
   Future<void> init() async {
     _logger.i('Initializing EnvelopeService...');
-    if (!Hive.isAdapterRegistered(70)) {
-      // Note: Adapter registration typically happens in main.dart or service_initializer
-      // We assume it's registered there or we register it if we can import the generated file.
-      // Since we can't reliably import .g.dart before it exists, we rely on the user/build_runner.
-    }
 
-    _envelopeBox = await Hive.openBox<Envelope>('envelopes');
+    // Load initial data
     _loadEnvelopes();
 
     // Listen to changes
-    // Listen to changes
-    _envelopeBox.watch().listen((_) {
-      _loadEnvelopes();
+    IsarService.watchEnvelopes().listen((data) {
+      envelopes.assignAll(data);
+      _recalculateTotalAllocated();
     });
   }
 
   void _loadEnvelopes() {
     try {
-      envelopes.assignAll(_envelopeBox.values.toList());
+      final data = IsarService.getAllEnvelopes();
+      envelopes.assignAll(data);
       _recalculateTotalAllocated();
     } catch (e) {
       _logger.e('Error loading envelopes', error: e);
@@ -64,32 +59,29 @@ class EnvelopeService extends GetxService {
     String? icon,
     String? color,
   }) async {
-    final envelope = Envelope(
+    final envelope = Envelope.create(
       name: name,
       targetAmount: targetAmount,
       currentAmount: 0.0, // Start empty
       icon: icon,
       color: color,
     );
-    await _envelopeBox.put(envelope.id, envelope);
-    _loadEnvelopes();
+    await IsarService.addEnvelope(envelope);
   }
 
   Future<void> updateEnvelope(Envelope envelope) async {
-    await _envelopeBox.put(envelope.id, envelope);
-    _loadEnvelopes();
+    await IsarService.updateEnvelope(envelope);
   }
 
   Future<void> deleteEnvelope(String id) async {
-    await _envelopeBox.delete(id);
-    _loadEnvelopes();
+    await IsarService.deleteEnvelope(id);
   }
 
   /// Allocates funds to an envelope.
   /// Returns true if successful, false if validation fails (e.g. not enough free funds).
   Future<bool> allocateFunds(String envelopeId, double amount,
       {bool force = false}) async {
-    final envelope = _envelopeBox.get(envelopeId);
+    final envelope = IsarService.getEnvelopeById(envelopeId);
     if (envelope == null) return false;
 
     // Check availability if not forcing
@@ -99,8 +91,7 @@ class EnvelopeService extends GetxService {
     if (newAmount < 0) return false; // Cannot have negative envelope balance
 
     final updated = envelope.copyWith(currentAmount: newAmount);
-    await _envelopeBox.put(updated.id, updated);
-    _loadEnvelopes();
+    await IsarService.updateEnvelope(updated);
     return true;
   }
 }
