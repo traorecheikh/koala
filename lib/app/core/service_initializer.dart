@@ -194,10 +194,10 @@ class ServiceInitializer {
     await _fixRattrapageData();
   }
 
-  /// V2 Migration: Fix existing 'Rattrapage' transactions
+  /// V3 Migration: Fix existing 'Rattrapage' transactions
   /// Updates description to category name and ensures category enum is set
   static Future<void> _fixRattrapageData() async {
-    final done = await _secureStorage.read(key: 'rattrapage_fix_v2');
+    final done = await _secureStorage.read(key: 'rattrapage_fix_v3');
     if (done == 'true') return;
 
     try {
@@ -205,39 +205,55 @@ class ServiceInitializer {
       int fixed = 0;
       int processed = 0;
 
+      // UUID pattern (both standard and without dashes)
+      final uuidPattern = RegExp(
+          r'^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$');
+
       for (final tx in allTx) {
         bool needsUpdate = false;
+        final desc = tx.description.trim();
 
-        // Check if description is a UUID pattern (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
-        final uuidPattern = RegExp(
-            r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
-        final isUuidDescription = uuidPattern.hasMatch(tx.description);
+        // Check if description looks like a UUID or contains UUID-like patterns
+        final isUuidDescription = uuidPattern.hasMatch(desc) ||
+            (desc.length == 36 && desc.contains('-')) ||
+            (desc.length >= 32 &&
+                !desc.contains(' ') &&
+                RegExp(r'^[0-9a-fA-F-]+$').hasMatch(desc));
 
-        // Fix description if it's "Rattrapage", starts with "Rattrapage:", or is a UUID
-        if (tx.description == 'Rattrapage du mois' ||
-            tx.description == 'Rattrapage' ||
-            tx.description.startsWith('Rattrapage:') ||
+        // Fix description if it matches any problematic pattern
+        if (desc == 'Rattrapage du mois' ||
+            desc == 'Rattrapage' ||
+            desc.startsWith('Rattrapage:') ||
             isUuidDescription) {
-          if (tx.categoryId != null) {
+          // Try to get proper name from categoryId or category
+          String properName = 'Dépense';
+
+          if (tx.categoryId != null && tx.categoryId!.isNotEmpty) {
             try {
+              // Check if categoryId is a standard enum name
               final cat = TransactionCategory.values
                   .firstWhere((e) => e.name == tx.categoryId);
-              tx.description = 'Rattrapage: ${cat.displayName}';
+              properName = cat.displayName;
               // Also fix the category enum if it's wrong
               if (tx.category != cat) {
                 tx.category = cat;
               }
-              needsUpdate = true;
             } catch (_) {
-              // Custom category - use a proper description
-              tx.description = 'Rattrapage: ${tx.categoryId}';
-              needsUpdate = true;
+              // categoryId is custom - use it directly if not UUID
+              if (!uuidPattern.hasMatch(tx.categoryId!)) {
+                properName = tx.categoryId!;
+              } else {
+                properName = tx.category.displayName;
+              }
             }
-          } else if (isUuidDescription) {
-            // UUID with no categoryId - use category enum displayName
-            tx.description = 'Rattrapage: ${tx.category.displayName}';
-            needsUpdate = true;
+          } else {
+            // No categoryId - use category enum displayName
+            properName = tx.category.displayName;
           }
+
+          tx.description = 'Rattrapage: $properName';
+          needsUpdate = true;
+          debugPrint('[Migration] Fixed: ${tx.id} -> ${tx.description}');
         }
 
         // Also fix any transaction with 'other' category but valid categoryId
@@ -254,18 +270,17 @@ class ServiceInitializer {
         }
 
         if (needsUpdate) {
-          IsarService.updateTransaction(tx); // Removed await (sync method)
+          IsarService.updateTransaction(tx);
           fixed++;
         }
 
         processed++;
-        // Yield every 50 items to keep animation smooth
         if (processed % 50 == 0) {
           await Future.delayed(Duration.zero);
         }
       }
 
-      await _secureStorage.write(key: 'rattrapage_fix_v2', value: 'true');
+      await _secureStorage.write(key: 'rattrapage_fix_v3', value: 'true');
       if (fixed > 0) {
         debugPrint('[Migration] ✅ Fixed $fixed rattrapage transactions');
       }

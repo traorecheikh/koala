@@ -521,7 +521,7 @@ class HomeController extends GetxController {
 
         newTransactions.add(LocalTransaction.create(
           amount: amount,
-          description: 'Rattrapage: ${category.name}',
+          description: 'Rattrapage: ${category.displayName}',
           date: catchUpDate,
           type: TransactionType.expense,
           category: category,
