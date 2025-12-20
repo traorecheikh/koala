@@ -40,8 +40,6 @@ class DebtController extends GetxController {
     DateTime? dueDate,
     double? minPayment,
   }) async {
-    final debtBox = Hive.box<Debt>('debtBox');
-    // REMOVED: final transactionBox = Hive.box<LocalTransaction>('transactionBox');
 
     final debtId = const Uuid().v4();
     final debt = Debt(
@@ -71,8 +69,8 @@ class DebtController extends GetxController {
       linkedDebtId: debtId,
     );
 
-    // Save debt to Hive
-    await debtBox.put(debt.id, debt);
+    // Save debt to Isar
+    IsarService.addDebt(debt);
 
     // Save transaction to ISAR (Source of Truth for Balance)
     IsarService.addTransaction(tx);
@@ -82,8 +80,7 @@ class DebtController extends GetxController {
   }
 
   Future<void> updateDebt(Debt updatedDebt) async {
-    final box = Hive.box<Debt>('debtBox');
-    await box.put(updatedDebt.id, updatedDebt);
+    IsarService.updateDebt(updatedDebt);
     int index = debts.indexWhere((d) => d.id == updatedDebt.id);
     if (index != -1) {
       debts[index] = updatedDebt;
@@ -91,8 +88,7 @@ class DebtController extends GetxController {
   }
 
   Future<void> deleteDebt(String debtId) async {
-    final box = Hive.box<Debt>('debtBox');
-    await box.delete(debtId);
+    await IsarService.deleteDebt(debtId);
     debts.removeWhere((debt) => debt.id == debtId);
   }
 
@@ -155,7 +151,7 @@ class DebtController extends GetxController {
   // Auto-create goal for debt payoff
   Future<void> createPayoffGoal(Debt debt) async {
     final goalsController = Get.find<GoalsController>();
-    final newGoal = FinancialGoal(
+    final newGoal = FinancialGoal.create(
       title: 'Rembourser ${debt.personName}',
       description: 'Rembourser la dette de ${debt.personName}',
       targetAmount: debt.remainingAmount,
