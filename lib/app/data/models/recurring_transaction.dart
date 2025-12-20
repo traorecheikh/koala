@@ -163,4 +163,41 @@ class RecurringTransaction extends HiveObject {
     }
     return false;
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'amount': amount,
+      'description': description,
+      'frequency': frequency.index,
+      'daysOfWeek': daysOfWeek,
+      'dayOfMonth': dayOfMonth,
+      'lastGeneratedDate': lastGeneratedDate.toIso8601String(),
+      'category': category.index,
+      'type': type.index,
+      'categoryId': categoryId,
+      'endDate': endDate?.toIso8601String(),
+      'isActive': isActive,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory RecurringTransaction.fromJson(Map<String, dynamic> json) {
+    return RecurringTransaction(
+      id: json['id'],
+      amount: json['amount'],
+      description: json['description'],
+      frequency: Frequency.values[json['frequency']],
+      daysOfWeek: List<int>.from(json['daysOfWeek']),
+      dayOfMonth: json['dayOfMonth'],
+      lastGeneratedDate: DateTime.parse(json['lastGeneratedDate']),
+      category: TransactionCategory.values[json['category']],
+      type: TransactionType.values[json['type']],
+      categoryId: json['categoryId'],
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
+      isActive: json['isActive'],
+      createdAt:
+          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+    );
+  }
 }
