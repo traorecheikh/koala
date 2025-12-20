@@ -14,6 +14,8 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/data/models/envelope.dart';
+import 'package:koaa/app/services/envelope_service.dart';
 
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
 import 'package:koaa/app/modules/settings/controllers/recurring_transactions_controller.dart';
@@ -113,7 +115,9 @@ class ServiceInitializer {
       _openBoxSafe<SavingsGoal>('savingsGoalBox'),
       _openBoxSafe<Budget>('budgetBox'),
       _openBoxSafe<Debt>('debtBox'),
+      _openBoxSafe<Debt>('debtBox'),
       _openBoxSafe<FinancialGoal>('financialGoalBox'),
+      _openBoxSafe<Envelope>('envelopeBox'),
 
       // Non-sensitive boxes
       Hive.openBox<Category>('categoryBox'),
@@ -193,7 +197,7 @@ class ServiceInitializer {
   /// V2 Migration: Fix existing 'Rattrapage' transactions
   /// Updates description to category name and ensures category enum is set
   static Future<void> _fixRattrapageData() async {
-    final done = await _secureStorage.read(key: 'rattrapage_fix_v1');
+    final done = await _secureStorage.read(key: 'rattrapage_fix_v2');
     if (done == 'true') return;
 
     try {
@@ -204,24 +208,35 @@ class ServiceInitializer {
       for (final tx in allTx) {
         bool needsUpdate = false;
 
-        // Fix description if it's "Rattrapage"
+        // Check if description is a UUID pattern (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
+        final uuidPattern = RegExp(
+            r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+        final isUuidDescription = uuidPattern.hasMatch(tx.description);
+
+        // Fix description if it's "Rattrapage", starts with "Rattrapage:", or is a UUID
         if (tx.description == 'Rattrapage du mois' ||
-            tx.description == 'Rattrapage') {
+            tx.description == 'Rattrapage' ||
+            tx.description.startsWith('Rattrapage:') ||
+            isUuidDescription) {
           if (tx.categoryId != null) {
             try {
               final cat = TransactionCategory.values
                   .firstWhere((e) => e.name == tx.categoryId);
-              tx.description = cat.displayName;
+              tx.description = 'Rattrapage: ${cat.displayName}';
               // Also fix the category enum if it's wrong
               if (tx.category != cat) {
                 tx.category = cat;
               }
               needsUpdate = true;
             } catch (_) {
-              // Custom category - use ID as description
-              tx.description = tx.categoryId!;
+              // Custom category - use a proper description
+              tx.description = 'Rattrapage: ${tx.categoryId}';
               needsUpdate = true;
             }
+          } else if (isUuidDescription) {
+            // UUID with no categoryId - use category enum displayName
+            tx.description = 'Rattrapage: ${tx.category.displayName}';
+            needsUpdate = true;
           }
         }
 
@@ -250,7 +265,7 @@ class ServiceInitializer {
         }
       }
 
-      await _secureStorage.write(key: 'rattrapage_fix_v1', value: 'true');
+      await _secureStorage.write(key: 'rattrapage_fix_v2', value: 'true');
       if (fixed > 0) {
         debugPrint('[Migration] ✅ Fixed $fixed rattrapage transactions');
       }
@@ -271,7 +286,7 @@ class ServiceInitializer {
     Get.lazyPut(() => RecurringTransactionsController(), fenix: true);
     Get.lazyPut<CategoriesController>(() => CategoriesController(),
         fenix: true);
-    Get.lazyPut(() => SettingsController(), fenix: true);
+    Get.put<SettingsController>(SettingsController(), permanent: true);
     Get.put<PinService>(PinService(), permanent: true);
     Get.put<SecurityService>(SecurityService(), permanent: true);
     Get.put<AchievementsService>(AchievementsService(), permanent: true);
@@ -299,6 +314,13 @@ class ServiceInitializer {
     await Get.putAsync<IntelligenceService>(() async {
       final service = IntelligenceService();
       await service.onInit();
+      return service;
+    });
+
+    // Envelopes (Smart Envelopes Feature)
+    await Get.putAsync<EnvelopeService>(() async {
+      final service = EnvelopeService();
+      await service.init();
       return service;
     });
   }
