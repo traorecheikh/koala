@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/core/design_system.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/data/models/job.dart';
 import 'package:uuid/uuid.dart';
@@ -95,7 +96,7 @@ class _JobDialogState extends State<_JobDialog> {
     final amount = double.parse(amountText);
 
     try {
-      final box = Hive.box<Job>('jobBox');
+      // Using IsarService
 
       // Explicitly NOT passing endDate to constructor to avoid crash on stale app instances
       final newJob = Job(
@@ -105,11 +106,11 @@ class _JobDialogState extends State<_JobDialog> {
         frequency: _frequency,
         paymentDate: _paymentDate,
         isActive: _isActive,
-        createdAt: widget.job?.createdAt,
+        createdAt: widget.job?.createdAt ?? DateTime.now(),
         endDate: _endDate, // Added saving using the field
       );
 
-      await box.put(newJob.id, newJob);
+      await newJob.save();
 
       NavigationHelper.safeBack();
     } catch (e) {
@@ -130,8 +131,8 @@ class _JobDialogState extends State<_JobDialog> {
       isDestructive: true,
       onConfirm: () async {
         try {
-          final box = Hive.box<Job>('jobBox');
-          await box.delete(widget.job!.id);
+          // Using IsarService
+          await IsarService.deleteJob(widget.job!.id);
           NavigationHelper.safeBack();
           NavigationHelper.safeBack();
         } catch (_) {}
@@ -419,8 +420,8 @@ class _JobDialogState extends State<_JobDialog> {
                     padding:
                         EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     decoration: BoxDecoration(
-                      color:
-                          KoalaColors.inputBackground(context).withValues(alpha: 0.5),
+                      color: KoalaColors.inputBackground(context)
+                          .withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(KoalaRadius.md),
                     ),
                     child: SwitchListTile.adaptive(
