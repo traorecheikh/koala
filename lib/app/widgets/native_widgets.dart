@@ -17,7 +17,10 @@ class NativeBalanceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Create a local theme wrapper to ensure consistent rendering
-    final theme = isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
+    final theme = AppTheme.getTheme(
+      skin: AppSkin.blue,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+    );
     final gradient = LinearGradient(
       colors: isDark
           ? [Color(0xFF2E3B55), Color(0xFF1A1F2C)]
