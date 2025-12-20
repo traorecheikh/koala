@@ -488,6 +488,8 @@ class _AnalyticsViewState extends State<AnalyticsView> {
                   targetDate: data.targetDate,
                   status: GoalStatus.active,
                   type: GoalType.savings,
+                  createdAt:
+                      DateTime.now(), // Display-only, doesn't need exact date
                 );
                 return Padding(
                   padding: EdgeInsets.only(bottom: 16.h),
@@ -804,10 +806,31 @@ class _AnalyticsViewState extends State<AnalyticsView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Mes Emplois', style: KoalaTypography.heading3(context)),
-              Text(
-                '${jobs.length}',
-                style: KoalaTypography.bodyMedium(context)
-                    .copyWith(color: KoalaColors.textSecondary(context)),
+              Row(
+                children: [
+                  Text(
+                    '${jobs.length}',
+                    style: KoalaTypography.bodyMedium(context)
+                        .copyWith(color: KoalaColors.textSecondary(context)),
+                  ),
+                  SizedBox(width: 12.w),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _showAddJobDialog(context);
+                    },
+                    child: Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        color: KoalaColors.primaryUi(context)
+                            .withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(CupertinoIcons.add,
+                          size: 18.sp, color: KoalaColors.primaryUi(context)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
