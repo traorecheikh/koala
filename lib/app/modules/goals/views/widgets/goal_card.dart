@@ -20,7 +20,7 @@ class GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Color(goal.colorValue ?? KoalaColors.primary.toARGB32());
+    final color = Color(goal.colorValue ?? KoalaColors.primaryUi(context).toARGB32());
 
     return Container(
       padding: EdgeInsets.all(16.w),
