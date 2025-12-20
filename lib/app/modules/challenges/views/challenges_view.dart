@@ -304,14 +304,14 @@ class _HeroStatsCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            KoalaColors.primary,
-            KoalaColors.primary.withBlue(180),
+            KoalaColors.primaryUi(context),
+            KoalaColors.primaryUi(context).withBlue(180),
           ],
         ),
         borderRadius: BorderRadius.circular(KoalaRadius.xl),
         boxShadow: [
           BoxShadow(
-            color: KoalaColors.primary.withValues(alpha: 0.4),
+            color: KoalaColors.primaryUi(context).withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
