@@ -10,6 +10,7 @@ import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'package:koaa/app/services/ml/models/time_series_engine.dart';
 import 'package:koaa/app/services/ml/contextual_brain.dart'; // Fixed: Added import
+import 'package:koaa/app/services/predictive_spending_service.dart';
 import 'package:logger/logger.dart';
 import 'dart:math';
 
@@ -172,14 +173,70 @@ class SmartFinancialBrain extends GetxService {
           input.forecast),
 
       // Risk assessment
-      overallRiskLevel: _calculateOverallRisk(
+      overallRiskLevel: _assessOverallRisk(
         input.transactions,
-        input.debts,
+        input.debts, // Fixed: passed correct arguments to _assessOverallRisk
         input.goals,
         input.currentBalance,
         input.monthlyIncome,
       ),
+      spendingAlerts: PredictiveSpendingService().analyzeSpending(
+        transactions: input.transactions,
+        budgets: input.budgets,
+      ),
     );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RISK ASSESSMENT (STATIC)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static RiskLevel _assessOverallRisk(
+    List<LocalTransaction> transactions,
+    List<Debt> debts,
+    List<FinancialGoal> goals,
+    double currentBalance,
+    double monthlyIncome,
+  ) {
+    if (monthlyIncome <= 0) return RiskLevel.unknown;
+
+    int riskScore = 0; // Lower is better
+
+    // 1. Spending too fast?
+    final spendingBehavior =
+        _analyzeSpendingBehavior(transactions, monthlyIncome);
+    if (spendingBehavior.pattern == SpendingPattern.reckless) riskScore += 3;
+    if (spendingBehavior.pattern == SpendingPattern.aggressive) riskScore += 2;
+    if (spendingBehavior.pattern == SpendingPattern.atRisk) riskScore += 1;
+
+    // 2. High debt?
+    final debtStrategy =
+        _analyzeDebtStrategy(debts, monthlyIncome, currentBalance);
+    if (debtStrategy.recommendedStrategy == PayoffStrategy.seekHelp) {
+      riskScore += 3;
+    }
+    if (debtStrategy.recommendedStrategy == PayoffStrategy.aggressive) {
+      riskScore += 2;
+    }
+
+    // 3. Low savings/buffer?
+    if (currentBalance < monthlyIncome * 0.1) {
+      riskScore += 2; // Less than 10% buffer
+    }
+    if (currentBalance < 0) riskScore += 3; // In overdraft
+
+    // 4. Failing goals?
+    final goalProgress =
+        _analyzeGoalProgress(goals, monthlyIncome, currentBalance);
+    if (goalProgress.goalsAtRisk > goalProgress.goalsOnTrack) riskScore += 1;
+
+    // Determine level
+    if (riskScore >= 6) return RiskLevel.critical;
+    if (riskScore >= 4) return RiskLevel.high;
+    if (riskScore >= 2) return RiskLevel.medium;
+    if (riskScore >= 1) return RiskLevel.low;
+
+    return RiskLevel.minimal;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
