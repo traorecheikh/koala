@@ -1,60 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+enum AppSkin {
+  blue(Color(0xFF3E69FE), 'Bleu Koala'),
+  purple(Color(0xFFAF52DE), 'Violet Royal'),
+  green(Color(0xFF32D74B), 'Vert Nature'),
+  orange(Color(0xFFFF9F0A), 'Orange Sunset'),
+  red(Color(0xFFFF453A), 'Rouge Passion'),
+  teal(Color(0xFF30D5C8), 'Teal Océan');
+
+  final Color color;
+  final String label;
+  const AppSkin(this.color, this.label);
+}
+
 class AppTheme {
-  static ThemeData get lightTheme {
-    const Color primaryTextLight = Color(0xFF1A1B1E);
-    final textThemeLight = GoogleFonts.poppinsTextTheme(
-      ThemeData.light().textTheme,
-    ).apply(bodyColor: primaryTextLight, displayColor: primaryTextLight);
+  static ThemeData getTheme({
+    required AppSkin skin,
+    required Brightness brightness,
+  }) {
+    final isDark = brightness == Brightness.dark;
+    final primaryColor = skin.color;
+
+    // Base Colors
+    final scaffoldBg =
+        isDark ? const Color(0xFF1A1B1E) : const Color(0xFFF2F2F7);
+    final surface = isDark ? const Color(0xFF242529) : Colors.white;
+    final onSurface = isDark ? Colors.white : const Color(0xFF1C1C1E);
+
+    // Text Theme Base
+    final baseTextTheme =
+        isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme;
+
+    final primaryTextColor =
+        isDark ? const Color(0xFFEAEAEA) : const Color(0xFF1A1B1E);
+    final secondaryTextColor =
+        isDark ? const Color(0xFFB0B0B0) : const Color(0xFF6A6A6A);
+
+    final textTheme = GoogleFonts.poppinsTextTheme(baseTextTheme).apply(
+      bodyColor: primaryTextColor,
+      displayColor: primaryTextColor,
+    );
 
     return ThemeData(
-      brightness: Brightness.light,
-      primaryColor: const Color(0xFF3E69FE), // Vibrant Blue
-      scaffoldBackgroundColor: const Color(0xFFF2F2F7), // iOS light background
-      colorScheme: const ColorScheme.light(
-        primary: Color(0xFF3E69FE), // Vibrant Blue
-        secondary: Color(0xFF30D5C8), // Teal for variety
-        surface: Colors.white, // Pure white for cards
-        onPrimary: Colors.white,
+      brightness: brightness,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: scaffoldBg,
+      colorScheme: ColorScheme(
+        brightness: brightness,
+        primary: primaryColor,
+        onPrimary: Colors.white, // Assuming white text on primary color buttons
+        secondary: const Color(
+            0xFF30D5C8), // Fixed secondary or derived? Keeping fixed for now or could match skin
         onSecondary: Colors.white,
-        onSurface: Color(0xFF1C1C1E), // Dark grey for text on white surfaces
+        surface: surface,
+        onSurface: onSurface,
         error: Colors.redAccent,
+        onError: Colors.white,
       ),
-      textTheme: textThemeLight.copyWith(
-        headlineSmall: textThemeLight.headlineSmall?.copyWith(
+      textTheme: textTheme.copyWith(
+        headlineSmall: textTheme.headlineSmall?.copyWith(
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF1C1C1E),
+          color: primaryTextColor,
         ),
-        headlineMedium: textThemeLight.headlineMedium?.copyWith(
+        headlineMedium: textTheme.headlineMedium?.copyWith(
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF1C1C1E),
+          color: primaryTextColor,
           fontSize: 48,
         ),
-        titleLarge: textThemeLight.titleLarge?.copyWith(
+        titleLarge: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF1C1C1E),
+          color: primaryTextColor,
         ),
-        titleMedium: textThemeLight.titleMedium?.copyWith(
-          color: const Color(0xFF1C1C1E),
+        titleMedium: textTheme.titleMedium?.copyWith(
+          color: primaryTextColor,
           fontWeight: FontWeight.w500,
         ),
-        bodyMedium: textThemeLight.bodyMedium?.copyWith(
-          color: const Color(0xFF6A6A6A),
+        bodyMedium: textTheme.bodyMedium?.copyWith(
+          color: secondaryTextColor,
           fontSize: 16,
         ),
-        bodySmall: textThemeLight.bodySmall?.copyWith(
-          color: const Color(0xFF6A6A6A),
+        bodySmall: textTheme.bodySmall?.copyWith(
+          color: secondaryTextColor,
           fontSize: 12,
         ),
       ),
-      iconTheme: const IconThemeData(color: Color(0xFF1C1C1E), size: 24),
+      iconTheme: IconThemeData(color: primaryTextColor, size: 24),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: const Color(0xFF3E69FE), // Match primary color
+          foregroundColor: primaryColor,
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
+      // Keep page transitions
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
@@ -65,66 +103,7 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
-    const Color primaryTextDark = Color(0xFFEAEAEA);
-    const Color secondaryTextDark = Color(0xFFB0B0B0);
-    final textThemeDark = GoogleFonts.poppinsTextTheme(
-      ThemeData.dark().textTheme,
-    ).apply(bodyColor: primaryTextDark, displayColor: primaryTextDark);
-
-    return ThemeData(
-      brightness: Brightness.dark,
-      primaryColor: const Color(0xFF3E69FE), // Vibrant Blue
-      scaffoldBackgroundColor: const Color(0xFF1A1B1E),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF3E69FE), // Vibrant Blue
-        secondary: Color(0xFF30D5C8), // Teal for variety
-        surface: Color(0xFF242529), // Lighter Dark
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: Colors.white,
-        error: Colors.redAccent,
-      ),
-      textTheme: textThemeDark.copyWith(
-        headlineSmall: textThemeDark.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: primaryTextDark,
-        ),
-        headlineMedium: textThemeDark.headlineMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: primaryTextDark,
-          fontSize: 48,
-        ),
-        titleLarge: textThemeDark.titleLarge?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
-        titleMedium: textThemeDark.titleMedium?.copyWith(
-          color: primaryTextDark,
-          fontWeight: FontWeight.w500,
-        ),
-        bodyMedium: textThemeDark.bodyMedium?.copyWith(
-          color: secondaryTextDark,
-          fontSize: 16,
-        ),
-        bodySmall: textThemeDark.bodySmall?.copyWith(
-          color: secondaryTextDark,
-          fontSize: 12,
-        ),
-      ),
-      iconTheme: const IconThemeData(color: primaryTextDark, size: 24),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: const Color(0xFF3E69FE),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-        },
-      ),
-      useMaterial3: true,
-    );
-  }
+  // Deprecated static getters provided for backward compatibility if needed,
+  // but better to switch to dynamic generation.
+  // We will remove lightTheme/darkTheme and force usage of getTheme with a default skin.
 }
