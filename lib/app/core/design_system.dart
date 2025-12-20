@@ -73,9 +73,7 @@ class KoalaColors {
           : const Color(0xFFF2F2F7);
 
   static Color primaryUi(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? accent // Blue in Dark Mode
-          : _brandBlack; // Black in Light Mode
+      Theme.of(context).primaryColor;
 
   static Color text(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark
@@ -287,7 +285,8 @@ class KoalaTextField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: isAmount ? '0.00' : label,
               hintStyle: KoalaTypography.bodyMedium(context).copyWith(
-                color: KoalaColors.textSecondary(context).withValues(alpha: 0.5),
+                color:
+                    KoalaColors.textSecondary(context).withValues(alpha: 0.5),
               ),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
@@ -668,7 +667,8 @@ class KoalaBottomSheet extends StatelessWidget {
                   Container(
                     padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
-                      color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
+                      color:
+                          KoalaColors.primaryUi(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Icon(icon,
