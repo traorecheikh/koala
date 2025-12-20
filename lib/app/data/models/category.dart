@@ -1,10 +1,15 @@
+import 'package:isar_plus/isar_plus.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 part 'category.g.dart';
 
+@Collection()
 @HiveType(typeId: 5)
-class Category extends HiveObject {
+class Category {
+  // UUID as primary ID (follows LocalTransaction pattern)
+  @Id()
   @HiveField(0)
   String id;
 
@@ -31,6 +36,14 @@ class Category extends HiveObject {
     required this.type,
     this.isDefault = false,
   });
+
+  /// Save this category to Isar
+  Future<void> save() async {
+    IsarService.updateCategory(this);
+  }
+
+  /// Delete this category from Isar
+  Future<void> delete() async {
+    IsarService.deleteCategory(id);
+  }
 }
-
-
