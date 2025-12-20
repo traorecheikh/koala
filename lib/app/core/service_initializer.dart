@@ -4,6 +4,10 @@ import 'package:hive_ce/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'dart:io';
+import 'package:isar_plus/isar_plus.dart';
+import 'package:uuid/uuid.dart';
+
 import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/challenge.dart';
@@ -117,7 +121,7 @@ class ServiceInitializer {
       _openBoxSafe<Debt>('debtBox'),
       _openBoxSafe<Debt>('debtBox'),
       _openBoxSafe<FinancialGoal>('financialGoalBox'),
-      _openBoxSafe<Envelope>('envelopeBox'),
+      _openBoxSafe<Envelope>('envelopes'),
 
       // Non-sensitive boxes
       Hive.openBox<Category>('categoryBox'),
@@ -144,16 +148,33 @@ class ServiceInitializer {
 
     // Migrate transactions from Hive to Isar (one-time)
     await _migrateTransactionsToIsar();
+
+    // Migrate categories from Hive to Isar (one-time)
+    await _migrateCategoriesToIsar();
+
+    // Migrate budgets from Hive to Isar (one-time)
+    await _migrateBudgetsToIsar();
+
+    // Migrate goals from Hive to Isar (one-time)
+    await _migrateGoalsToIsar();
+
+    // Phase 2: Migrate RecurringTransaction, Debt, Job from Hive to Isar (one-time)
+    await _migrateRecurringTransactionsToIsar();
+    await _migrateDebtsToIsar();
+    await _migrateJobsToIsar();
+    await _migrateLocalUserToIsar();
+    await _migrateEnvelopesToIsar();
+
+    // Rescue data from legacy DB (koala_isar) to current (koala_isar_v5)
+    await _rescueLegacyData();
   }
 
   /// One-time migration of transactions from Hive to Isar
   static Future<void> _migrateTransactionsToIsar() async {
-    // V2 Force Check: Ensure we catch any straggler transactions (e.g. from Debt bug)
-    // and CLEAR the legacy box once and for all.
-    final migrationComplete =
-        await _secureStorage.read(key: 'isar_tx_migration_forced_v2');
+    // V6: Added LocalUser, SavingsGoal, Envelope schemas (koala_isar)
+    final migrated = await _secureStorage.read(key: 'isar_tx_migration_v6');
 
-    if (migrationComplete == 'true') {
+    if (migrated == 'true') {
       final hiveCount = Hive.box<LocalTransaction>('transactionBox').length;
       if (hiveCount > 0) {
         // If somehow data appeared again, warn but don't auto-migrate blindly to avoid loops
@@ -197,8 +218,8 @@ class ServiceInitializer {
             '[Migration] ✅ Successfully migrated ${transactions.length} items and CLEARED legacy box.');
       }
 
-      await _secureStorage.write(
-          key: 'isar_tx_migration_forced_v2', value: 'true');
+      await _secureStorage.write(key: 'isar_tx_migration_v6', value: 'true');
+      debugPrint('[Migration] ✅ ALL DONE: Transaction migration complete');
     } catch (e) {
       debugPrint('[Migration] ❌ Failed to migrate transactions: $e');
       // Don't set flag - will retry on next startup
@@ -211,7 +232,7 @@ class ServiceInitializer {
   /// V4 Migration: Fix existing 'Rattrapage' transactions
   /// Updates description to category name and ensures category enum is set
   static Future<void> _fixRattrapageData() async {
-    final done = await _secureStorage.read(key: 'rattrapage_fix_v6');
+    final done = await _secureStorage.read(key: 'rattrapage_fix_v7');
     if (done == 'true') return;
 
     try {
@@ -322,12 +343,311 @@ class ServiceInitializer {
         }
       }
 
-      await _secureStorage.write(key: 'rattrapage_fix_v6', value: 'true');
+      await _secureStorage.write(key: 'rattrapage_fix_v7', value: 'true');
       if (fixed > 0) {
         debugPrint('[Migration] ✅ Fixed $fixed rattrapage transactions');
       }
     } catch (e) {
       debugPrint('[Migration] ❌ Rattrapage fix failed: $e');
+    }
+  }
+
+  /// One-time migration of categories from Hive to Isar
+  static Future<void> _migrateCategoriesToIsar() async {
+    final migrationComplete =
+        await _secureStorage.read(key: 'isar_category_migration_v1');
+
+    if (migrationComplete == 'true') {
+      final hiveCount = Hive.box<Category>('categoryBox').length;
+      if (hiveCount > 0) {
+        debugPrint(
+            '[Migration] Warning: categoryBox has $hiveCount items despite migration flag.');
+      }
+      return;
+    }
+
+    try {
+      debugPrint('[Migration] Starting Hive → Isar category migration...');
+      final hiveBox = Hive.box<Category>('categoryBox');
+      final categories = hiveBox.values.toList();
+
+      if (categories.isEmpty) {
+        debugPrint(
+            '[Migration] Hive categoryBox is empty. Nothing to migrate.');
+      } else {
+        debugPrint('[Migration] Migrating ${categories.length} categories...');
+
+        // Categories are small, no chunking needed
+        IsarService.addCategories(categories);
+
+        // CRITICAL: Clear the legacy box to prevent future confusion
+        await hiveBox.clear();
+        debugPrint('[Migration] ✅ Category migration complete');
+      }
+
+      await _secureStorage.write(
+          key: 'isar_category_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Category migration failed: $e');
+      debugPrint('[Migration] Stack: $stack');
+      rethrow;
+    }
+  }
+
+  /// One-time migration of budgets from Hive to Isar
+  static Future<void> _migrateBudgetsToIsar() async {
+    final migrationComplete =
+        await _secureStorage.read(key: 'isar_budget_migration_v1');
+
+    if (migrationComplete == 'true') {
+      return;
+    }
+
+    try {
+      debugPrint('[Migration] Starting Hive → Isar budget migration...');
+      final hiveBox = Hive.box<Budget>('budgetBox');
+      final budgets = hiveBox.values.toList();
+
+      if (budgets.isEmpty) {
+        debugPrint('[Migration] Hive budgetBox is empty. Nothing to migrate.');
+      } else {
+        debugPrint('[Migration] Migrating ${budgets.length} budgets...');
+
+        // Add all budgets to Isar
+        IsarService.addBudgets(budgets);
+
+        // Clear Hive box
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive budgetBox');
+      }
+
+      debugPrint('[Migration] ✅ Budget migration complete');
+      await _secureStorage.write(
+          key: 'isar_budget_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Budget migration failed: $e');
+      debugPrint('[Migration] Stack: $stack');
+      rethrow;
+    }
+  }
+
+  /// One-time migration of financial goals from Hive to Isar
+  static Future<void> _migrateGoalsToIsar() async {
+    final migrationComplete =
+        await _secureStorage.read(key: 'isar_goal_migration_v1');
+
+    if (migrationComplete == 'true') {
+      return;
+    }
+
+    try {
+      debugPrint('[Migration] Starting Hive → Isar goal migration...');
+      final hiveBox = Hive.box<FinancialGoal>('financialGoalBox');
+      final goals = hiveBox.values.toList();
+
+      if (goals.isEmpty) {
+        debugPrint(
+            '[Migration] Hive financialGoalBox is empty. Nothing to migrate.');
+      } else {
+        debugPrint('[Migration] Migrating ${goals.length} goals...');
+
+        // Add all goals to Isar
+        IsarService.addGoals(goals);
+
+        // Clear Hive box
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive financialGoalBox');
+      }
+
+      debugPrint('[Migration] ✅ Goal migration complete');
+      await _secureStorage.write(key: 'isar_goal_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Goal migration failed: $e');
+      debugPrint('[Migration] Stack: $stack');
+      rethrow;
+    }
+  }
+
+  /// One-time migration of recurring transactions from Hive to Isar
+  static Future<void> _migrateRecurringTransactionsToIsar() async {
+    try {
+      final migrated =
+          await _secureStorage.read(key: 'isar_recurring_tx_migration_v1');
+      if (migrated == 'true') {
+        debugPrint(
+            '[Migration] Recurring transactions already migrated to Isar');
+        return;
+      }
+
+      final hiveBox = Hive.box<RecurringTransaction>('recurringTransactionBox');
+      if (hiveBox.isNotEmpty) {
+        debugPrint(
+            '[Migration] Migrating ${hiveBox.length} recurring transactions to Isar');
+        final transactions = hiveBox.values.toList();
+
+        // Sanitize IDs
+        for (var item in transactions) {
+          if (item.id.isEmpty) {
+            item.id = const Uuid().v4();
+          }
+        }
+
+        IsarService.addRecurringTransactions(transactions);
+        debugPrint('[Migration] Migrated recurring transactions to Isar');
+
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive recurringTransactionBox');
+      }
+
+      debugPrint('[Migration] ✅ Recurring transaction migration complete');
+      await _secureStorage.write(
+          key: 'isar_recurring_tx_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Recurring transaction migration failed: $e');
+      // Fix: Don't rethrow to allow app to proceed even if this fails
+      // rethrow;
+    }
+  }
+
+  /// One-time migration of debts from Hive to Isar
+  static Future<void> _migrateDebtsToIsar() async {
+    try {
+      final migrated = await _secureStorage.read(key: 'isar_debt_migration_v1');
+      if (migrated == 'true') {
+        debugPrint('[Migration] Debts already migrated to Isar');
+        return;
+      }
+
+      final hiveBox = Hive.box<Debt>('debtBox');
+      if (hiveBox.isNotEmpty) {
+        debugPrint('[Migration] Migrating ${hiveBox.length} debts to Isar');
+        final debts = hiveBox.values.toList();
+
+        // Sanitize IDs
+        for (var item in debts) {
+          if (item.id.isEmpty) {
+            item.id = const Uuid().v4();
+          }
+        }
+
+        IsarService.addDebts(debts);
+        debugPrint('[Migration] Migrated debts to Isar');
+
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive debtBox');
+      }
+
+      debugPrint('[Migration] ✅ Debt migration complete');
+      await _secureStorage.write(key: 'isar_debt_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Debt migration failed: $e');
+      // Fix: Don't rethrow
+      // rethrow;
+    }
+  }
+
+  /// One-time migration of jobs from Hive to Isar
+  static Future<void> _migrateJobsToIsar() async {
+    try {
+      final migrated = await _secureStorage.read(key: 'isar_job_migration_v1');
+      if (migrated == 'true') {
+        debugPrint('[Migration] Jobs already migrated to Isar');
+        return;
+      }
+
+      final hiveBox = Hive.box<Job>('jobBox');
+      if (hiveBox.isNotEmpty) {
+        debugPrint('[Migration] Migrating ${hiveBox.length} jobs to Isar');
+        final jobs = hiveBox.values.toList();
+
+        // Sanitize IDs to prevent 'Illegal Argument'
+        for (var item in jobs) {
+          if (item.id.isEmpty) {
+            item.id = const Uuid().v4();
+          }
+        }
+
+        IsarService.addJobs(jobs);
+        debugPrint('[Migration] Migrated jobs to Isar');
+
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive jobBox');
+      }
+
+      debugPrint('[Migration] ✅ Job migration complete');
+      await _secureStorage.write(key: 'isar_job_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Job migration failed: $e');
+      // Fix: Don't rethrow
+      // rethrow;
+    }
+  }
+
+  /// One-time migration of user from Hive to Isar
+  static Future<void> _migrateLocalUserToIsar() async {
+    try {
+      final migrated = await _secureStorage.read(key: 'isar_user_migration_v1');
+      if (migrated == 'true') {
+        debugPrint('[Migration] User already migrated to Isar');
+        return;
+      }
+
+      final hiveBox = Hive.box<LocalUser>('userBox');
+      if (hiveBox.isNotEmpty) {
+        debugPrint('[Migration] Migrating user to Isar');
+        final user = hiveBox.values.first;
+
+        // Ensure ID is valid to prevent IsarError: Illegal Argument
+        // Always regenerate ID to prevent IsarError: Illegal Argument from old/invalid IDs
+        debugPrint('[Migration] Original User ID: ${user.id}');
+        user.id = const Uuid().v4();
+        debugPrint('[Migration] Regenerated UUID for user: ${user.id}');
+
+        await IsarService.saveUser(user);
+        debugPrint('[Migration] Migrated user to Isar');
+
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive userBox');
+      }
+
+      debugPrint('[Migration] ✅ User migration complete');
+      await _secureStorage.write(key: 'isar_user_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ User migration failed: $e');
+      debugPrint('[Migration] Stack: $stack');
+      // rethrow; // Allow other migrations (specifically Rescue) to proceed
+    }
+  }
+
+  /// One-time migration of savings goals from Hive to Isar
+  static Future<void> _migrateSavingsGoalsToIsar() async {
+    try {
+      final migrated =
+          await _secureStorage.read(key: 'isar_savings_goal_migration_v1');
+      if (migrated == 'true') {
+        debugPrint('[Migration] Savings goals already migrated to Isar');
+        return;
+      }
+
+      final hiveBox = Hive.box<SavingsGoal>('savingsGoalBox');
+      if (hiveBox.isNotEmpty) {
+        debugPrint(
+            '[Migration] Migrating ${hiveBox.length} savings goals to Isar');
+        final goals = hiveBox.values.toList();
+        IsarService.addSavingsGoals(goals);
+        debugPrint('[Migration] Migrated savings goals to Isar');
+
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive savingsGoalBox');
+      }
+
+      debugPrint('[Migration] ✅ Savings goal migration complete');
+      await _secureStorage.write(
+          key: 'isar_savings_goal_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Savings goal migration failed: $e');
+      debugPrint('[Migration] Stack: $stack');
+      rethrow;
     }
   }
 
@@ -387,6 +707,159 @@ class ServiceInitializer {
     await WidgetService.initialize();
     // Don't await updateAllWidgets in critical path
     WidgetService.updateAllWidgets();
+  }
+
+  /// One-time migration of envelopes from Hive to Isar
+  static Future<void> _migrateEnvelopesToIsar() async {
+    try {
+      final migrated =
+          await _secureStorage.read(key: 'isar_envelope_migration_v1');
+      if (migrated == 'true') {
+        debugPrint('[Migration] Envelopes already migrated to Isar');
+        return;
+      }
+
+      final hiveBox = Hive.box<Envelope>('envelopes');
+      if (hiveBox.isNotEmpty) {
+        debugPrint('[Migration] Migrating ${hiveBox.length} envelopes to Isar');
+        final envelopes = hiveBox.values.toList();
+        IsarService.addEnvelopes(envelopes);
+        debugPrint('[Migration] Migrated envelopes to Isar');
+
+        await hiveBox.clear();
+        debugPrint('[Migration] Cleared Hive envelopes');
+      }
+
+      debugPrint('[Migration] ✅ Envelope migration complete');
+      await _secureStorage.write(
+          key: 'isar_envelope_migration_v1', value: 'true');
+    } catch (e, stack) {
+      debugPrint('[Migration] ❌ Envelope migration failed: $e');
+      debugPrint('[Migration] Stack: $stack');
+      rethrow;
+    }
+  }
+
+  /// Rescue data (Jobs, Debts, Recurring) from koala_isar_v5 if it exists
+
+  /// Rescue data from legacy database (koala_isar) to current (koala_isar_v5)
+  static Future<void> _rescueLegacyData() async {
+    try {
+      final rescued =
+          await _secureStorage.read(key: 'legacy_rescue_complete_v1');
+      if (rescued == 'true') return;
+
+      final dir = await getApplicationDocumentsDirectory();
+      // Check if legacy exists
+      final legacyExists = Directory(dir.path)
+          .listSync()
+          .any((f) => f.path.contains('koala_isar') && !f.path.contains('v5'));
+
+      if (!legacyExists) {
+        await _secureStorage.write(
+            key: 'legacy_rescue_complete_v1', value: 'true');
+        return;
+      }
+
+      debugPrint(
+          '[Rescue] Attempting to rescue data from legacy koala_isar...');
+
+      // Open Legacy instance (Try-Catch in case of version crash)
+      final legacy = await Isar.open(
+        schemas: [
+          LocalTransactionSchema,
+          CategorySchema,
+          BudgetSchema,
+          FinancialGoalSchema,
+          RecurringTransactionSchema,
+          DebtSchema,
+          JobSchema,
+          LocalUserSchema,
+          SavingsGoalSchema,
+          EnvelopeSchema
+        ],
+        directory: dir.path,
+        name: 'koala_isar', // Legacy name
+      );
+
+      // Rescue Transactions
+      try {
+        final txs = await legacy.localTransactions.where().findAllAsync();
+        if (txs.isNotEmpty) {
+          debugPrint(
+              '[Rescue] Found ${txs.length} transactions in legacy. Copying...');
+          IsarService.addTransactions(txs);
+        }
+      } catch (e) {
+        debugPrint('[Rescue] Legacy Transactions failed: $e');
+      }
+
+      // Rescue Jobs
+      try {
+        final jobs = await legacy.jobs.where().findAllAsync();
+        if (jobs.isNotEmpty) {
+          debugPrint(
+              '[Rescue] Found ${jobs.length} jobs in legacy. Copying...');
+          IsarService.addJobs(jobs);
+        }
+      } catch (e) {
+        debugPrint('[Rescue] Legacy Jobs failed: $e');
+      }
+
+      // Rescue Debts
+      try {
+        final debts = await legacy.debts.where().findAllAsync();
+        if (debts.isNotEmpty) {
+          debugPrint(
+              '[Rescue] Found ${debts.length} debts in legacy. Copying...');
+          IsarService.addDebts(debts);
+        }
+      } catch (e) {
+        debugPrint('[Rescue] Legacy Debts failed: $e');
+      }
+
+      // Rescue Recurring
+      try {
+        final recurring =
+            await legacy.recurringTransactions.where().findAllAsync();
+        if (recurring.isNotEmpty) {
+          debugPrint(
+              '[Rescue] Found ${recurring.length} recurring tx in legacy. Copying...');
+          IsarService.addRecurringTransactions(recurring);
+        }
+      } catch (e) {
+        debugPrint('[Rescue] Legacy Recurring failed: $e');
+      }
+
+      // Rescue User
+      try {
+        final legacyUser = await legacy.localUsers.where().findFirstAsync();
+        if (legacyUser != null) {
+          final currentUser = IsarService.getUser();
+          if (currentUser == null) {
+            debugPrint('[Rescue] Restoring user from legacy...');
+
+            // Ensure valid ID for legacy user too
+            if (legacyUser.id.isEmpty) {
+              legacyUser.id = const Uuid().v4();
+            }
+
+            await IsarService.saveUser(legacyUser);
+          }
+        }
+      } catch (e) {
+        debugPrint('[Rescue] Legacy User failed: $e');
+      }
+
+      await legacy.close();
+      debugPrint('[Rescue] Legacy rescue complete.');
+      await _secureStorage.write(
+          key: 'legacy_rescue_complete_v1', value: 'true');
+    } catch (e) {
+      debugPrint('[Rescue] Critical Failure opening legacy DB: $e');
+      // If we can't open it, we can't rescue. Mark as done to prevent loop?
+      // No, maybe retry later. Code changes might fix it.
+    }
   }
 
   /// Helper to safely open a box with encryption fallback
