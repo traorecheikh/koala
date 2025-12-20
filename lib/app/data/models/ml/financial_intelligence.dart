@@ -16,6 +16,7 @@ class FinancialIntelligence {
   final NetWorthAnalysis netWorthAnalysis; // New
   final List<SmartRecommendation> recommendations;
   final RiskLevel overallRiskLevel;
+  final List<SpendingAlert> spendingAlerts;
 
   FinancialIntelligence({
     required this.spendingBehavior,
@@ -26,6 +27,7 @@ class FinancialIntelligence {
     required this.netWorthAnalysis,
     required this.recommendations,
     required this.overallRiskLevel,
+    required this.spendingAlerts,
   });
 
   factory FinancialIntelligence.empty() => FinancialIntelligence(
@@ -37,7 +39,28 @@ class FinancialIntelligence {
         netWorthAnalysis: NetWorthAnalysis.empty(),
         recommendations: [],
         overallRiskLevel: RiskLevel.unknown,
+        spendingAlerts: [],
       );
+}
+
+enum AlertSeverity { low, medium, high, critical }
+
+class SpendingAlert {
+  final String categoryId;
+  final String message;
+  final AlertSeverity severity;
+  final double projectedAmount;
+  final double budgetAmount;
+  final double currentAmount;
+
+  SpendingAlert({
+    required this.categoryId,
+    required this.message,
+    required this.severity,
+    required this.projectedAmount,
+    required this.budgetAmount,
+    required this.currentAmount,
+  });
 }
 
 class NetWorthAnalysis {
