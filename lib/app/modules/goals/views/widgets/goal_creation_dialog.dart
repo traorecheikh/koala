@@ -179,7 +179,7 @@ class _GoalCreationDialogState extends State<GoalCreationDialog> {
                         _targetAmountController.text.isNotEmpty) {
                       final amount = double.parse(_targetAmountController.text);
 
-                      final newGoal = FinancialGoal(
+                      final newGoal = FinancialGoal.create(
                         title: _titleController.text,
                         description: _descriptionController.text,
                         targetAmount: amount,
