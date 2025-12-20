@@ -1,5 +1,7 @@
+import 'package:isar_plus/isar_plus.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 part 'debt.g.dart';
 
@@ -11,11 +13,14 @@ enum DebtType {
   borrowed, // I borrowed money (Liability)
 }
 
+@Collection()
 @HiveType(typeId: 42)
-class Debt extends HiveObject {
+class Debt {
+  @Id()
   @HiveField(0)
-  final String id;
+  String id;
 
+  @Index()
   @HiveField(1)
   String personName;
 
@@ -25,6 +30,7 @@ class Debt extends HiveObject {
   @HiveField(3)
   double remainingAmount;
 
+  @Index()
   @HiveField(4)
   DebtType type;
 
@@ -38,28 +44,63 @@ class Debt extends HiveObject {
   List<String> transactionIds; // IDs of repayment transactions
 
   @HiveField(8)
-  double minPayment; // Renamed from monthlyPayment to minPayment
+  double minPayment;
 
   @HiveField(9)
   int? dueDayOfMonth; // For monthly repayment schedules
 
   Debt({
-    String? id,
+    required this.id,
     required this.personName,
     required this.originalAmount,
-    double? remainingAmount,
+    required this.remainingAmount,
     required this.type,
     this.dueDate,
-    DateTime? createdAt,
+    required this.createdAt,
     this.transactionIds = const [],
     this.minPayment = 0.0,
     this.dueDayOfMonth,
-  })  : id = id ?? const Uuid().v4(),
-        createdAt = createdAt ?? DateTime.now(),
-        remainingAmount = remainingAmount ?? originalAmount;
+  });
 
+  /// Factory constructor for creating with auto-generated ID and timestamp
+  factory Debt.create({
+    required String personName,
+    required double originalAmount,
+    double? remainingAmount,
+    required DebtType type,
+    DateTime? dueDate,
+    List<String> transactionIds = const [],
+    double minPayment = 0.0,
+    int? dueDayOfMonth,
+  }) {
+    return Debt(
+      id: const Uuid().v4(),
+      personName: personName,
+      originalAmount: originalAmount,
+      remainingAmount: remainingAmount ?? originalAmount,
+      type: type,
+      dueDate: dueDate,
+      createdAt: DateTime.now(),
+      transactionIds: transactionIds,
+      minPayment: minPayment,
+      dueDayOfMonth: dueDayOfMonth,
+    );
+  }
+
+  /// Save this debt to Isar
+  Future<void> save() async {
+    IsarService.updateDebt(this);
+  }
+
+  /// Delete this debt from Isar
+  Future<void> delete() async {
+    IsarService.deleteDebt(id);
+  }
+
+  @Ignore()
   bool get isPaidOff => remainingAmount <= 0;
 
+  @Ignore()
   double get paidAmount => originalAmount - remainingAmount;
 
   Map<String, dynamic> toJson() {
