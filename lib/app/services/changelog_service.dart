@@ -11,11 +11,17 @@ class ChangelogService {
   static const String _boxName = 'app_settings';
   static const String _lastSeenVersionKey = 'last_seen_version';
 
-  static String currentVersion = '1.3.5';
+  static String currentVersion = '1.7.0';
   static String currentBuildNumber = '1';
 
   /// Changelog entries - simple text only
   static const Map<String, List<String>> changelog = {
+    '1.7.0': [
+      '• Migration sécurisée des données (Jobs/Dettes)',
+      '• Correctif critique "Data Rescue" pour anciens utilisateurs',
+      '• Retour du bouton "Ajouter" pour les Emplois',
+      '• Stabilisation et sécurisation des sauvegardes',
+    ],
     '1.3.5': [
       '• Nouvel écran de démarrage minimaliste "Apple-style"',
       '• Animations 3D du logo',
