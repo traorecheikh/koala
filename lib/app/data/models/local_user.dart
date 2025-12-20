@@ -35,7 +35,11 @@ class LocalUser extends HiveObject {
     required this.budgetingType,
     this.firstLaunchDate,
     this.hasCompletedCatchUp = false,
-  });
+    String? id,
+  }) : id = id ?? '';
+
+  @HiveField(7)
+  String id;
 
   Map<String, dynamic> toJson() {
     return {
@@ -46,6 +50,7 @@ class LocalUser extends HiveObject {
       'budgetingType': budgetingType,
       'firstLaunchDate': firstLaunchDate?.toIso8601String(),
       'hasCompletedCatchUp': hasCompletedCatchUp,
+      'id': id,
     };
   }
 
@@ -60,6 +65,7 @@ class LocalUser extends HiveObject {
           ? DateTime.parse(json['firstLaunchDate'])
           : null,
       hasCompletedCatchUp: json['hasCompletedCatchUp'] ?? false,
+      id: json['id'],
     );
   }
 }

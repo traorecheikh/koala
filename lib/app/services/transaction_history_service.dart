@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 /// Service for managing transaction history and undo/redo operations
 class TransactionHistoryService extends GetxService {
@@ -72,24 +72,23 @@ class TransactionHistoryService extends GetxService {
 
     try {
       final entry = _undoStack.removeLast();
-      final box = Hive.box<LocalTransaction>('transactionBox');
 
       switch (entry.action) {
         case HistoryAction.added:
           // Remove the added transaction
-          await box.delete(entry.transaction.id);
+          IsarService.deleteTransaction(entry.transaction.id);
           _redoStack.add(entry);
           break;
 
         case HistoryAction.deleted:
           // Restore the deleted transaction
-          await box.put(entry.transaction.id, entry.transaction);
+          IsarService.addTransaction(entry.transaction);
           _redoStack.add(entry);
           break;
 
         case HistoryAction.modified:
           // Restore the old version
-          await box.put(entry.transaction.id, entry.transaction);
+          IsarService.updateTransaction(entry.transaction);
           _redoStack.add(entry);
           break;
       }
@@ -107,25 +106,24 @@ class TransactionHistoryService extends GetxService {
 
     try {
       final entry = _redoStack.removeLast();
-      final box = Hive.box<LocalTransaction>('transactionBox');
 
       switch (entry.action) {
         case HistoryAction.added:
           // Re-add the transaction
-          await box.put(entry.transaction.id, entry.transaction);
+          IsarService.addTransaction(entry.transaction);
           _undoStack.add(entry);
           break;
 
         case HistoryAction.deleted:
           // Re-delete the transaction
-          await box.delete(entry.transaction.id);
+          IsarService.deleteTransaction(entry.transaction.id);
           _undoStack.add(entry);
           break;
 
         case HistoryAction.modified:
           // Apply the new version again
           if (entry.newData != null) {
-            await box.put(entry.newData!.id, entry.newData!);
+            IsarService.updateTransaction(entry.newData!);
           }
           _undoStack.add(entry);
           break;

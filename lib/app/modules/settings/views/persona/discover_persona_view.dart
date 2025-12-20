@@ -100,9 +100,7 @@ class _DiscoverPersonaViewState extends State<DiscoverPersonaView> {
 
   Widget _buildContent(UserFinancialProfile profile) {
     // Check if we have enough data to show a meaningful profile
-    if (profile.dataQuality == 'low' ||
-        profile.personaType.toLowerCase() == 'unknown' ||
-        profile.transactionCount < 5) {
+    if (profile.transactionCount < 30) {
       return _buildLearningState(profile);
     }
     return _buildPersonaDetails(profile);

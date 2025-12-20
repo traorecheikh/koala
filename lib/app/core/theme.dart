@@ -7,14 +7,45 @@ enum AppSkin {
   green(Color(0xFF32D74B), 'Vert Nature'),
   orange(Color(0xFFFF9F0A), 'Orange Sunset'),
   red(Color(0xFFFF453A), 'Rouge Passion'),
-  teal(Color(0xFF30D5C8), 'Teal Océan');
+  teal(Color(0xFF30D5C8), 'Teal Océan'),
+
+  spiderRed(Color(0xFFE23636), 'Spider-Man'),
+  deadpoolRed(Color(0xFF8B0000), 'Deadpool'),
+  gojoPurple(Color(0xFF512DA8), 'Gojo Satoru'),
+  batmanDark(Color(0xFF263238), 'Batman'),
+  ironmanRed(Color(0xFFBF360C), 'Iron Man'),
+  narutoOrange(Color(0xFFFF6D00), 'Naruto'),
+  tanjiroGreen(Color(0xFF2E7D32), 'Demon Slayer'),
+  flashRed(Color(0xFFFF0000), 'The Flash');
 
   final Color color;
   final String label;
   const AppSkin(this.color, this.label);
 }
 
+class HeroThemeData {
+  final String patternAsset;
+  final Color baseColor; // Usually matches the skin color or a specific tint
+  late final Color patternColor; // Derived or custom
+  final double patternOpacity;
+
+  HeroThemeData({
+    required this.patternAsset,
+    required this.baseColor,
+    Color? patternColor,
+    this.patternOpacity = 0.05,
+  }) {
+    this.patternColor = patternColor ?? baseColor;
+  }
+}
+
 class AppTheme {
+  static final ValueNotifier<AppSkin> skinNotifier =
+      ValueNotifier(AppSkin.blue);
+
+  static final ValueNotifier<HeroThemeData?> heroThemeNotifier =
+      ValueNotifier(null);
+
   static ThemeData getTheme({
     required AppSkin skin,
     required Brightness brightness,

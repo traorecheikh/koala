@@ -166,6 +166,8 @@ class FinancialContextService extends GetxService {
   void _loadTransactions() async {
     // Load transactions from Isar (primary source)
     final transactions = await IsarService.getAllTransactions();
+    _logger.i(
+        'ISAR DEBUG: Loaded ${transactions.length} total tx. Hidden: ${transactions.where((t) => t.isHidden).length}');
     _onIsarTransactionsChanged(transactions.where((t) => !t.isHidden).toList());
   }
 

@@ -148,43 +148,57 @@ class ServiceInitializer {
 
   /// One-time migration of transactions from Hive to Isar
   static Future<void> _migrateTransactionsToIsar() async {
+    // V2 Force Check: Ensure we catch any straggler transactions (e.g. from Debt bug)
+    // and CLEAR the legacy box once and for all.
     final migrationComplete =
-        await _secureStorage.read(key: 'isar_tx_migration_v1');
+        await _secureStorage.read(key: 'isar_tx_migration_forced_v2');
 
     if (migrationComplete == 'true') {
-      debugPrint('[Migration] Isar transaction migration already complete.');
+      final hiveCount = Hive.box<LocalTransaction>('transactionBox').length;
+      if (hiveCount > 0) {
+        // If somehow data appeared again, warn but don't auto-migrate blindly to avoid loops
+        debugPrint(
+            '[Migration] Warning: transactionBox has $hiveCount items despite V2 flag.');
+      }
       return;
     }
 
     try {
-      debugPrint('[Migration] Starting Hive → Isar transaction migration...');
+      debugPrint(
+          '[Migration] Starting Hive → Isar transaction migration (V2 Sweep)...');
       final hiveBox = Hive.box<LocalTransaction>('transactionBox');
       final transactions = hiveBox.values.toList();
 
       if (transactions.isEmpty) {
-        debugPrint('[Migration] No transactions to migrate.');
-        await _secureStorage.write(key: 'isar_tx_migration_v1', value: 'true');
-        return;
+        debugPrint(
+            '[Migration] Hive transactionBox is empty. Nothing to migrate.');
+      } else {
+        debugPrint(
+            '[Migration] Migrating ${transactions.length} legacy transactions...');
+
+        // Optimize: Process in chunks to avoid blocking UI
+        const chunkSize = 200;
+        for (var i = 0; i < transactions.length; i += chunkSize) {
+          final end = (i + chunkSize < transactions.length)
+              ? i + chunkSize
+              : transactions.length;
+          final chunk = transactions.sublist(i, end);
+
+          // Upsert to Isar (handles duplicates safely)
+          IsarService.addTransactions(chunk);
+
+          // Yield to allow UI frame rendering
+          await Future.delayed(Duration.zero);
+        }
+
+        // CRITICAL: Clear the legacy box to prevent future confusion
+        await hiveBox.clear();
+        debugPrint(
+            '[Migration] ✅ Successfully migrated ${transactions.length} items and CLEARED legacy box.');
       }
 
-      debugPrint(
-          '[Migration] Migrating ${transactions.length} transactions...');
-
-      // Optimize: Process in chunks to avoid blocking UI (Splash animation)
-      const chunkSize = 200;
-      for (var i = 0; i < transactions.length; i += chunkSize) {
-        final end = (i + chunkSize < transactions.length)
-            ? i + chunkSize
-            : transactions.length;
-        final chunk = transactions.sublist(i, end);
-        IsarService.addTransactions(chunk); // Removed await (sync method)
-        // Yield to allow UI frame rendering
-        await Future.delayed(Duration.zero);
-      }
-
-      await _secureStorage.write(key: 'isar_tx_migration_v1', value: 'true');
-      debugPrint(
-          '[Migration] ✅ Successfully migrated ${transactions.length} transactions to Isar!');
+      await _secureStorage.write(
+          key: 'isar_tx_migration_forced_v2', value: 'true');
     } catch (e) {
       debugPrint('[Migration] ❌ Failed to migrate transactions: $e');
       // Don't set flag - will retry on next startup
@@ -194,10 +208,10 @@ class ServiceInitializer {
     await _fixRattrapageData();
   }
 
-  /// V3 Migration: Fix existing 'Rattrapage' transactions
+  /// V4 Migration: Fix existing 'Rattrapage' transactions
   /// Updates description to category name and ensures category enum is set
   static Future<void> _fixRattrapageData() async {
-    final done = await _secureStorage.read(key: 'rattrapage_fix_v3');
+    final done = await _secureStorage.read(key: 'rattrapage_fix_v6');
     if (done == 'true') return;
 
     try {
@@ -209,28 +223,51 @@ class ServiceInitializer {
       final uuidPattern = RegExp(
           r'^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$');
 
+      // Try to load custom categories from Hive for name lookup
+      Map<String, String> customCategoryNames = {};
+      try {
+        if (Hive.isBoxOpen('categoryBox')) {
+          final categoryBox = Hive.box<Category>('categoryBox');
+          for (final cat in categoryBox.values) {
+            customCategoryNames[cat.id] = cat.name;
+          }
+        }
+      } catch (_) {}
+
       for (final tx in allTx) {
         bool needsUpdate = false;
         final desc = tx.description.trim();
 
-        // Check if description looks like a UUID or contains UUID-like patterns
+        // Check if description is a pure UUID
         final isUuidDescription = uuidPattern.hasMatch(desc) ||
             (desc.length == 36 && desc.contains('-')) ||
             (desc.length >= 32 &&
                 !desc.contains(' ') &&
                 RegExp(r'^[0-9a-fA-F-]+$').hasMatch(desc));
 
+        // Check if description contains UUID after 'Rattrapage: ' prefix
+        bool hasUuidInRattrapage = false;
+        if (desc.startsWith('Rattrapage: ')) {
+          final afterPrefix = desc.substring('Rattrapage: '.length).trim();
+          hasUuidInRattrapage = uuidPattern.hasMatch(afterPrefix) ||
+              (afterPrefix.length == 36 && afterPrefix.contains('-')) ||
+              (afterPrefix.length >= 32 &&
+                  !afterPrefix.contains(' ') &&
+                  RegExp(r'^[0-9a-fA-F-]+$').hasMatch(afterPrefix));
+        }
+
         // Fix description if it matches any problematic pattern
-        if (desc == 'Rattrapage du mois' ||
+        // V6 Update: Broader check for 'rattrapage' and REMOVE prefix
+        if (desc.toLowerCase().contains('rattrapage') ||
             desc == 'Rattrapage' ||
-            desc.startsWith('Rattrapage:') ||
-            isUuidDescription) {
+            isUuidDescription ||
+            hasUuidInRattrapage) {
           // Try to get proper name from categoryId or category
           String properName = 'Dépense';
 
           if (tx.categoryId != null && tx.categoryId!.isNotEmpty) {
+            // First try enum name match
             try {
-              // Check if categoryId is a standard enum name
               final cat = TransactionCategory.values
                   .firstWhere((e) => e.name == tx.categoryId);
               properName = cat.displayName;
@@ -239,10 +276,14 @@ class ServiceInitializer {
                 tx.category = cat;
               }
             } catch (_) {
-              // categoryId is custom - use it directly if not UUID
-              if (!uuidPattern.hasMatch(tx.categoryId!)) {
+              // categoryId might be a UUID for custom category - lookup in Hive
+              if (customCategoryNames.containsKey(tx.categoryId)) {
+                properName = customCategoryNames[tx.categoryId]!;
+              } else if (!uuidPattern.hasMatch(tx.categoryId!)) {
+                // Use categoryId directly if not a UUID
                 properName = tx.categoryId!;
               } else {
+                // Fallback to category enum displayName
                 properName = tx.category.displayName;
               }
             }
@@ -251,9 +292,10 @@ class ServiceInitializer {
             properName = tx.category.displayName;
           }
 
-          tx.description = 'Rattrapage: $properName';
+          tx.description = properName;
           needsUpdate = true;
-          debugPrint('[Migration] Fixed: ${tx.id} -> ${tx.description}');
+          debugPrint(
+              '[Migration] Fixed (Clean): ${tx.id} -> ${tx.description}');
         }
 
         // Also fix any transaction with 'other' category but valid categoryId
@@ -280,7 +322,7 @@ class ServiceInitializer {
         }
       }
 
-      await _secureStorage.write(key: 'rattrapage_fix_v3', value: 'true');
+      await _secureStorage.write(key: 'rattrapage_fix_v6', value: 'true');
       if (fixed > 0) {
         debugPrint('[Migration] ✅ Fixed $fixed rattrapage transactions');
       }

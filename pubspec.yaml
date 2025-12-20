@@ -61,6 +61,8 @@ flutter:
     - assets/
     - assets/achievements/
     - assets/subscriptions/
+    - assets/hero-folder/
+    - assets/patterns/
     - shorebird.yaml
 
 flutter_icons:

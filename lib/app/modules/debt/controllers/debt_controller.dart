@@ -6,6 +6,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/modules/goals/controllers/goals_controller.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/events/financial_events_service.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:uuid/uuid.dart';
 
 class DebtController extends GetxController {
@@ -40,7 +41,7 @@ class DebtController extends GetxController {
     double? minPayment,
   }) async {
     final debtBox = Hive.box<Debt>('debtBox');
-    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
+    // REMOVED: final transactionBox = Hive.box<LocalTransaction>('transactionBox');
 
     final debtId = const Uuid().v4();
     final debt = Debt(
@@ -70,11 +71,13 @@ class DebtController extends GetxController {
       linkedDebtId: debtId,
     );
 
-    // Save both debt and transaction
+    // Save debt to Hive
     await debtBox.put(debt.id, debt);
-    await transactionBox.put(tx.id, tx);
 
-    // Emit transaction event to update balance
+    // Save transaction to ISAR (Source of Truth for Balance)
+    IsarService.addTransaction(tx);
+
+    // Emit transaction event to update balance (might be redundant if Isar watch works, but harmless)
     _financialEventsService.emitTransactionAdded(tx);
   }
 
@@ -95,7 +98,6 @@ class DebtController extends GetxController {
 
   Future<void> recordRepayment(Debt debt, double amount) async {
     // 1. Create transaction
-    final transactionBox = Hive.box<LocalTransaction>('transactionBox');
     final tx = LocalTransaction.create(
       amount: amount,
       description: 'Remboursement: ${debt.personName}',
@@ -106,7 +108,9 @@ class DebtController extends GetxController {
       categoryId: null, // Could be 'Debt' category if added
       linkedDebtId: debt.id, // Link transaction to debt
     );
-    await transactionBox.put(tx.id, tx); // Use put with id
+
+    // Save to ISAR
+    IsarService.addTransaction(tx);
 
     // 2. Update Debt
     debt.remainingAmount -= amount;

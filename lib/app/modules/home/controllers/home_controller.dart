@@ -21,6 +21,7 @@ import 'package:koaa/app/services/ml/smart_financial_brain.dart'; // Added valid
 import 'package:logger/logger.dart';
 import 'dart:math';
 import 'dart:async'; // Fixed: Needed for Timer
+import 'package:uuid/uuid.dart';
 
 // -----------------------------------------------------------------------------
 // ENUMS
@@ -485,6 +486,14 @@ class HomeController extends GetxController {
 
       if (hasUser) {
         final currentUser = userBox.values.first;
+
+        // V7 Migration: Add ID if missing
+        if (currentUser.id.isEmpty) {
+          currentUser.id = _generateShortId();
+          currentUser.save(); // Save back to Hive
+          _logger.i('Migrated User ID: ${currentUser.id}');
+        }
+
         user.value = currentUser;
         userName.value = currentUser.fullName;
       } else {
@@ -498,6 +507,25 @@ class HomeController extends GetxController {
     } catch (e) {
       _logger.e('Failed to load user: $e');
     }
+  }
+
+  String _generateShortId() {
+    // Generate a professional looking ID like "KOALA-7X92"
+    // Base UUID is too long for display.
+    // Let's use a combination of prefix and random generated chars
+    const chars =
+        'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 for clarity
+    final rnd = Random();
+    final buffer = StringBuffer();
+    for (var i = 0; i < 4; i++) {
+      buffer.write(chars[rnd.nextInt(chars.length)]);
+    }
+    final buffer2 = StringBuffer();
+    for (var i = 0; i < 4; i++) {
+      buffer2.write(chars[rnd.nextInt(chars.length)]);
+    }
+
+    return 'ID-${buffer.toString()}-${buffer2.toString()}';
   }
 
   // Proper getter for home_view

@@ -48,19 +48,46 @@ class _AnalyticsViewState extends State<AnalyticsView> {
             style: KoalaTypography.heading3(context),
           ),
           centerTitle: true,
-          bottom: TabBar(
-            labelColor: KoalaColors.accent,
-            unselectedLabelColor: KoalaColors.textSecondary(context),
-            labelStyle: KoalaTypography.bodyMedium(context)
-                .copyWith(fontWeight: FontWeight.w600),
-            indicatorColor: KoalaColors.accent,
-            indicatorSize: TabBarIndicatorSize.label,
-            tabs: const [
-              Tab(text: 'Aperçu'),
-              Tab(text: 'Budgets'),
-              Tab(text: 'Objectifs'),
-              Tab(text: 'Dettes'),
-            ],
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(50.h),
+            child: Container(
+              decoration: BoxDecoration(
+                color: KoalaColors.surface(context),
+                border: Border(
+                  bottom: BorderSide(
+                    color: KoalaColors.border(context),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: TabBar(
+                labelColor: KoalaColors.accent,
+                unselectedLabelColor: KoalaColors.textSecondary(context),
+                labelStyle: KoalaTypography.bodyMedium(context)
+                    .copyWith(fontWeight: FontWeight.w600),
+                unselectedLabelStyle: KoalaTypography.bodyMedium(context)
+                    .copyWith(fontWeight: FontWeight.w500),
+                indicator: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: KoalaColors.accent,
+                      width: 3.h,
+                    ),
+                  ),
+                ),
+                indicatorPadding: EdgeInsets.symmetric(horizontal: 20.w),
+                indicatorSize: TabBarIndicatorSize.label,
+                dividerColor: Colors.transparent,
+                overlayColor: WidgetStateProperty.all(Colors.transparent),
+                splashFactory: NoSplash.splashFactory,
+                tabs: const [
+                  Tab(text: 'Aperçu'),
+                  Tab(text: 'Budgets'),
+                  Tab(text: 'Objectifs'),
+                  Tab(text: 'Dettes'),
+                ],
+              ),
+            ),
           ),
         ),
         body: TabBarView(
@@ -306,8 +333,16 @@ class _AnalyticsViewState extends State<AnalyticsView> {
         children: [
           Obx(() => controller.selectedTimeRange.value == TimeRange.month
               ? _buildBudgetComparisonCard(context)
-              : _buildEmptyCard(context,
-                  'Sélectionnez le mois pour la comparaison budgétaire')),
+              : _buildEmptyCard(
+                  context,
+                  'Sélectionnez le mois pour voir la comparaison budgétaire',
+                  icon: CupertinoIcons.chart_bar_square,
+                  actionLabel: 'Revenir au Mois',
+                  onAction: () {
+                    HapticFeedback.lightImpact();
+                    controller.setTimeRange(TimeRange.month);
+                  },
+                )),
           SizedBox(height: KoalaSpacing.xxxl),
         ]
             .animate(interval: 50.ms)
@@ -323,7 +358,15 @@ class _AnalyticsViewState extends State<AnalyticsView> {
 
       if (activeGoalsData.isEmpty) {
         return _buildEmptyCard(
-            context, 'Aucun objectif à afficher pour cette période.');
+          context,
+          'Créez votre premier objectif financier pour suivre vos progrès',
+          icon: CupertinoIcons.flag_fill,
+          actionLabel: 'Créer un Objectif',
+          onAction: () {
+            HapticFeedback.lightImpact();
+            NavigationHelper.toNamed('/goals');
+          },
+        );
       }
 
       final totalCurrentAmount =
@@ -467,8 +510,16 @@ class _AnalyticsViewState extends State<AnalyticsView> {
           Obx(() => controller.selectedTimeRange.value != TimeRange.month &&
                   controller.debtTimeline.isNotEmpty
               ? _buildDebtTimelineCard(context)
-              : _buildEmptyCard(context,
-                  'Sélectionnez l\'année ou tout pour la chronologie de la dette')),
+              : _buildEmptyCard(
+                  context,
+                  'Sélectionnez l\'année ou tout pour voir la chronologie des dettes',
+                  icon: CupertinoIcons.money_dollar_circle,
+                  actionLabel: 'Revenir à l\'Année',
+                  onAction: () {
+                    HapticFeedback.lightImpact();
+                    controller.setTimeRange(TimeRange.year);
+                  },
+                )),
           SizedBox(height: KoalaSpacing.xxxl),
         ],
       ),
@@ -917,29 +968,63 @@ class _AnalyticsViewState extends State<AnalyticsView> {
     );
   }
 
-  Widget _buildEmptyCard(BuildContext context, String message) {
+  Widget _buildEmptyCard(BuildContext context, String message,
+      {IconData? icon, String? actionLabel, VoidCallback? onAction}) {
     return Container(
-      padding: EdgeInsets.all(32.w),
+      padding: EdgeInsets.all(40.w),
       decoration: BoxDecoration(
         color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(KoalaRadius.xl),
         border: Border.all(color: KoalaColors.border(context)),
       ),
       child: Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              CupertinoIcons.chart_bar_alt_fill,
-              size: 48.sp,
-              color: KoalaColors.textSecondary(context).withValues(alpha: 0.3),
+            Container(
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: KoalaColors.accent.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon ?? CupertinoIcons.chart_bar_alt_fill,
+                size: 40.sp,
+                color: KoalaColors.accent.withValues(alpha: 0.7),
+              ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 20.h),
             Text(
               message,
-              style: KoalaTypography.bodyMedium(context)
-                  .copyWith(color: KoalaColors.textSecondary(context)),
+              style: KoalaTypography.bodyLarge(context).copyWith(
+                color: KoalaColors.textSecondary(context),
+                fontWeight: FontWeight.w500,
+              ),
               textAlign: TextAlign.center,
             ),
+            if (actionLabel != null && onAction != null) ...[
+              SizedBox(height: 24.h),
+              FilledButton.icon(
+                onPressed: onAction,
+                style: FilledButton.styleFrom(
+                  backgroundColor: KoalaColors.accent,
+                  foregroundColor: Colors.white,
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 14.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(KoalaRadius.md),
+                  ),
+                ),
+                icon: Icon(CupertinoIcons.add, size: 18.sp),
+                label: Text(
+                  actionLabel,
+                  style: KoalaTypography.bodyMedium(context).copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1174,7 +1259,11 @@ class _AnalyticsViewState extends State<AnalyticsView> {
                             return const Text('');
                           },
                           interval: (debtTimeline.length / 5)
-                              .ceilToDouble(), // Adjust interval for readability
+                              .ceilToDouble()
+                              .clamp(
+                                  1.0,
+                                  double
+                                      .infinity), // Ensure interval is at least 1
                         ),
                       ),
                       leftTitles: AxisTitles(
@@ -1192,7 +1281,8 @@ class _AnalyticsViewState extends State<AnalyticsView> {
                               ),
                             );
                           },
-                          interval: (maxY - minY) / 4, // 4 intervals
+                          interval: ((maxY - minY) / 4).clamp(1.0,
+                              double.infinity), // Ensure interval is at least 1
                           reservedSize: 40,
                         ),
                       ),

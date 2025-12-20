@@ -11,6 +11,7 @@ import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:logger/logger.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -240,9 +241,8 @@ class _ProfileViewState extends State<ProfileView> {
     final dateStr = DateFormat('dd MMM yyyy', 'fr_FR').format(memberSince);
     final days = DateTime.now().difference(memberSince).inDays;
 
-    // Attempt to get a stable ID. HiveObject key can be dynamic, but usually int (index) or custom key.
-    // If key is null (not saved), default to '-'.
-    final accountId = user.key != null ? 'User#${user.key}' : 'Non synchronisé';
+    // Use the official ID field
+    final accountId = user.id.isNotEmpty ? user.id : 'Non synchronisé';
 
     return _ProfileSectionCard(
       children: [

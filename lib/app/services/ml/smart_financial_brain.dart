@@ -23,7 +23,9 @@ class AnalysisInput {
   final List<Job> jobs;
   final List<RecurringTransaction> recurringTransactions;
   final double currentBalance;
-  final double monthlyIncome;
+  final double incomeReceivedSoFar; // Added field
+  final double
+      monthlyIncome; // Renamed conceptually to totalProjectedIncome in usage
   final double monthlyExpenses;
   final ForecastResult? forecast;
 
@@ -35,6 +37,7 @@ class AnalysisInput {
     required this.jobs,
     required this.recurringTransactions,
     required this.currentBalance,
+    required this.incomeReceivedSoFar, // Added
     required this.monthlyIncome,
     required this.monthlyExpenses,
     this.forecast,
@@ -118,6 +121,7 @@ class SmartFinancialBrain extends GetxService {
       jobs: _context.allJobs.toList(),
       recurringTransactions: _context.allRecurringTransactions.toList(),
       currentBalance: _context.currentBalance.value,
+      incomeReceivedSoFar: _context.totalMonthlyIncome.value,
       monthlyIncome: effectiveMonthlyIncome,
       monthlyExpenses: _context.totalMonthlyExpenses.value,
       forecast: forecast,
@@ -157,8 +161,16 @@ class SmartFinancialBrain extends GetxService {
       goalProgress: _analyzeGoalProgress(
           input.goals, input.monthlyIncome, input.currentBalance),
       budgetHealth: _analyzeBudgetHealth(input.budgets, input.transactions),
-      cashFlowPrediction: _predictCashFlow(input.transactions, input.debts,
-          input.monthlyIncome, input.currentBalance, input.forecast),
+      cashFlowPrediction: _predictCashFlow(
+        input.transactions,
+        input.debts,
+        max(
+            0,
+            input.monthlyIncome -
+                input.incomeReceivedSoFar), // Pass upcoming income only
+        input.currentBalance,
+        input.forecast,
+      ),
       netWorthAnalysis:
           _calculateNetWorth(input.currentBalance, input.debts, input.goals),
 
@@ -593,7 +605,7 @@ class SmartFinancialBrain extends GetxService {
   static CashFlowPrediction _predictCashFlow(
     List<LocalTransaction> transactions,
     List<Debt> debts,
-    double monthlyIncome,
+    double upcomingIncome, // Renamed from monthlyIncome
     double balance,
     ForecastResult? forecast, // Passed as argument
   ) {
@@ -636,10 +648,10 @@ class SmartFinancialBrain extends GetxService {
     final manualPrediction = balance -
         predictedVariableSpending -
         upcomingDebtPayments +
-        monthlyIncome;
+        upcomingIncome;
 
     print(
-        '🔮 [CASHFLOW] MANUAL: $balance - $predictedVariableSpending - $upcomingDebtPayments + $monthlyIncome = $manualPrediction');
+        '🔮 [CASHFLOW] MANUAL: $balance - $predictedVariableSpending - $upcomingDebtPayments + $upcomingIncome = $manualPrediction');
 
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 2: Check if ML can be trusted
@@ -648,7 +660,9 @@ class SmartFinancialBrain extends GetxService {
     double? mlPrediction;
 
     if (forecast != null && forecast.forecasts.isNotEmpty) {
-      mlPrediction = forecast.forecasts.last.predictedBalance;
+      // Fix: TimeSeries predicts balance trends based on expenses.
+      // We must add the projected income to get the true end-of-month balance.
+      mlPrediction = forecast.forecasts.last.predictedBalance + upcomingIncome;
 
       // Criteria for trusting ML:
       // 1. Sufficient data: at least 60 transactions
@@ -696,7 +710,7 @@ class SmartFinancialBrain extends GetxService {
         upcomingDebtPayments: upcomingDebtPayments,
         daysRemainingInMonth: daysRemaining,
         willSurviveMonth: mlPrediction > 0,
-        upcomingIncome: monthlyIncome,
+        upcomingIncome: upcomingIncome,
       );
     } else {
       // Use manual calculation (more predictable)
@@ -711,7 +725,7 @@ class SmartFinancialBrain extends GetxService {
         upcomingDebtPayments: upcomingDebtPayments,
         daysRemainingInMonth: daysRemaining,
         willSurviveMonth: manualPrediction > 0,
-        upcomingIncome: monthlyIncome,
+        upcomingIncome: upcomingIncome,
       );
     }
   }

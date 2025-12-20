@@ -174,6 +174,10 @@ class AnalyticsController extends GetxController {
   }
 
   void _updateCachedData() {
+    // Debug logging to verify method is being called
+    print(
+        '📊 [Analytics] _updateCachedData() called - TimeRange: ${selectedTimeRange.value}, Year: ${selectedYear.value}, Month: ${selectedMonth.value}');
+
     _updateFilteredTransactions();
     _updateSpendingByCategory();
     _updateTotals();
@@ -185,6 +189,9 @@ class AnalyticsController extends GetxController {
     _updateGoalProgress();
     _updateDailySpending(); // New call
     _loadCurrentSavingsGoal(); // Re-evaluate current savings goal as month/year might change
+
+    print(
+        '📊 [Analytics] Data updated - Filtered Transactions: ${_filteredTransactions.length}, Total Income: ${_totalIncome.value}, Total Expenses: ${_totalExpenses.value}');
   }
 
   void _updateDailySpending() {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
 enum FilterType { all, income, expense }
@@ -28,7 +28,7 @@ class TransactionsController extends GetxController {
   final currentSort = SortOption.dateNewest.obs;
   final dateRange = Rxn<DateTimeRange>();
 
-  StreamSubscription? _transactionBoxSubscription; // Store the subscription
+  StreamSubscription? _transactionSubscription; // Store the subscription
 
   @override
   void onInit() {
@@ -39,25 +39,28 @@ class TransactionsController extends GetxController {
     searchController.addListener(_filterAndSort);
     scrollController.addListener(_onScroll);
 
-    // Watch Hive box for changes and store the subscription
-    final box = Hive.box<LocalTransaction>('transactionBox');
-    _transactionBoxSubscription =
-        box.watch().listen((_) => _loadTransactions());
+    // Watch Isar for changes
+    _transactionSubscription =
+        IsarService.watchTransactions().listen((_) => _loadTransactions());
   }
 
   @override
   void onClose() {
     searchController.dispose();
     scrollController.dispose();
-    _transactionBoxSubscription?.cancel(); // Cancel the subscription
+    _transactionSubscription?.cancel(); // Cancel the subscription
     super.onClose();
   }
 
-  void _loadTransactions() {
+  Future<void> _loadTransactions() async {
     isLoading.value = true;
-    final box = Hive.box<LocalTransaction>('transactionBox');
-    transactions.assignAll(box.values.toList());
-    _filterAndSort();
+    try {
+      final allTx = await IsarService.getAllTransactions();
+      transactions.assignAll(allTx);
+      _filterAndSort();
+    } catch (e) {
+      debugPrint('Error loading transactions: $e');
+    }
     isLoading.value = false;
   }
 

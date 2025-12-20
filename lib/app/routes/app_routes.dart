@@ -22,6 +22,7 @@ abstract class Routes {
   static const splash = _Paths.splash;
   static const challenges = _Paths.challenges;
   static const envelopes = _Paths.envelopes;
+  static const cardPersonalization = _Paths.cardPersonalization;
 }
 
 abstract class _Paths {
@@ -45,4 +46,5 @@ abstract class _Paths {
   static const splash = '/splash';
   static const challenges = '/challenges';
   static const envelopes = '/envelopes';
+  static const cardPersonalization = '/card-personalization';
 }

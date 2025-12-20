@@ -109,7 +109,12 @@ class _TransactionListItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        transaction.description,
+                        transaction.description
+                                .toLowerCase()
+                                .contains('rattrapage')
+                            ? (category?.name ??
+                                transaction.category.displayName)
+                            : transaction.description,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: KoalaTypography.bodyLarge(context)
@@ -361,68 +366,21 @@ class _Header extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 8.w),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Obx(
-            () => Text(
-              'Bonjour, ${controller.userName.value}',
-              style: KoalaTypography.heading2(context),
-            ),
-          ),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Contextual Action Chip
-              Obx(() {
-                final action = controller.contextualAction.value;
-                if (action == null) return const SizedBox.shrink();
-
-                return Container(
-                  margin: EdgeInsets.only(right: 8.w),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        showAddTransactionDialog(
-                          context,
-                          TransactionType.expense,
-                          initialCategory: action.category,
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(20.r),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 12.w, vertical: 6.h),
-                        decoration: BoxDecoration(
-                          color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20.r),
-                          border: Border.all(
-                            color: KoalaColors.primaryUi(context).withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(action.icon,
-                                size: 16.sp, color: KoalaColors.primaryUi(context)),
-                            SizedBox(width: 6.w),
-                            Text(
-                              action.label,
-                              style: KoalaTypography.caption(context).copyWith(
-                                color: KoalaColors.primaryUi(context),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+              Flexible(
+                child: Obx(
+                  () => Text(
+                    'Bonjour, ${controller.userName.value}',
+                    style: KoalaTypography.heading2(context),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                )
-                    .animate()
-                    .fadeIn(duration: 500.ms)
-                    .slideX(begin: 0.2, curve: Curves.easeOutBack);
-              }),
+                ),
+              ),
               IconButton(
                 icon: Icon(CupertinoIcons.settings,
                     size: 28.sp, color: KoalaColors.text(context)),
@@ -431,6 +389,58 @@ class _Header extends GetView<HomeController> {
               ),
             ],
           ),
+          Obx(() {
+            final action = controller.contextualAction.value;
+            if (action == null) return const SizedBox.shrink();
+
+            return Container(
+              margin: EdgeInsets.only(top: 8.h),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    showAddTransactionDialog(
+                      context,
+                      TransactionType.expense,
+                      initialCategory: action.category,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(20.r),
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color:
+                          KoalaColors.primaryUi(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(
+                        color: KoalaColors.primaryUi(context)
+                            .withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(action.icon,
+                            size: 16.sp, color: KoalaColors.primaryUi(context)),
+                        SizedBox(width: 6.w),
+                        Text(
+                          action.label,
+                          style: KoalaTypography.caption(context).copyWith(
+                            color: KoalaColors.primaryUi(context),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+                .animate()
+                .fadeIn(duration: 500.ms)
+                .slideX(begin: 0.2, curve: Curves.easeOutBack);
+          }),
         ],
       ),
     );
@@ -1556,7 +1566,8 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                       width: 40.w,
                       height: 40.w,
                       decoration: BoxDecoration(
-                        color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
+                        color: KoalaColors.primaryUi(context)
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Center(

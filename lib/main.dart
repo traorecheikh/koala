@@ -8,6 +8,8 @@ import 'package:koaa/app/core/service_initializer.dart';
 import 'package:koaa/app/core/theme.dart';
 import 'app/routes/app_pages.dart';
 
+import 'package:koaa/app/core/widgets/global_hero_background.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('fr_FR', null);
@@ -27,16 +29,24 @@ class KoalaApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return GetMaterialApp(
-          title: "Koala",
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.getTheme(
-              skin: AppSkin.blue, brightness: Brightness.light),
-          darkTheme: AppTheme.getTheme(
-              skin: AppSkin.blue, brightness: Brightness.dark),
-          themeMode: ThemeMode.system,
-          initialRoute: Routes.splash,
-          getPages: AppPages.routes,
+        return ValueListenableBuilder<AppSkin>(
+          valueListenable: AppTheme.skinNotifier,
+          builder: (context, skin, _) {
+            return GetMaterialApp(
+              title: "Koala",
+              debugShowCheckedModeBanner: false,
+              theme:
+                  AppTheme.getTheme(skin: skin, brightness: Brightness.light),
+              darkTheme:
+                  AppTheme.getTheme(skin: skin, brightness: Brightness.dark),
+              themeMode: ThemeMode.system,
+              initialRoute: Routes.splash,
+              getPages: AppPages.routes,
+              builder: (context, child) {
+                return GlobalHeroBackground(child: child ?? const SizedBox());
+              },
+            );
+          },
         );
       },
     );

@@ -16,6 +16,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:restart_app/restart_app.dart';
 import 'package:share_plus/share_plus.dart';
@@ -29,7 +30,7 @@ class BackupService extends GetxService {
   Future<void> createBackup(String password) async {
     try {
       // 1. Gather all data
-      final data = _gatherAllData();
+      final data = await _gatherAllData();
 
       // 2. Serialize to JSON
       final jsonString = jsonEncode(data);
@@ -102,13 +103,14 @@ class BackupService extends GetxService {
   // Internal Helpers
   // ---------------------------------------------------------------------------
 
-  Map<String, dynamic> _gatherAllData() {
+  Future<Map<String, dynamic>> _gatherAllData() async {
+    final transactions = await IsarService.getAllTransactions();
     return {
       'version': _backupVersion,
       'timestamp': DateTime.now().toIso8601String(),
       'boxes': {
         'userBox': _boxToList<LocalUser>('userBox'),
-        'transactionBox': _boxToList<LocalTransaction>('transactionBox'),
+        'transactionBox': transactions.map((e) => e.toJson()).toList(),
         'recurringTransactionBox':
             _boxToList<RecurringTransaction>('recurringTransactionBox'),
         'jobBox': _boxToList<Job>('jobBox'),
@@ -211,8 +213,15 @@ class BackupService extends GetxService {
     // Clear and restore each box
     await _restoreBox<LocalUser>(
         'userBox', boxesData['userBox'], (json) => LocalUser.fromJson(json));
-    await _restoreBox<LocalTransaction>('transactionBox',
-        boxesData['transactionBox'], (json) => LocalTransaction.fromJson(json));
+
+    // Restore Isar transactions
+    if (boxesData['transactionBox'] != null) {
+      final list = boxesData['transactionBox'] as List;
+      final txs = list.map((e) => LocalTransaction.fromJson(e)).toList();
+      IsarService.clearTransactions();
+      IsarService.addTransactions(txs);
+    }
+
     await _restoreBox<RecurringTransaction>(
         'recurringTransactionBox',
         boxesData['recurringTransactionBox'],

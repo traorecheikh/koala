@@ -12,7 +12,6 @@ import 'package:koaa/app/modules/settings/views/profile_view.dart';
 import 'package:koaa/app/modules/settings/views/privacy_policy_view.dart';
 import 'package:koaa/app/modules/settings/views/terms_view.dart';
 import 'package:koaa/app/modules/settings/views/data_management_view.dart';
-import 'package:koaa/app/modules/settings/widgets/theme_selection_sheet.dart';
 import 'package:koaa/app/services/notification_service.dart';
 import 'package:koaa/app/services/changelog_service.dart';
 
@@ -53,7 +52,7 @@ class SettingsView extends GetView<SettingsController> {
               Obx(() => _buildSettingsItem(
                     context,
                     icon: CupertinoIcons.paintbrush_fill,
-                    title: 'Thème et Couleurs',
+                    title: 'Personnalisation & Thème',
                     trailing: Container(
                       width: 24,
                       height: 24,
@@ -64,10 +63,7 @@ class SettingsView extends GetView<SettingsController> {
                             color: KoalaColors.border(context), width: 2),
                       ),
                     ),
-                    onTap: () => Get.bottomSheet(
-                      const ThemeSelectionSheet(),
-                      isScrollControlled: true,
-                    ),
+                    onTap: () => Get.toNamed(Routes.cardPersonalization),
                   )),
               _buildSettingsItem(
                 context,

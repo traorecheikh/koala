@@ -9,6 +9,7 @@ import 'package:koaa/hive_registrar.g.dart'; // Import generated Hive adapters
 import 'package:koaa/app/services/encryption_service.dart'; // Import encryption service
 import 'package:koaa/app/services/notification_service.dart'; // NEW: Import NotificationService
 import 'package:koaa/app/services/intelligence/intelligence_service.dart'; // Import for ProactiveAlert logic
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:logger/logger.dart'; // For logging within the background task
 
 const String kDailyCheckTask = "dailyCheckTask";
@@ -42,10 +43,11 @@ void callbackDispatcher() {
           await encryptionService.getEncryptionKey();
       final HiveAesCipher hiveCipher = HiveAesCipher(encryptionKey);
 
+      // Initialize Isar for background isolate
+      await IsarService.init();
+
       // 4. Open encrypted boxes required by background tasks
-      final Box<LocalTransaction> transactionBox =
-          await Hive.openBox<LocalTransaction>('transactionBox',
-              encryptionCipher: hiveCipher);
+      // Removed transactionBox as we use Isar
       final Box<Budget> budgetBox =
           await Hive.openBox<Budget>('budgetBox', encryptionCipher: hiveCipher);
       final Box<RecurringTransaction> recurringTransactionBox =
@@ -93,20 +95,15 @@ void callbackDispatcher() {
             logger.e("Error checking insights: $e");
           }
 
-          logger.d("Transaction count: ${transactionBox.length}");
+          final txCount = await IsarService.getTransactionCount();
+          logger.d("Transaction count: $txCount");
           logger.d("Budget count: ${budgetBox.length}");
           logger.d(
               "Recurring transaction count: ${recurringTransactionBox.length}");
 
-          if (transactionBox.isNotEmpty) {
-            final latestTx = transactionBox.values.last;
-            logger.d("Latest transaction description: ${latestTx.description}");
-          }
-
           // Logic from previous _runDailyCheck, adapted:
           final budgets = budgetBox.values.toList();
-          final transactions =
-              transactionBox.values.toList(); // Use the opened box
+          final transactions = await IsarService.getAllTransactions();
           final now = DateTime.now();
           final startOfMonth = DateTime(now.year, now.month, 1);
 

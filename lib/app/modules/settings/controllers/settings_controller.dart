@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:koaa/app/core/theme.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
@@ -28,14 +29,77 @@ import 'package:koaa/app/services/financial_context_service.dart';
 
 import 'package:koaa/app/core/design_system.dart';
 
+enum BalanceCardStyle {
+  classic, // Default Gradient
+  minimal, // Solid Matte
+  mesh, // Mesh Gradient
+  comic, // Halftone/Pop Art
+  hero, // Custom Image Asset
+}
+
 class SettingsController extends GetxController {
   RxBool isDarkMode = Get.isDarkMode.obs;
   Rx<AppSkin> currentSkin = AppSkin.blue.obs;
+  Rx<BalanceCardStyle> currentCardStyle = BalanceCardStyle.classic.obs;
+  RxString currentHeroAsset = ''.obs; // For Hero style
+
   RxBool reduceMotion = false
       .obs; // For accessibility - disable animations for motion-sensitive users
   RxString currentVersion = ''.obs;
   late Dio _dio;
   late Box _settingsBox; // Make _settingsBox accessible for onClose
+
+  Color get activeThemeColor => currentSkin.value.color;
+
+  Rx<HeroThemeData?> currentHeroTheme = Rx<HeroThemeData?>(null);
+
+  // Expanded Hero Theme Data
+  static final Map<String, HeroThemeData> heroThemesData = {
+    'assets/hero-folder/spider.png': HeroThemeData(
+      patternAsset: 'assets/patterns/web_spider.png',
+      baseColor: Color(0xFFE23636),
+      patternOpacity: 0.08,
+    ),
+    'assets/hero-folder/deadpool.png': HeroThemeData(
+      patternAsset: 'assets/patterns/deadpool_grunge.png',
+      baseColor: Color(0xFF8B0000),
+      patternOpacity: 0.15, // Grunge needs to be visible
+    ),
+    'assets/hero-folder/gojo-jujutsu-kaisen.png': HeroThemeData(
+      patternAsset: 'assets/patterns/gojo_void.png',
+      baseColor: Color(0xFF512DA8),
+      patternOpacity: 0.12,
+    ),
+    'assets/hero-folder/batman.png': HeroThemeData(
+      patternAsset: 'assets/patterns/bats_pattern.png',
+      baseColor: Color(0xFF263238),
+      patternOpacity: 0.06,
+    ),
+    'assets/hero-folder/ironman.png': HeroThemeData(
+      patternAsset: 'assets/patterns/tech_hud.png',
+      baseColor: Color(0xFFBF360C),
+      patternOpacity: 0.1,
+    ),
+    'assets/hero-folder/naruto.png': HeroThemeData(
+      patternAsset: 'assets/patterns/konoha_symbol.png',
+      baseColor: Color(0xFFFF6D00),
+      patternOpacity: 0.08,
+    ),
+    'assets/hero-folder/demonslayer.png': HeroThemeData(
+      patternAsset: 'assets/patterns/tanjiro_pattern.png',
+      baseColor: Color(0xFF2E7D32),
+      patternOpacity: 0.1, // Checkered pattern is bold
+    ),
+    'assets/hero-folder/the-flash.png': HeroThemeData(
+      patternAsset: 'assets/patterns/lightening_force.png',
+      baseColor: Color(0xFFFF0000),
+      patternOpacity: 0.08,
+    ),
+  };
+
+  // Backward compatibility getter if strictly needed, or just use baseColor
+  static Map<String, Color> get heroThemes =>
+      heroThemesData.map((key, value) => MapEntry(key, value.baseColor));
 
   @override
   void onInit() {
@@ -71,12 +135,30 @@ class SettingsController extends GetxController {
       currentSkin.value = AppSkin.values[savedSkinIndex];
     }
 
+    // Load Card Style
+    final savedCardStyleIndex = _settingsBox.get('balanceCardStyleIndex');
+    if (savedCardStyleIndex != null &&
+        savedCardStyleIndex < BalanceCardStyle.values.length) {
+      currentCardStyle.value = BalanceCardStyle.values[savedCardStyleIndex];
+    }
+
+    // Load Hero Asset
+    final savedHeroAsset = _settingsBox.get('heroAsset');
+    if (savedHeroAsset != null) {
+      currentHeroAsset.value = savedHeroAsset;
+    }
+
     _updateTheme();
   }
 
   void _updateTheme() {
+    // Update global notifier to rebuild GetMaterialApp with new skin
+    AppTheme.skinNotifier.value = currentSkin.value;
+
+    // Update GetX mode
     Get.changeThemeMode(isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
-    // Force theme update with new skin
+
+    // Also update Get.theme for immediate consistency (optional but good for non-context usages)
     Get.changeTheme(AppTheme.getTheme(
         skin: currentSkin.value,
         brightness: isDarkMode.value ? Brightness.dark : Brightness.light));
@@ -92,6 +174,54 @@ class SettingsController extends GetxController {
     currentSkin.value = skin;
     _settingsBox.put('appSkinIndex', skin.index);
     _updateTheme();
+  }
+
+  void changeCardStyle(BalanceCardStyle style) {
+    currentCardStyle.value = style;
+    _settingsBox.put('balanceCardStyleIndex', style.index);
+
+    if (style == BalanceCardStyle.hero) {
+      // Re-apply Hero Theme if switching TO Hero
+      if (currentHeroAsset.value.isNotEmpty) {
+        changeHeroAsset(currentHeroAsset.value);
+      }
+    } else {
+      // Switching AWAY from Hero (e.g. to Classic)
+      // Reset to Default Blue (Standard UI)
+      changeSkin(AppSkin.blue);
+
+      // Disable Global Hero Background
+      currentHeroTheme.value = null;
+      AppTheme.heroThemeNotifier.value = null;
+    }
+  }
+
+  void changeHeroAsset(String assetPath) {
+    currentHeroAsset.value = assetPath;
+    _settingsBox.put('heroAsset', assetPath);
+
+    // Update Hero Theme Data
+    currentHeroTheme.value = heroThemesData[assetPath];
+    AppTheme.heroThemeNotifier.value = currentHeroTheme.value;
+
+    // Automatically switch App Skin to match Hero
+    if (assetPath.contains('spider')) {
+      changeSkin(AppSkin.spiderRed);
+    } else if (assetPath.contains('deadpool')) {
+      changeSkin(AppSkin.deadpoolRed);
+    } else if (assetPath.contains('gojo')) {
+      changeSkin(AppSkin.gojoPurple);
+    } else if (assetPath.contains('batman')) {
+      changeSkin(AppSkin.batmanDark);
+    } else if (assetPath.contains('ironman')) {
+      changeSkin(AppSkin.ironmanRed);
+    } else if (assetPath.contains('naruto')) {
+      changeSkin(AppSkin.narutoOrange);
+    } else if (assetPath.contains('demonslayer')) {
+      changeSkin(AppSkin.tanjiroGreen);
+    } else if (assetPath.contains('flash')) {
+      changeSkin(AppSkin.flashRed);
+    }
   }
 
   Future<void> performReset() async {
@@ -115,6 +245,10 @@ class SettingsController extends GetxController {
       await transactionBox.clear();
       debugPrint(
           'performReset: Cleared transactionBox (${transactionBox.length} items remaining)');
+
+      // Clear Isar transactions (Source of Truth)
+      IsarService.clearTransactions();
+      debugPrint('performReset: Cleared Isar transactions');
 
       await userBox.clear();
       debugPrint(
