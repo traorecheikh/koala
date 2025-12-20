@@ -125,7 +125,7 @@ class _ProfileViewState extends State<ProfileView> {
           decoration: BoxDecoration(
             color: KoalaColors.surface(context),
             shape: BoxShape.circle,
-            border: Border.all(color: KoalaColors.primary, width: 2),
+            border: Border.all(color: KoalaColors.primaryUi(context), width: 2),
             boxShadow: KoalaShadows.sm,
           ),
           child: Center(
@@ -134,7 +134,7 @@ class _ProfileViewState extends State<ProfileView> {
                   ? user.fullName.substring(0, 1).toUpperCase()
                   : '?',
               style: TextStyle(
-                color: KoalaColors.primary,
+                color: KoalaColors.primaryUi(context),
                 fontSize: 20.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -166,7 +166,7 @@ class _ProfileViewState extends State<ProfileView> {
           icon: Icon(
             CupertinoIcons.pencil_circle_fill,
             size: 32.sp,
-            color: KoalaColors.primary,
+            color: KoalaColors.primaryUi(context),
           ),
         ),
       ],
