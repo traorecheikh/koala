@@ -20,12 +20,16 @@ class Budget extends HiveObject {
   @HiveField(6)
   int month;
 
+  @HiveField(7)
+  bool rolloverEnabled;
+
   Budget({
     String? id,
     required this.categoryId,
     required this.amount,
     required this.year,
     required this.month,
+    this.rolloverEnabled = false,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() {
@@ -35,6 +39,7 @@ class Budget extends HiveObject {
       'amount': amount,
       'year': year,
       'month': month,
+      'rolloverEnabled': rolloverEnabled,
     };
   }
 
@@ -44,6 +49,7 @@ class Budget extends HiveObject {
     double? amount,
     int? year,
     int? month,
+    bool? rolloverEnabled,
   }) {
     return Budget(
       id: id ?? this.id,
@@ -51,8 +57,7 @@ class Budget extends HiveObject {
       amount: amount ?? this.amount,
       year: year ?? this.year,
       month: month ?? this.month,
+      rolloverEnabled: rolloverEnabled ?? this.rolloverEnabled,
     );
   }
 }
-
-
