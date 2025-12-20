@@ -1,13 +1,18 @@
+import 'package:isar_plus/isar_plus.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 part 'budget.g.dart';
 
+@Collection()
 @HiveType(typeId: 40)
-class Budget extends HiveObject {
+class Budget {
+  @Id()
   @HiveField(0)
-  final String id;
+  String id;
 
+  @Index()
   @HiveField(1)
   String categoryId; // Links to Category model
 
@@ -24,13 +29,41 @@ class Budget extends HiveObject {
   bool rolloverEnabled;
 
   Budget({
-    String? id,
+    required this.id,
     required this.categoryId,
     required this.amount,
     required this.year,
     required this.month,
     this.rolloverEnabled = false,
-  }) : id = id ?? const Uuid().v4();
+  });
+
+  /// Factory constructor for creating with auto-generated ID
+  factory Budget.create({
+    required String categoryId,
+    required double amount,
+    required int year,
+    required int month,
+    bool rolloverEnabled = false,
+  }) {
+    return Budget(
+      id: const Uuid().v4(),
+      categoryId: categoryId,
+      amount: amount,
+      year: year,
+      month: month,
+      rolloverEnabled: rolloverEnabled,
+    );
+  }
+
+  /// Save this budget to Isar
+  Future<void> save() async {
+    IsarService.updateBudget(this);
+  }
+
+  /// Delete this budget from Isar
+  Future<void> delete() async {
+    IsarService.deleteBudget(id);
+  }
 
   Map<String, dynamic> toJson() {
     return {
