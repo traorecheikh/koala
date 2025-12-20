@@ -179,7 +179,7 @@ class SubscriptionsView extends GetView<RecurringTransactionsController> {
 
                   if (amount > 0) {
                     controller.addRecurringTransaction(
-                      RecurringTransaction(
+                      RecurringTransaction.create(
                         amount: amount,
                         description: service.name,
                         frequency: Frequency.monthly,
@@ -254,7 +254,8 @@ class SubscriptionsView extends GetView<RecurringTransactionsController> {
                 ),
                 child: Row(
                   children: [
-                    Icon(CupertinoIcons.calendar, color: KoalaColors.primaryUi(context)),
+                    Icon(CupertinoIcons.calendar,
+                        color: KoalaColors.primaryUi(context)),
                     SizedBox(width: 12.w),
                     Text(
                       'Prochain: le ${subscription.dayOfMonth} du mois',
