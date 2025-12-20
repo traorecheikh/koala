@@ -1,9 +1,16 @@
+import 'package:isar_plus/isar_plus.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 part 'local_user.g.dart';
 
+@Collection()
 @HiveType(typeId: 0)
-class LocalUser extends HiveObject {
+class LocalUser {
+  @Id()
+  @HiveField(7)
+  String id;
+
   @HiveField(0)
   String fullName;
 
@@ -28,6 +35,7 @@ class LocalUser extends HiveObject {
   bool hasCompletedCatchUp;
 
   LocalUser({
+    this.id = '',
     required this.fullName,
     required this.salary,
     required this.payday,
@@ -35,11 +43,17 @@ class LocalUser extends HiveObject {
     required this.budgetingType,
     this.firstLaunchDate,
     this.hasCompletedCatchUp = false,
-    String? id,
-  }) : id = id ?? '';
+  });
 
-  @HiveField(7)
-  String id;
+  /// Save this user to Isar
+  Future<void> save() async {
+    await IsarService.saveUser(this);
+  }
+
+  /// Delete this user from Isar
+  Future<void> delete() async {
+    await IsarService.deleteUser();
+  }
 
   Map<String, dynamic> toJson() {
     return {
