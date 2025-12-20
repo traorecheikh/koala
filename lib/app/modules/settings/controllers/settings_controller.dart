@@ -228,42 +228,17 @@ class SettingsController extends GetxController {
     try {
       debugPrint('performReset: Starting reset process...');
 
-      // Clear all Hive boxes - ensure all data is wiped
-      // Need to access typed boxes the same way they were opened
-      final transactionBox = Hive.box<LocalTransaction>('transactionBox');
-      final userBox = Hive.box<LocalUser>('userBox');
-      final jobBox = Hive.box<Job>('jobBox');
-      final budgetBox = Hive.box<Budget>('budgetBox');
-      final debtBox = Hive.box<Debt>('debtBox');
-      final recurringBox =
-          Hive.box<RecurringTransaction>('recurringTransactionBox');
-      final savingsGoalBox = Hive.box<SavingsGoal>('savingsGoalBox');
-      final financialGoalBox = Hive.box<FinancialGoal>('financialGoalBox');
-      final categoryBox = Hive.box<models.Category>('categoryBox');
-
-      // Clear each box and flush to ensure it's written to disk
-      await transactionBox.clear();
-      debugPrint(
-          'performReset: Cleared transactionBox (${transactionBox.length} items remaining)');
-
-      // Clear Isar transactions (Source of Truth)
+      // Clear all data from Isar (Source of Truth)
       IsarService.clearTransactions();
-      debugPrint('performReset: Cleared Isar transactions');
-
-      await userBox.clear();
-      debugPrint(
-          'performReset: Cleared userBox (${userBox.length} items remaining)');
-
-      await jobBox.clear();
-      debugPrint(
-          'performReset: Cleared jobBox (${jobBox.length} items remaining)');
-
-      await budgetBox.clear();
-      await debtBox.clear();
-      await recurringBox.clear();
-      await savingsGoalBox.clear();
-      await financialGoalBox.clear();
-      await categoryBox.clear();
+      IsarService.deleteUser();
+      IsarService.clearJobs();
+      IsarService.clearBudgets();
+      IsarService.clearDebts();
+      IsarService.clearRecurringTransactions();
+      IsarService.clearSavingsGoals();
+      IsarService.clearGoals();
+      IsarService.clearCategories();
+      debugPrint('performReset: Cleared all Isar data');
 
       // Clear settings box (untyped)
       try {
