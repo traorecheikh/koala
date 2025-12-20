@@ -65,7 +65,8 @@ class BudgetController extends GetxController {
     return _financialContextService.getCategoryById(id);
   }
 
-  Future<void> addBudget(String categoryId, double amount) async {
+  Future<void> addBudget(String categoryId, double amount,
+      {bool rolloverEnabled = false}) async {
     try {
       final box = Hive.box<Budget>('budgetBox');
       final now = DateTime.now();
@@ -76,6 +77,7 @@ class BudgetController extends GetxController {
           b.month == now.month);
       if (existing != null) {
         existing.amount = amount;
+        existing.rolloverEnabled = rolloverEnabled;
         await existing.save();
         Get.snackbar(
           'Succès',
@@ -90,6 +92,7 @@ class BudgetController extends GetxController {
           amount: amount,
           year: now.year,
           month: now.month,
+          rolloverEnabled: rolloverEnabled,
         );
         await box.put(budget.id, budget);
         Get.snackbar(
@@ -115,6 +118,25 @@ class BudgetController extends GetxController {
   }
 
   // --- New Methods for Enhanced Integration ---
+
+  double getRolloverAmount(String categoryId, int year, int month) {
+    // Determine previous month
+    final date = DateTime(year, month);
+    final prevDate = DateTime(date.year, date.month - 1);
+
+    final prevBudget = budgets.firstWhereOrNull((b) =>
+        b.categoryId == categoryId &&
+        b.year == prevDate.year &&
+        b.month == prevDate.month);
+
+    if (prevBudget != null && prevBudget.rolloverEnabled) {
+      final prevSpent = _financialContextService.getSpentAmountForCategory(
+          categoryId, prevDate.year, prevDate.month);
+      final remaining = prevBudget.amount - prevSpent;
+      return remaining > 0 ? remaining : 0.0;
+    }
+    return 0.0;
+  }
 
   // Detailed budget vs actual with trends
   double getBudgetPerformance(String categoryId, int year, int month) {
@@ -169,8 +191,14 @@ class BudgetController extends GetxController {
     final category = categories.firstWhereOrNull((c) => c.id == categoryId);
     final isIncome = category?.type == TransactionType.income;
 
-    final budgeted = _financialContextService.getBudgetedAmountForCategory(
+    double budgeted = _financialContextService.getBudgetedAmountForCategory(
         categoryId, year, month);
+
+    // Add rollover if applicable (for expenses only usually)
+    if (!isIncome) {
+      budgeted += getRolloverAmount(categoryId, year, month);
+    }
+
     if (budgeted == 0) return BudgetStatus.safe;
 
     double actual = 0.0;
