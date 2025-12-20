@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
+import 'package:koaa/app/data/models/ml/financial_pattern.dart';
+import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
 class RecurringTransactionsController extends GetxController {
@@ -17,7 +19,58 @@ class RecurringTransactionsController extends GetxController {
     _recurringTransactionSubscription =
         recurringTransactionBox.watch().listen((_) {
       recurringTransactions.assignAll(recurringTransactionBox.values.toList());
+      scanForSubscriptions(); // Rescan when recurring transactions change
     });
+
+    // Initial scan
+    scanForSubscriptions();
+  }
+
+  // Detected patterns that could be subscriptions
+  final detectedSubscriptions = <FinancialPattern>[].obs;
+
+  // Locally suppressed patterns (temporary for session or persisted later if needed)
+  final _ignoredPatterns = <String>[].obs;
+
+  void scanForSubscriptions() {
+    try {
+      if (!Get.isRegistered<KoalaMLEngine>()) return;
+
+      final mlEngine = Get.find<KoalaMLEngine>();
+      final patterns = mlEngine.modelStore.getAllPatterns();
+
+      // Filter for recurring expenses
+      final candidates = patterns
+          .where((p) =>
+              p.patternType ==
+                  'recurringExpense' && // Matches PatternType.recurringExpense.name
+              !_ignoredPatterns.contains(p.description))
+          .toList();
+
+      // Filter out those that match existing active recurring transactions
+      // Heuristic: Same amount and roughly same description
+      final filtered = candidates.where((pattern) {
+        final amount =
+            double.tryParse(pattern.parameters['amount'] ?? '0') ?? 0;
+
+        final alreadyExists = recurringTransactions.any((existing) =>
+                existing.isActive &&
+                (existing.amount - amount).abs() < 1.0 // Matches amount
+            // Could also check description similarity if needed
+            );
+
+        return !alreadyExists;
+      }).toList();
+
+      detectedSubscriptions.assignAll(filtered);
+    } catch (e) {
+      print('Error scanning for subscriptions: $e');
+    }
+  }
+
+  void ignoreSubscription(FinancialPattern pattern) {
+    _ignoredPatterns.add(pattern.description);
+    detectedSubscriptions.remove(pattern);
   }
 
   @override
