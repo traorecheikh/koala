@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart';
+
 import 'package:koaa/app/core/utils/icon_helper.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:koaa/app/modules/settings/views/categories/add_category_dialog.dart'
     as styled;
 import 'package:uuid/uuid.dart';
@@ -26,24 +27,25 @@ class CategoriesController extends GetxController {
   }
 
   Future<void> _initializeCategories() async {
-    final box = Hive.box<Category>('categoryBox');
+    // Check if any categories exist in Isar
+    final existingCategories = await IsarService.getAllCategories();
 
-    if (box.isEmpty) {
-      await _seedDefaultCategories(box);
+    if (existingCategories.isEmpty) {
+      await _seedDefaultCategories();
     } else {
-      await _migrateLegacyIcons(box);
+      await _migrateLegacyIcons(existingCategories);
     }
 
-    categories.assignAll(box.values.toList());
+    categories.assignAll(await IsarService.getAllCategories());
 
-    // Listen to changes
-    _categoryBoxSubscription = box.watch().listen((_) {
-      categories.assignAll(box.values.toList());
+    // Listen to changes from Isar
+    _categoryBoxSubscription = IsarService.watchCategories().listen((cats) {
+      categories.assignAll(cats);
     });
   }
 
-  Future<void> _migrateLegacyIcons(Box<Category> box) async {
-    for (var category in box.values) {
+  Future<void> _migrateLegacyIcons(List<Category> categoryList) async {
+    for (var category in categoryList) {
       if (IconHelper.isEmoji(category.icon)) {
         for (var enumCat in TransactionCategory.values) {
           if (enumCat.displayName == category.name) {
@@ -56,7 +58,7 @@ class CategoriesController extends GetxController {
     }
   }
 
-  Future<void> _seedDefaultCategories(Box<Category> box) async {
+  Future<void> _seedDefaultCategories() async {
     final List<Category> defaults = [];
 
     // Seed Income Categories
@@ -88,7 +90,7 @@ class CategoriesController extends GetxController {
       colorIndex++;
     }
 
-    await box.addAll(defaults);
+    IsarService.addCategories(defaults);
   }
 
   List<Category> get incomeCategories =>
@@ -104,7 +106,6 @@ class CategoriesController extends GetxController {
     required TransactionType type,
   }) async {
     try {
-      final box = Hive.box<Category>('categoryBox');
       final category = Category(
         id: const Uuid().v4(),
         name: name,
@@ -113,7 +114,7 @@ class CategoriesController extends GetxController {
         type: type,
         isDefault: false,
       );
-      await box.add(category);
+      await category.save();
       Get.snackbar(
         'Succès',
         'Catégorie ajoutée avec succès',
@@ -132,7 +133,7 @@ class CategoriesController extends GetxController {
 
   Future<void> updateCategory(Category category) async {
     try {
-      await category.save();
+      IsarService.updateCategory(category);
       Get.snackbar(
         'Succès',
         'Catégorie mise à jour avec succès',
