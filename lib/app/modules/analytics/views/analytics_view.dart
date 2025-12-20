@@ -16,6 +16,8 @@ import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/modules/analytics/controllers/analytics_controller.dart';
 import 'package:koaa/app/modules/goals/views/widgets/goal_card.dart';
 
+import 'package:koaa/app/modules/analytics/widgets/spending_heatmap.dart'; // New import
+
 class AnalyticsView extends StatefulWidget {
   const AnalyticsView({super.key});
 
@@ -23,128 +25,52 @@ class AnalyticsView extends StatefulWidget {
   State<AnalyticsView> createState() => _AnalyticsViewState();
 }
 
-class _AnalyticsViewState extends State<AnalyticsView>
-    with SingleTickerProviderStateMixin {
+class _AnalyticsViewState extends State<AnalyticsView> {
   final AnalyticsController controller = Get.find<AnalyticsController>();
 
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(
-        length: 4, vsync: this); // 4 tabs: Overview, Budgets, Goals, Debts
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+// ... (rest of imports)
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: KoalaColors.background(context),
-      appBar: AppBar(
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(CupertinoIcons.back, color: KoalaColors.text(context)),
-          onPressed: () => NavigationHelper.safeBack(),
-        ),
-        title: Text(
-          'Analyse Financière',
-          style: KoalaTypography.heading3(context),
-        ),
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
         backgroundColor: KoalaColors.background(context),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(CupertinoIcons.add_circled_solid,
-                color: KoalaColors.primaryUi(context)),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              _showAddJobDialog(context);
-            },
+        appBar: AppBar(
+          backgroundColor: KoalaColors.surface(context),
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(CupertinoIcons.back, color: KoalaColors.text(context)),
+            onPressed: () => Get.back(),
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
+          title: Text(
+            'Analytique',
+            style: KoalaTypography.heading3(context),
+          ),
+          centerTitle: true,
+          bottom: TabBar(
+            labelColor: KoalaColors.accent,
+            unselectedLabelColor: KoalaColors.textSecondary(context),
+            labelStyle: KoalaTypography.bodyMedium(context)
+                .copyWith(fontWeight: FontWeight.w600),
+            indicatorColor: KoalaColors.accent,
+            indicatorSize: TabBarIndicatorSize.label,
+            tabs: const [
+              Tab(text: 'Aperçu'),
+              Tab(text: 'Budgets'),
+              Tab(text: 'Objectifs'),
+              Tab(text: 'Dettes'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           children: [
-            _buildCustomTabBar(context),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                physics:
-                    const NeverScrollableScrollPhysics(), // Disable swipe to force tab usage
-                children: [
-                  _buildOverviewTab(context),
-                  _buildBudgetsTab(context),
-                  _buildGoalsTab(context),
-                  _buildDebtsTab(context),
-                ],
-              ),
-            ),
+            _buildOverviewTab(context),
+            _buildBudgetsTab(context),
+            _buildGoalsTab(context),
+            _buildDebtsTab(context),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCustomTabBar(BuildContext context) {
-    final tabs = ['Vue d\'ensemble', 'Budgets', 'Objectifs', 'Dettes'];
-    return Container(
-      height: 44.h,
-      margin: EdgeInsets.symmetric(vertical: 8.h),
-      child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
-        scrollDirection: Axis.horizontal,
-        itemCount: tabs.length,
-        separatorBuilder: (context, index) => SizedBox(width: 12.w),
-        itemBuilder: (context, index) {
-          return GestureDetector(
-            onTap: () {
-              _tabController.animateTo(index);
-              setState(() {}); // Rebuild to update selected state
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              decoration: BoxDecoration(
-                color: _tabController.index == index
-                    ? KoalaColors.primaryUi(context)
-                    : KoalaColors.surface(context),
-                borderRadius: BorderRadius.circular(KoalaRadius.xl),
-                border: Border.all(
-                  color: _tabController.index == index
-                      ? KoalaColors.primaryUi(context)
-                      : KoalaColors.border(context),
-                ),
-                boxShadow: _tabController.index == index
-                    ? [
-                        BoxShadow(
-                          color:
-                              KoalaColors.primaryUi(context).withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        )
-                      ]
-                    : [],
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                tabs[index],
-                style: KoalaTypography.bodyMedium(context).copyWith(
-                  color: _tabController.index == index
-                      ? Colors.white
-                      : KoalaColors.textSecondary(context),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }
@@ -162,6 +88,25 @@ class _AnalyticsViewState extends State<AnalyticsView>
           if (controller.canNavigate) SizedBox(height: KoalaSpacing.xxl),
           Obx(() => _buildMonthlySummary(context)),
           SizedBox(height: KoalaSpacing.xl),
+
+          // Spending Heatmap (Only in Month View)
+          Obx(() {
+            if (controller.selectedTimeRange.value == TimeRange.month &&
+                controller.dailySpending.isNotEmpty) {
+              final days = DateTime(controller.selectedYear.value,
+                      controller.selectedMonth.value + 1, 0)
+                  .day;
+              return Padding(
+                padding: EdgeInsets.only(bottom: KoalaSpacing.xl),
+                child: SpendingHeatmap(
+                  dailySpending: controller.dailySpending,
+                  daysInMonth: days,
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+
           _buildMultiMonthProjectionCard(context),
           SizedBox(height: KoalaSpacing.xl),
           Obx(() => _buildJobsSection(context)),
