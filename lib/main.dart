@@ -30,8 +30,10 @@ class KoalaApp extends StatelessWidget {
         return GetMaterialApp(
           title: "Koala",
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
+          theme: AppTheme.getTheme(
+              skin: AppSkin.blue, brightness: Brightness.light),
+          darkTheme: AppTheme.getTheme(
+              skin: AppSkin.blue, brightness: Brightness.dark),
           themeMode: ThemeMode.system,
           initialRoute: Routes.splash,
           getPages: AppPages.routes,
