@@ -955,7 +955,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         padding: EdgeInsets.all(KoalaSpacing.xl),
         decoration: BoxDecoration(
           color:
-              isSelected ? KoalaColors.primary : KoalaColors.surface(context),
+              isSelected ? KoalaColors.primaryUi(context) : KoalaColors.surface(context),
           borderRadius: BorderRadius.circular(KoalaRadius.md),
           border: Border.all(
               color: isSelected
@@ -965,7 +965,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: KoalaColors.primary.withValues(alpha: 0.2),
+                      color: KoalaColors.primaryUi(context).withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 4))
                 ]
@@ -982,7 +982,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w600,
                           color:
-                              isSelected ? Colors.white : KoalaColors.primary)),
+                              isSelected ? Colors.white : KoalaColors.primaryUi(context))),
                   SizedBox(height: KoalaSpacing.xs),
                   Text(description,
                       style: TextStyle(
@@ -1056,15 +1056,15 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         Container(
           padding: EdgeInsets.all(KoalaSpacing.md),
           decoration: BoxDecoration(
-            color: KoalaColors.primary.withValues(alpha: 0.1),
+            color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(KoalaRadius.md),
             border:
-                Border.all(color: KoalaColors.primary.withValues(alpha: 0.3)),
+                Border.all(color: KoalaColors.primaryUi(context).withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
               Icon(CupertinoIcons.info_circle,
-                  color: KoalaColors.primary, size: 20.sp),
+                  color: KoalaColors.primaryUi(context), size: 20.sp),
               SizedBox(width: KoalaSpacing.sm),
               Expanded(
                 child: Text(
