@@ -37,6 +37,11 @@ class FinancialContextService extends GetxService {
   final RxDouble totalMonthlyDebtPayments = 0.0.obs;
   final RxDouble averageMonthlySavings = 0.0.obs; // Placeholder
   final RxInt financialHealthScore = 0.obs; // Placeholder
+  final RxDouble totalAllocatedBalance =
+      0.0.obs; // Funds allocated to envelopes
+
+  // Computed: Free Balance (Current - Allocated)
+  double get freeBalance => currentBalance.value - totalAllocatedBalance.value;
 
   // Synchronization locks for critical operations
   final _balanceLock = Mutex();
@@ -457,5 +462,11 @@ class FinancialContextService extends GetxService {
 
   List<Debt> getActiveDebts() {
     return allDebts.where((debt) => !debt.isPaidOff).toList();
+  }
+
+  /// Updates the total amount allocated to envelopes/goals.
+  /// Called by EnvelopeService.
+  void updateAllocatedBalance(double amount) {
+    totalAllocatedBalance.value = amount;
   }
 }
