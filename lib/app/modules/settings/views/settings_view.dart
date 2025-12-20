@@ -9,9 +9,10 @@ import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/modules/settings/views/subscriptions_view.dart';
 import 'package:koaa/app/modules/settings/views/recurring_transactions_view.dart';
 import 'package:koaa/app/modules/settings/views/profile_view.dart';
-import 'package:koaa/app/modules/settings/widgets/reset_app_sheet.dart';
 import 'package:koaa/app/modules/settings/views/privacy_policy_view.dart';
 import 'package:koaa/app/modules/settings/views/terms_view.dart';
+import 'package:koaa/app/modules/settings/views/data_management_view.dart';
+import 'package:koaa/app/modules/settings/widgets/theme_selection_sheet.dart';
 import 'package:koaa/app/services/notification_service.dart';
 import 'package:koaa/app/services/changelog_service.dart';
 
@@ -49,6 +50,25 @@ class SettingsView extends GetView<SettingsController> {
             context,
             title: 'Apparence',
             children: [
+              Obx(() => _buildSettingsItem(
+                    context,
+                    icon: CupertinoIcons.paintbrush_fill,
+                    title: 'Thème et Couleurs',
+                    trailing: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: controller.currentSkin.value.color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: KoalaColors.border(context), width: 2),
+                      ),
+                    ),
+                    onTap: () => Get.bottomSheet(
+                      const ThemeSelectionSheet(),
+                      isScrollControlled: true,
+                    ),
+                  )),
               _buildSettingsItem(
                 context,
                 icon: CupertinoIcons.moon_fill,
@@ -107,7 +127,13 @@ class SettingsView extends GetView<SettingsController> {
                 iconColor: const Color(0xFFFF6B6B),
                 onTap: () => Get.to(() => const SubscriptionsView()),
               ),
-              // Future: Import/Export
+              _buildSettingsItem(
+                context,
+                icon: CupertinoIcons.doc_on_clipboard_fill,
+                title: 'Gestion des données',
+                iconColor: Colors.blueGrey,
+                onTap: () => Get.to(() => const DataManagementView()),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -190,21 +216,6 @@ class SettingsView extends GetView<SettingsController> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          _buildSettingsSection(
-            context,
-            title: 'Zone de danger',
-            children: [
-              _buildSettingsItem(
-                context,
-                icon: CupertinoIcons.trash_fill,
-                title: 'Réinitialiser l\'application',
-                iconColor: KoalaColors.destructive,
-                textColor: KoalaColors.destructive,
-                onTap: () => showResetAppSheet(context),
-              ),
-            ],
-          ),
           const SizedBox(height: 32),
           GestureDetector(
             onTap: () => ChangelogService.showWhatsNewDialog(context),
@@ -221,7 +232,7 @@ class SettingsView extends GetView<SettingsController> {
                 Text(
                   'Voir les nouveautés',
                   style: KoalaTypography.caption(context).copyWith(
-                    color: KoalaColors.primary,
+                    color: KoalaColors.primaryUi(context),
                     decoration: TextDecoration.underline,
                   ),
                 ),
