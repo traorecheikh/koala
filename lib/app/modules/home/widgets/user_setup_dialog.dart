@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/job.dart';
@@ -207,11 +208,10 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
     setState(() => _loading = true);
 
     try {
-      final jobBox = Hive.box<Job>('jobBox');
-      for (final job in _jobs) {
-        await jobBox.put(job.id, job);
+      final jobs = _jobs;
+      for (final job in jobs) {
+        IsarService.addJob(job);
       }
-
       final homeController = Get.find<HomeController>();
       final totalMonthlyIncome = _jobs.fold(
         0.0,
@@ -229,9 +229,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         hasCompletedCatchUp: _shouldShowCatchUpStep,
       );
 
-      final userBox = Hive.box<LocalUser>('userBox');
-      await userBox.put('currentUser', newUser);
-
+      await IsarService.saveUser(newUser);
       Hive.box('settingsBox').put('hasUser', true);
 
       homeController.user.value = newUser;
@@ -954,8 +952,9 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.all(KoalaSpacing.xl),
         decoration: BoxDecoration(
-          color:
-              isSelected ? KoalaColors.primaryUi(context) : KoalaColors.surface(context),
+          color: isSelected
+              ? KoalaColors.primaryUi(context)
+              : KoalaColors.surface(context),
           borderRadius: BorderRadius.circular(KoalaRadius.md),
           border: Border.all(
               color: isSelected
@@ -965,7 +964,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: KoalaColors.primaryUi(context).withValues(alpha: 0.2),
+                      color:
+                          KoalaColors.primaryUi(context).withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 4))
                 ]
@@ -981,8 +981,9 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
                       style: TextStyle(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w600,
-                          color:
-                              isSelected ? Colors.white : KoalaColors.primaryUi(context))),
+                          color: isSelected
+                              ? Colors.white
+                              : KoalaColors.primaryUi(context))),
                   SizedBox(height: KoalaSpacing.xs),
                   Text(description,
                       style: TextStyle(
@@ -1058,8 +1059,8 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
           decoration: BoxDecoration(
             color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(KoalaRadius.md),
-            border:
-                Border.all(color: KoalaColors.primaryUi(context).withValues(alpha: 0.3)),
+            border: Border.all(
+                color: KoalaColors.primaryUi(context).withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
