@@ -18,19 +18,25 @@ import 'package:koaa/app/services/ml/contextual_brain.dart';
 import 'package:koaa/app/core/design_system.dart';
 import 'package:intl/intl.dart';
 
-void showAddTransactionDialog(BuildContext context, TransactionType type) {
+void showAddTransactionDialog(BuildContext context, TransactionType type,
+    {TransactionCategory? initialCategory}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (context) => _AddTransactionSheet(type: type),
+    builder: (context) =>
+        _AddTransactionSheet(type: type, initialCategory: initialCategory),
   );
 }
 
 class _AddTransactionSheet extends StatefulWidget {
   final TransactionType type;
+  final TransactionCategory? initialCategory;
 
-  const _AddTransactionSheet({required this.type});
+  const _AddTransactionSheet({
+    required this.type,
+    this.initialCategory,
+  });
 
   @override
   State<_AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -56,7 +62,26 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _amountFocusNode.requestFocus();
       _checkContextualPrediction();
+      _applyInitialCategory();
     });
+  }
+
+  void _applyInitialCategory() {
+    if (widget.initialCategory != null) {
+      final financialContext = Get.find<FinancialContextService>();
+      final category = financialContext.allCategories.firstWhereOrNull(
+        (c) => c.icon == widget.initialCategory!.iconKey,
+      );
+      // Fallback: Try match by name if iconKey match fails (or if we want a more robust match)
+      // Ideally we should match by ID, but ContextualAction gives us the Enum.
+      // The Enum -> Category mapping is via `icon` usually.
+
+      if (category != null) {
+        setState(() {
+          _selectedCategory = category;
+        });
+      }
+    }
   }
 
   @override
@@ -326,7 +351,8 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                 height: 4.h,
                 margin: EdgeInsets.only(top: 12.h),
                 decoration: BoxDecoration(
-                  color: KoalaColors.textSecondary(context).withValues(alpha: 0.3),
+                  color:
+                      KoalaColors.textSecondary(context).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -861,7 +887,8 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                                         style: TextStyle(
                                           fontSize: 17.sp,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.white.withValues(alpha: 0.8),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.8),
                                         ),
                                       ),
                                     ],
