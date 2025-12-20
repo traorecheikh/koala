@@ -181,7 +181,7 @@ class _AddRecurringTransactionSheetState
         await _controller.updateRecurringTransaction(t);
       } else {
         // Create new with error handling
-        final newTransaction = RecurringTransaction(
+        final newTransaction = RecurringTransaction.create(
           amount: amount,
           description: _descriptionController.text.trim(),
           frequency: _frequency,
