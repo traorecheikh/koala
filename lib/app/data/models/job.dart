@@ -1,4 +1,6 @@
+import 'package:isar_plus/isar_plus.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 part 'job.g.dart';
 
@@ -38,11 +40,14 @@ extension PaymentFrequencyExtension on PaymentFrequency {
   }
 }
 
+@Collection()
 @HiveType(typeId: 9)
-class Job extends HiveObject {
+class Job {
+  @Id()
   @HiveField(0)
   String id;
 
+  @Index()
   @HiveField(1)
   String name;
 
@@ -55,6 +60,7 @@ class Job extends HiveObject {
   @HiveField(4)
   DateTime paymentDate;
 
+  @Index()
   @HiveField(5)
   bool isActive;
 
@@ -72,17 +78,29 @@ class Job extends HiveObject {
     required this.frequency,
     required this.paymentDate,
     this.isActive = true,
-    DateTime? createdAt,
+    required this.createdAt,
     this.endDate,
-  }) : createdAt = createdAt ?? DateTime.now();
+  });
+
+  /// Save this job to Isar
+  Future<void> save() async {
+    IsarService.updateJob(this);
+  }
+
+  /// Delete this job from Isar
+  Future<void> delete() async {
+    IsarService.deleteJob(id);
+  }
 
   /// Check if this job is currently valid for income generation
+  @Ignore()
   bool get isCurrentlyValid {
     if (!isActive) return false;
     if (endDate != null && DateTime.now().isAfter(endDate!)) return false;
     return true;
   }
 
+  @Ignore()
   double get monthlyIncome => amount * frequency.paymentsPerMonth;
 
   bool isPaymentDue(DateTime date) {
