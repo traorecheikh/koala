@@ -5,6 +5,7 @@ import 'package:koaa/app/data/models/ml/financial_pattern.dart';
 import 'package:koaa/app/services/ml/koala_ml_engine.dart';
 import 'dart:async'; // Added import for StreamSubscription
 
+import 'package:koaa/app/services/isar_service.dart';
 class RecurringTransactionsController extends GetxController {
   final recurringTransactions = <RecurringTransaction>[].obs;
   StreamSubscription?
@@ -13,13 +14,10 @@ class RecurringTransactionsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    final recurringTransactionBox =
-        Hive.box<RecurringTransaction>('recurringTransactionBox');
-    recurringTransactions.assignAll(recurringTransactionBox.values.toList());
     _recurringTransactionSubscription =
-        recurringTransactionBox.watch().listen((_) {
-      recurringTransactions.assignAll(recurringTransactionBox.values.toList());
-      scanForSubscriptions(); // Rescan when recurring transactions change
+        IsarService.watchRecurringTransactions().listen((transactions) {
+      recurringTransactions.assignAll(transactions);
+      scanForSubscriptions();
     });
 
     // Initial scan
@@ -80,9 +78,7 @@ class RecurringTransactionsController extends GetxController {
   }
 
   void addRecurringTransaction(RecurringTransaction transaction) {
-    final recurringTransactionBox =
-        Hive.box<RecurringTransaction>('recurringTransactionBox');
-    recurringTransactionBox.add(transaction);
+    IsarService.addRecurringTransaction(transaction);
   }
 
   Future<void> updateRecurringTransaction(
@@ -104,8 +100,7 @@ class RecurringTransactionsController extends GetxController {
     String? newDescription,
     DateTime? newEndDate,
   }) async {
-    final recurringTransactionBox =
-        Hive.box<RecurringTransaction>('recurringTransactionBox');
+    // No box access needed - using IsarService via model methods
 
     // 1. End the old recurring transaction (set endDate to now)
     oldTransaction.endDate = DateTime.now();
@@ -113,7 +108,7 @@ class RecurringTransactionsController extends GetxController {
     await oldTransaction.save();
 
     // 2. Create a new recurring transaction with the new amount
-    final newTransaction = RecurringTransaction(
+    final newTransaction = RecurringTransaction.create(
       amount: newAmount,
       description: newDescription ?? oldTransaction.description,
       frequency: oldTransaction.frequency,
@@ -129,7 +124,7 @@ class RecurringTransactionsController extends GetxController {
     );
 
     // 3. Save the new recurring transaction
-    await recurringTransactionBox.add(newTransaction);
+    IsarService.addRecurringTransaction(newTransaction);
 
     return newTransaction;
   }
