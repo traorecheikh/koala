@@ -36,4 +36,30 @@ class LocalUser extends HiveObject {
     this.firstLaunchDate,
     this.hasCompletedCatchUp = false,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'fullName': fullName,
+      'salary': salary,
+      'payday': payday,
+      'age': age,
+      'budgetingType': budgetingType,
+      'firstLaunchDate': firstLaunchDate?.toIso8601String(),
+      'hasCompletedCatchUp': hasCompletedCatchUp,
+    };
+  }
+
+  factory LocalUser.fromJson(Map<String, dynamic> json) {
+    return LocalUser(
+      fullName: json['fullName'],
+      salary: json['salary'],
+      payday: json['payday'],
+      age: json['age'],
+      budgetingType: json['budgetingType'],
+      firstLaunchDate: json['firstLaunchDate'] != null
+          ? DateTime.parse(json['firstLaunchDate'])
+          : null,
+      hasCompletedCatchUp: json['hasCompletedCatchUp'] ?? false,
+    );
+  }
 }
