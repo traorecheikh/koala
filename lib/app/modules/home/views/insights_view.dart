@@ -190,10 +190,10 @@ class _InsightDetailCard extends StatelessWidget {
                   children: [
                     Text('Voir détails',
                         style: TextStyle(
-                            color: KoalaColors.primary,
+                            color: KoalaColors.primaryUi(context),
                             fontWeight: FontWeight.w600)),
                     Icon(CupertinoIcons.chevron_right,
-                        color: KoalaColors.primary, size: 16.sp),
+                        color: KoalaColors.primaryUi(context), size: 16.sp),
                   ],
                 )
               ],
