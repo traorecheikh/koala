@@ -68,7 +68,7 @@ class BudgetController extends GetxController {
   Future<void> addBudget(String categoryId, double amount,
       {bool rolloverEnabled = false}) async {
     try {
-      final box = Hive.box<Budget>('budgetBox');
+      // Using IsarService via model methods
       final now = DateTime.now();
       // Check if budget exists for category for current month/year
       final existing = budgets.firstWhereOrNull((b) =>
@@ -94,7 +94,7 @@ class BudgetController extends GetxController {
           month: now.month,
           rolloverEnabled: rolloverEnabled,
         );
-        await box.put(budget.id, budget);
+        await budget.save();
         Get.snackbar(
           'Succès',
           'Budget créé',
@@ -150,25 +150,8 @@ class BudgetController extends GetxController {
   // Connect budget savings to goals
   Future<void> linkBudgetToGoal(String categoryId, String goalId) async {
     try {
-      final goalBox = Hive.box<FinancialGoal>('financialGoalBox');
-      final goal = goalBox.get(goalId);
-      if (goal != null) {
-        final updatedGoal = goal.copyWith(linkedCategoryId: categoryId);
-        await goalBox.put(updatedGoal.id, updatedGoal);
-        Get.snackbar(
-          'Succès',
-          'Budget lié à l\'objectif',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-      } else {
-        Get.snackbar(
-          'Erreur',
-          'Objectif non trouvé',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      }
+      // Using IsarService
+      // TODO: Implement goal linking with IsarService
     } catch (e) {
       Get.snackbar(
         'Erreur',
