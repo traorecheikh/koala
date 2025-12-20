@@ -52,3 +52,18 @@
 -dontwarn com.google.android.play.core.splitcompat.**
 -dontwarn com.google.android.play.core.splitinstall.**
 -dontwarn com.google.android.play.core.tasks.**
+
+# Ignore missing compile-time embedded annotations
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.lang.model.element.Modifier
+-dontwarn javax.xml.stream.XMLStreamException
+
+# Workmanager
+-keep class androidx.work.** { *; }
+-keep class com.transistorsoft.** { *; }
+
+# Hive TypeAdapters (Generated)
+-keep class * extends com.hive.TypeAdapter { *; }
+-keep class * extends com.hive.HiveObject { *; }
+-keep class io.flutter.plugins.firebase.core.** { *; }
+
