@@ -88,6 +88,7 @@ class AnalyticsController extends GetxController {
   final budgetComparison = <BudgetComparisonData>[].obs; // New observable
   final debtTimeline = <DebtTimelineData>[].obs; // New observable
   final goalProgress = <GoalProgressData>[].obs; // New observable
+  final dailySpending = <int, double>{}.obs; // New observable for Heatmap
 
   // Trends
   final _previousTotalExpenses = 0.0.obs;
@@ -148,6 +149,7 @@ class AnalyticsController extends GetxController {
     budgetComparison.clear();
     debtTimeline.clear();
     goalProgress.clear();
+    dailySpending.clear();
 
     super.onClose();
   }
@@ -179,8 +181,30 @@ class AnalyticsController extends GetxController {
     _updateInsights();
     _updateBudgetComparison();
     _updateDebtTimeline();
-    _updateGoalProgress(); // New call
+    _updateDebtTimeline();
+    _updateGoalProgress();
+    _updateDailySpending(); // New call
     _loadCurrentSavingsGoal(); // Re-evaluate current savings goal as month/year might change
+  }
+
+  void _updateDailySpending() {
+    final map = <int, double>{};
+
+    // Only available for month view
+    if (selectedTimeRange.value == TimeRange.month) {
+      final daysInMonth =
+          DateTime(selectedYear.value, selectedMonth.value + 1, 0).day;
+      for (int i = 1; i <= daysInMonth; i++) {
+        map[i] = 0.0;
+      }
+
+      for (var t in _filteredTransactions) {
+        if (t.type == TransactionType.expense) {
+          map[t.date.day] = (map[t.date.day] ?? 0.0) + t.amount;
+        }
+      }
+    }
+    dailySpending.assignAll(map);
   }
 
   void _updateInsights() {
