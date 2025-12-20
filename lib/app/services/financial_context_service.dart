@@ -105,21 +105,26 @@ class FinancialContextService extends GetxService {
     _subscriptions.add(IsarService.watchTransactions().listen((transactions) {
       _onIsarTransactionsChanged(transactions);
     }));
+    _subscriptions.add(IsarService.watchActiveJobs().listen((jobs) {
+      allJobs.assignAll(jobs);
+    }));
+    _subscriptions.add(IsarService.watchBudgets().listen((budgets) {
+      allBudgets.assignAll(budgets);
+    }));
+    _subscriptions.add(IsarService.watchDebts().listen((debts) {
+      allDebts.assignAll(debts);
+    }));
+    _subscriptions.add(IsarService.watchGoals().listen((goals) {
+      allGoals.assignAll(goals);
+    }));
+    // Listen to Isar category changes
+    _subscriptions.add(IsarService.watchCategories().listen((categories) {
+      allCategories.assignAll(categories);
+    }));
     _subscriptions
-        .add(Hive.box<Job>('jobBox').watch().listen((_) => _loadJobs()));
-    _subscriptions.add(
-        Hive.box<Budget>('budgetBox').watch().listen((_) => _loadBudgets()));
-    _subscriptions
-        .add(Hive.box<Debt>('debtBox').watch().listen((_) => _loadDebts()));
-    _subscriptions.add(Hive.box<FinancialGoal>('financialGoalBox')
-        .watch()
-        .listen((_) => _loadGoals()));
-    _subscriptions.add(Hive.box<Category>('categoryBox')
-        .watch()
-        .listen((_) => _loadCategories()));
-    _subscriptions.add(Hive.box<RecurringTransaction>('recurringTransactionBox')
-        .watch()
-        .listen((_) => _loadRecurringTransactions()));
+        .add(IsarService.watchRecurringTransactions().listen((recurring) {
+      allRecurringTransactions.assignAll(recurring);
+    }));
 
     // Targeted updates with debounce
     // 1. Transactions change -> Balance, Income, Savings, and Debt Reconciliation
@@ -152,12 +157,8 @@ class FinancialContextService extends GetxService {
     // Changed to async Future<void>
     _logger.i('FinancialContextService: Starting _loadAllData.');
     _loadTransactions();
-    _loadJobs();
-    _loadBudgets();
-    _loadDebts();
-    _loadGoals();
+    // Jobs, Budgets, Debts, Goals, RecurringTransactions now loaded via streams
     _loadCategories();
-    _loadRecurringTransactions();
     // Schedule metrics recalculation asynchronously
     await Future.microtask(() => _recalculateMetrics()); // Await recalculation
     _logger.i('FinancialContextService: _loadAllData completed.');
@@ -192,23 +193,13 @@ class FinancialContextService extends GetxService {
     _transactionsByDebt.assignAll(byDebt);
   }
 
-  void _loadJobs() => allJobs.assignAll(Hive.box<Job>('jobBox')
-      .values
-      .toList()
-      .where((job) => job.isActive)
-      .toList());
-  void _loadBudgets() =>
-      allBudgets.assignAll(Hive.box<Budget>('budgetBox').values.toList());
-  void _loadDebts() =>
-      allDebts.assignAll(Hive.box<Debt>('debtBox').values.toList());
-  void _loadGoals() => allGoals
-      .assignAll(Hive.box<FinancialGoal>('financialGoalBox').values.toList());
-  void _loadCategories() => allCategories
-      .assignAll(Hive.box<Category>('categoryBox').values.toList());
-  void _loadRecurringTransactions() => allRecurringTransactions.assignAll(
-      Hive.box<RecurringTransaction>('recurringTransactionBox')
-          .values
-          .toList());
+  // Load methods now handled by streams in _initListeners
+  // Keeping _loadCategories for initial load
+  void _loadCategories() async {
+    // Load categories from Isar
+    final categories = await IsarService.getAllCategories();
+    allCategories.assignAll(categories);
+  }
 
   Future<void> _recalculateMetrics() async {
     await _reconcileDebtAmounts(); // Ensure consistency before calculation
