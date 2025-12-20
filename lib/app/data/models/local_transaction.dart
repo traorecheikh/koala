@@ -418,6 +418,26 @@ class LocalTransaction {
       isCatchUp: isCatchUp ?? this.isCatchUp,
     );
   }
+
+  factory LocalTransaction.fromJson(Map<String, dynamic> json) {
+    return LocalTransaction(
+      id: json['id'],
+      amount: json['amount'],
+      description: json['description'],
+      date: DateTime.parse(json['date']),
+      type: TransactionType.values
+          .firstWhere((e) => e.toString().split('.').last == json['type']),
+      isRecurring: json['isRecurring'],
+      category: TransactionCategory.values
+          .firstWhere((e) => e.toString().split('.').last == json['category']),
+      categoryId: json['categoryId'],
+      isHidden: json['isHidden'],
+      linkedDebtId: json['linkedDebtId'],
+      linkedRecurringId: json['linkedRecurringId'],
+      linkedJobId: json['linkedJobId'],
+      isCatchUp: json['isCatchUp'],
+    );
+  }
 }
 
 /// FNV-1a 64bit hash algorithm optimized for Dart Strings
