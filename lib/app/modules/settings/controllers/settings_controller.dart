@@ -5,8 +5,8 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// Changed import
 import 'package:get/get.dart';
+import 'package:koaa/app/core/theme.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
@@ -30,6 +30,7 @@ import 'package:koaa/app/core/design_system.dart';
 
 class SettingsController extends GetxController {
   RxBool isDarkMode = Get.isDarkMode.obs;
+  Rx<AppSkin> currentSkin = AppSkin.blue.obs;
   RxBool reduceMotion = false
       .obs; // For accessibility - disable animations for motion-sensitive users
   RxString currentVersion = ''.obs;
@@ -63,14 +64,34 @@ class SettingsController extends GetxController {
     final savedIsDark = _settingsBox.get('isDarkMode');
     if (savedIsDark != null) {
       isDarkMode.value = savedIsDark;
-      Get.changeThemeMode(isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
     }
+
+    final savedSkinIndex = _settingsBox.get('appSkinIndex');
+    if (savedSkinIndex != null && savedSkinIndex < AppSkin.values.length) {
+      currentSkin.value = AppSkin.values[savedSkinIndex];
+    }
+
+    _updateTheme();
+  }
+
+  void _updateTheme() {
+    Get.changeThemeMode(isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
+    // Force theme update with new skin
+    Get.changeTheme(AppTheme.getTheme(
+        skin: currentSkin.value,
+        brightness: isDarkMode.value ? Brightness.dark : Brightness.light));
   }
 
   void toggleTheme(bool value) {
     isDarkMode.value = value;
-    Get.changeThemeMode(isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
-    _settingsBox.put('isDarkMode', value); // Use _settingsBox
+    _settingsBox.put('isDarkMode', value);
+    _updateTheme();
+  }
+
+  void changeSkin(AppSkin skin) {
+    currentSkin.value = skin;
+    _settingsBox.put('appSkinIndex', skin.index);
+    _updateTheme();
   }
 
   Future<void> performReset() async {
