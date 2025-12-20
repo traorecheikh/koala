@@ -7,6 +7,7 @@ import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/category.dart';
 import 'package:koaa/app/data/models/challenge.dart';
 import 'package:koaa/app/data/models/debt.dart';
+import 'package:koaa/app/data/models/envelope.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
@@ -29,6 +30,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(ChallengeTypeAdapter());
     registerAdapter(DebtAdapter());
     registerAdapter(DebtTypeAdapter());
+    registerAdapter(EnvelopeAdapter());
     registerAdapter(FinancialGoalAdapter());
     registerAdapter(FinancialPatternAdapter());
     registerAdapter(FrequencyAdapter());
@@ -61,6 +63,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(ChallengeTypeAdapter());
     registerAdapter(DebtAdapter());
     registerAdapter(DebtTypeAdapter());
+    registerAdapter(EnvelopeAdapter());
     registerAdapter(FinancialGoalAdapter());
     registerAdapter(FinancialPatternAdapter());
     registerAdapter(FrequencyAdapter());
