@@ -212,7 +212,7 @@ class _SuggestionCard extends GetView<RecurringTransactionsController> {
 
                   if (finalAmount > 0 && finalName.isNotEmpty) {
                     controller.addRecurringTransaction(
-                      RecurringTransaction(
+                      RecurringTransaction.create(
                         amount: finalAmount,
                         description: finalName,
                         frequency: Frequency.monthly,
