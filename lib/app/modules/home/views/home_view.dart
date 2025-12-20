@@ -23,6 +23,7 @@ import '../../goals/views/widgets/goal_card.dart';
 
 import '../../../routes/app_pages.dart';
 import '../controllers/home_controller.dart';
+import '../../envelopes/views/envelopes_view.dart';
 
 // --- Global Widgets (Accessible across the file for reuse) ---
 
@@ -167,8 +168,8 @@ class TransactionSearchDelegate extends SearchDelegate<LocalTransaction?> {
             .copyWith(color: KoalaColors.textSecondary(context)),
       ),
       textSelectionTheme: TextSelectionThemeData(
-        cursorColor: KoalaColors.primary,
-        selectionColor: KoalaColors.primary.withValues(alpha: 0.2),
+        cursorColor: KoalaColors.primaryUi(context),
+        selectionColor: KoalaColors.primaryUi(context).withValues(alpha: 0.2),
       ),
       textTheme: theme.textTheme.copyWith(
         titleLarge: KoalaTypography.bodyLarge(context),
@@ -371,6 +372,57 @@ class _Header extends GetView<HomeController> {
           ),
           Row(
             children: [
+              // Contextual Action Chip
+              Obx(() {
+                final action = controller.contextualAction.value;
+                if (action == null) return const SizedBox.shrink();
+
+                return Container(
+                  margin: EdgeInsets.only(right: 8.w),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        showAddTransactionDialog(
+                          context,
+                          TransactionType.expense,
+                          initialCategory: action.category,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(20.r),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(
+                            color: KoalaColors.primaryUi(context).withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(action.icon,
+                                size: 16.sp, color: KoalaColors.primaryUi(context)),
+                            SizedBox(width: 6.w),
+                            Text(
+                              action.label,
+                              style: KoalaTypography.caption(context).copyWith(
+                                color: KoalaColors.primaryUi(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(duration: 500.ms)
+                    .slideX(begin: 0.2, curve: Curves.easeOutBack);
+              }),
               IconButton(
                 icon: Icon(CupertinoIcons.settings,
                     size: 28.sp, color: KoalaColors.text(context)),
@@ -482,6 +534,8 @@ class _QuickActions extends GetView<HomeController> {
         return CupertinoIcons.sparkles;
       case QuickActionType.challenges:
         return CupertinoIcons.flame_fill;
+      case QuickActionType.envelopes:
+        return CupertinoIcons.envelope_fill;
     }
   }
 
@@ -505,6 +559,8 @@ class _QuickActions extends GetView<HomeController> {
         return 'IA';
       case QuickActionType.challenges:
         return 'Défis';
+      case QuickActionType.envelopes:
+        return 'Enveloppes';
     }
   }
 
@@ -529,6 +585,8 @@ class _QuickActions extends GetView<HomeController> {
         return const Color(0xFF64D2FF); // Cyan/Blue
       case QuickActionType.challenges:
         return const Color(0xFFFF9500); // Orange/Fire
+      case QuickActionType.envelopes:
+        return const Color(0xFF34C759); // Green
     }
   }
 
@@ -539,6 +597,9 @@ class _QuickActions extends GetView<HomeController> {
         break;
       case QuickActionType.analytics:
         Get.toNamed(Routes.analytics);
+        break;
+      case QuickActionType.envelopes:
+        Get.toNamed(Routes.envelopes);
         break;
       case QuickActionType.budget:
         Get.toNamed(Routes.budget);
@@ -807,6 +868,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return CupertinoIcons.star_fill;
       case QuickActionType.analytics:
         return CupertinoIcons.chart_bar_alt_fill;
+      case QuickActionType.envelopes:
+        return CupertinoIcons.envelope_fill;
       case QuickActionType.budget:
         return CupertinoIcons.chart_pie_fill;
       case QuickActionType.debt:
@@ -830,6 +893,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return 'Objectifs';
       case QuickActionType.analytics:
         return 'Stats';
+      case QuickActionType.envelopes:
+        return 'Enveloppes';
       case QuickActionType.budget:
         return 'Budgets';
       case QuickActionType.debt:
@@ -853,6 +918,8 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         return const Color(0xFFFF2D55);
       case QuickActionType.analytics:
         return const Color(0xFF5E5CE6);
+      case QuickActionType.envelopes:
+        return const Color(0xFF34C759); // Green
       case QuickActionType.budget:
         return const Color(0xFFFF9F0A);
       case QuickActionType.debt:
@@ -877,6 +944,9 @@ class _MoreOptionsSheet extends GetView<HomeController> {
         break;
       case QuickActionType.analytics:
         Get.toNamed(Routes.analytics);
+        break;
+      case QuickActionType.envelopes:
+        Get.toNamed(Routes.envelopes);
         break;
       case QuickActionType.budget:
         Get.toNamed(Routes.budget);
@@ -1332,7 +1402,7 @@ class _GoalProgressMiniCards extends GetView<GoalsController> {
                       onTap: () => Get.toNamed(Routes.goals),
                       child: Text('Voir tout',
                           style: KoalaTypography.bodySmall(context)
-                              .copyWith(color: KoalaColors.primary)),
+                              .copyWith(color: KoalaColors.primaryUi(context))),
                     ),
                 ],
               ),
@@ -1486,12 +1556,12 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                       width: 40.w,
                       height: 40.w,
                       decoration: BoxDecoration(
-                        color: KoalaColors.primary.withValues(alpha: 0.1),
+                        color: KoalaColors.primaryUi(context).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Center(
                         child: Icon(CupertinoIcons.person_2_fill,
-                            size: 20.sp, color: KoalaColors.primary),
+                            size: 20.sp, color: KoalaColors.primaryUi(context)),
                       ),
                     ),
                     SizedBox(width: 12.w),
@@ -1515,7 +1585,7 @@ class _UpcomingBillsWidget extends GetView<HomeController> {
                       _formatAmount(debt.minPayment),
                       style: KoalaTypography.bodyMedium(context).copyWith(
                         fontWeight: FontWeight.bold,
-                        color: KoalaColors.primary,
+                        color: KoalaColors.primaryUi(context),
                       ),
                     ),
                   ],
