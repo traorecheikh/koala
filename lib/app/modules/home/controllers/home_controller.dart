@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -11,6 +12,7 @@ import 'package:koaa/app/data/models/ml/financial_intelligence.dart';
 import 'package:koaa/app/services/ml/models/insight_generator.dart'; // Fixed Import
 
 import 'package:koaa/app/services/changelog_service.dart';
+import 'package:koaa/app/routes/app_pages.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
 import 'package:koaa/app/services/events/financial_events_service.dart';
 import 'package:koaa/app/services/isar_service.dart';
@@ -34,6 +36,7 @@ enum QuickActionType {
   settings,
   intelligence,
   challenges,
+  envelopes,
 }
 
 // -----------------------------------------------------------------------------
@@ -78,6 +81,20 @@ class RecurringGenerationResult {
 // HomeController
 // -----------------------------------------------------------------------------
 
+class ContextualAction {
+  final String label;
+  final IconData icon;
+  final TransactionCategory category;
+  final String categoryId;
+
+  ContextualAction({
+    required this.label,
+    required this.icon,
+    required this.category,
+    required this.categoryId,
+  });
+}
+
 class HomeController extends GetxController {
   final Logger _logger = Logger();
 
@@ -87,16 +104,19 @@ class HomeController extends GetxController {
   // UI State
   final RxList<LocalTransaction> transactions = <LocalTransaction>[].obs;
   final RxDouble balance = 0.0.obs;
+  final RxDouble freeBalance = 0.0.obs; // New: Free to spend
   final RxBool balanceVisible = true.obs;
   final RxBool isCardFlipped = false.obs;
   final RxString userName = 'User'.obs;
-  final Rx<LocalUser?> user = Rx<LocalUser?>(null); // Added user observable
+  final Rx<LocalUser?> user = Rx<LocalUser?>(null);
 
   // Quick Actions & Sheet State
   final RxBool isMoreOptionsOpen = false.obs;
   final RxBool isSheetHidden = false.obs;
   final Rx<QuickActionType> thirdAction = QuickActionType.intelligence.obs;
   final RxList<QuickActionType> sheetActions = <QuickActionType>[].obs;
+  final Rx<ContextualAction?> contextualAction =
+      Rx<ContextualAction?>(null); // New Observable
 
   // Pagination
   int _transactionLimit = 50;
@@ -108,8 +128,8 @@ class HomeController extends GetxController {
 
   // Workers
   final List<Worker> _workers = [];
-  Timer?
-      _debounceTimer; // Use Timer for manual debounce instead of missing class
+  Timer? _debounceTimer;
+  Timer? _contextualActionTimer; // New Timer
 
   @override
   void onInit() {
@@ -209,6 +229,8 @@ class HomeController extends GetxController {
 
     _workers.add(ever(
         _financialContextService.currentBalance, (_) => calculateBalance()));
+    _workers.add(ever(_financialContextService.totalAllocatedBalance,
+        (_) => calculateBalance())); // Listen to allocated changes
 
     // Initial load for transactions and balance if already initialized
     if (_financialContextService.isInitialized.value) {
@@ -219,6 +241,51 @@ class HomeController extends GetxController {
 
     // Archive old transactions on startup
     archiveOldTransactions();
+
+    // Start Contextual Action Timer (Every 30 minutes check is enough)
+    _updateContextualAction();
+    _contextualActionTimer = Timer.periodic(const Duration(minutes: 30), (_) {
+      _updateContextualAction();
+    });
+  }
+
+  void _updateContextualAction() {
+    final now = DateTime.now();
+    final hour = now.hour;
+
+    ContextualAction? action;
+
+    // Logic: Time-of-day suggestions
+    if (hour >= 6 && hour < 11) {
+      // Morning: Transport
+      action = ContextualAction(
+        label: 'Transport ?',
+        icon: CupertinoIcons.bus,
+        category: TransactionCategory.transport,
+        categoryId: 'transport',
+      );
+    } else if (hour >= 11 && hour < 15) {
+      // Lunch: Food
+      action = ContextualAction(
+        label: 'Déjeuner ?',
+        icon: CupertinoIcons.cart, // or a food icon if available
+        category: TransactionCategory.food,
+        categoryId: 'food',
+      );
+    } else if (hour >= 18 && hour < 21) {
+      // Evening: Groceries/Dinner
+      action = ContextualAction(
+        label: 'Courses ?',
+        icon: CupertinoIcons.bag_fill,
+        category: TransactionCategory.groceries,
+        categoryId: 'groceries',
+      );
+    }
+
+    // Only update if changed to avoid unnecessary rebuilds
+    if (contextualAction.value?.label != action?.label) {
+      contextualAction.value = action;
+    }
   }
 
   void _onServiceInitialized() async {
@@ -270,9 +337,49 @@ class HomeController extends GetxController {
       try {
         final brain = Get.find<SmartFinancialBrain>();
         final intelligence = brain.intelligence.value;
+
+        final newInsights = <MLInsight>[];
+
+        // 1. Map Spending Alerts (High Priority)
+        if (intelligence.spendingAlerts.isNotEmpty) {
+          final alertInsights = intelligence.spendingAlerts.map((alert) {
+            final stableId =
+                'alert_${alert.categoryId}_${DateTime.now().day}'; // Daily alert stability
+
+            // Map severity to priority
+            int priority = 5;
+            switch (alert.severity) {
+              case AlertSeverity.critical:
+                priority = 10;
+                break;
+              case AlertSeverity.high:
+                priority = 9;
+                break;
+              case AlertSeverity.medium:
+                priority = 7;
+                break;
+              case AlertSeverity.low:
+                priority = 5;
+                break;
+            }
+
+            return MLInsight(
+              id: stableId,
+              title: 'Alerte Dépense',
+              description: alert.message,
+              type: InsightType.warning,
+              priority: priority,
+              actionRoute: Routes.budget, // Corrected route case
+              actionLabel: 'Voir Budget',
+              isRead: readInsightIds.contains(stableId),
+            );
+          });
+          newInsights.addAll(alertInsights);
+        }
+
+        // 2. Map Recommendations (Standard Priority)
         if (intelligence.recommendations.isNotEmpty) {
-          final generatedInsights =
-              intelligence.recommendations.take(5).map((rec) {
+          final recInsights = intelligence.recommendations.take(5).map((rec) {
             // Use Title Hash for ID stability (Priority can fluctuate)
             final stableId = 'rec_${rec.category.index}_${rec.title.hashCode}';
             return MLInsight(
@@ -285,9 +392,15 @@ class HomeController extends GetxController {
               actionLabel: rec.actionLabel,
               isRead: readInsightIds.contains(stableId),
             );
-          }).toList();
+          });
+          newInsights.addAll(recInsights);
+        }
 
-          insights.assignAll(generatedInsights);
+        // 3. Sort by priority and assign
+        newInsights.sort((a, b) => b.priority.compareTo(a.priority));
+
+        if (newInsights.isNotEmpty) {
+          insights.assignAll(newInsights);
 
           final box = Hive.box('insightsBox');
           final jsonList = insights.map((e) => e.toJson()).toList();
@@ -357,6 +470,7 @@ class HomeController extends GetxController {
       worker.dispose();
     }
     _debounceTimer?.cancel();
+    _contextualActionTimer?.cancel();
     super.onClose();
   }
 
@@ -427,6 +541,7 @@ class HomeController extends GetxController {
   void calculateBalance() {
     if (_financialContextService.isInitialized.value) {
       balance.value = _financialContextService.currentBalance.value;
+      freeBalance.value = _financialContextService.freeBalance;
     }
   }
 
