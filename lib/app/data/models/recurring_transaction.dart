@@ -1,6 +1,8 @@
+import 'package:isar_plus/isar_plus.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:uuid/uuid.dart';
+import 'package:koaa/app/services/isar_service.dart';
 
 part 'recurring_transaction.g.dart';
 
@@ -22,10 +24,12 @@ enum Frequency {
   yearly,
 }
 
+@Collection()
 @HiveType(typeId: 4)
-class RecurringTransaction extends HiveObject {
+class RecurringTransaction {
+  @Id()
   @HiveField(0)
-  final String id;
+  String id;
 
   @HiveField(1)
   double amount;
@@ -51,6 +55,7 @@ class RecurringTransaction extends HiveObject {
   @HiveField(8)
   TransactionType type;
 
+  @Index()
   @HiveField(9)
   String? categoryId;
 
@@ -59,6 +64,7 @@ class RecurringTransaction extends HiveObject {
   DateTime? endDate;
 
   /// Whether this recurring transaction is active (can be manually stopped)
+  @Index()
   @HiveField(11)
   bool isActive;
 
@@ -67,10 +73,11 @@ class RecurringTransaction extends HiveObject {
   DateTime createdAt;
 
   // For compatibility with logic expecting startDate
+  @Ignore()
   DateTime get startDate => createdAt;
 
   RecurringTransaction({
-    String? id,
+    required this.id,
     required this.amount,
     required this.description,
     required this.frequency,
@@ -82,17 +89,59 @@ class RecurringTransaction extends HiveObject {
     this.categoryId,
     this.endDate,
     this.isActive = true,
-    DateTime? createdAt,
-  })  : id = id ?? const Uuid().v4(),
-        createdAt = createdAt ?? DateTime.now();
+    required this.createdAt,
+  });
+
+  /// Factory constructor for creating with auto-generated ID and timestamp
+  factory RecurringTransaction.create({
+    required double amount,
+    required String description,
+    required Frequency frequency,
+    List<int> daysOfWeek = const [],
+    int dayOfMonth = 1,
+    required DateTime lastGeneratedDate,
+    required TransactionCategory category,
+    required TransactionType type,
+    String? categoryId,
+    DateTime? endDate,
+    bool isActive = true,
+  }) {
+    return RecurringTransaction(
+      id: const Uuid().v4(),
+      amount: amount,
+      description: description,
+      frequency: frequency,
+      daysOfWeek: daysOfWeek,
+      dayOfMonth: dayOfMonth,
+      lastGeneratedDate: lastGeneratedDate,
+      category: category,
+      type: type,
+      categoryId: categoryId,
+      endDate: endDate,
+      isActive: isActive,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  /// Save this recurring transaction to Isar
+  Future<void> save() async {
+    IsarService.updateRecurringTransaction(this);
+  }
+
+  /// Delete this recurring transaction from Isar
+  Future<void> delete() async {
+    IsarService.deleteRecurringTransaction(id);
+  }
 
   /// Check if this recurring transaction is currently valid for generating
+  @Ignore()
   bool get isCurrentlyValid {
     if (!isActive) return false;
     if (endDate != null && DateTime.now().isAfter(endDate!)) return false;
     return true;
   }
 
+  @Ignore()
   DateTime get nextDueDate {
     if (frequency == Frequency.daily) {
       return lastGeneratedDate.add(const Duration(days: 1));
@@ -117,11 +166,6 @@ class RecurringTransaction extends HiveObject {
         final clampedDay = (day > daysInMonth) ? daysInMonth : day;
         return DateTime(year, month, clampedDay);
       }
-
-      // Check current month (in case last generated was early in the month)
-      // This handles cases where we might have missed a generation?
-      // Actually standard logic is usually just +1 month.
-      // But let's stick to the safer next month logic relative to lastGeneratedDate.
 
       DateTime candidate = getClampedDate(
           lastGeneratedDate.year, lastGeneratedDate.month + 1, dayOfMonth);
@@ -151,8 +195,6 @@ class RecurringTransaction extends HiveObject {
     if (frequency == Frequency.daily) return true;
     if (frequency == Frequency.weekly) return daysOfWeek.contains(date.weekday);
     if (frequency == Frequency.biWeekly) {
-      // Check if difference in days is multiple of 14 from start
-      // optimizing to use lastGeneratedDate as anchor
       final diff = date.difference(lastGeneratedDate).inDays;
       return diff > 0 && diff % 14 == 0;
     }
@@ -196,8 +238,9 @@ class RecurringTransaction extends HiveObject {
       categoryId: json['categoryId'],
       endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
       isActive: json['isActive'],
-      createdAt:
-          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
     );
   }
 }
