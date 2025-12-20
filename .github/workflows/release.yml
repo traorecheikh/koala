@@ -31,13 +31,39 @@ jobs:
           token: ${{ secrets.SHOREBIRD_TOKEN }}
 
       - name: Shorebird Release
-        run: shorebird release android --artifact=apk
+        run: shorebird release android --artifact=apk --target-platform=android-arm64
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
 
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update version.json
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          DATE=$(date +%Y-%m-%d)
+          cat > version.json << EOF
+          {
+            "version": "$VERSION",
+            "apk_url": "https://github.com/${{ github.repository }}/releases/download/v$VERSION/app-release.apk",
+            "checksum": "$(sha256sum build/app/outputs/flutter-apk/app-release.apk | cut -d' ' -f1)",
+            "release_notes": "Version $VERSION - See release notes below",
+            "min_supported_version": "1.2.0",
+            "release_date": "$DATE"
+          }
+          EOF
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
+
+      - name: Commit updated version.json
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add version.json
+          git commit -m "chore: update version.json for v${{ steps.version.outputs.version }}" || echo "No changes"
+          git push origin HEAD:main

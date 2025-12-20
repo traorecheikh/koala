@@ -6,13 +6,38 @@ on:
       - main
     paths:
       - 'lib/**'
-      - 'pubspec.yaml'
+      - 'assets/**'
   workflow_dispatch:
 
 jobs:
+  check:
+    name: Verify Patch-Safe
+    runs-on: ubuntu-latest
+    outputs:
+      needs_release: ${{ steps.check.outputs.needs_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for native changes
+        id: check
+        run: |
+          # Check if any native/dependency files changed
+          if git diff HEAD~1 --name-only | grep -E '^(android/|ios/|pubspec\.yaml|pubspec\.lock)'; then
+            echo "needs_release=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Native or dependency changes detected"
+          else
+            echo "needs_release=false" >> $GITHUB_OUTPUT
+            echo "✅ Dart-only changes - safe to patch"
+          fi
+
   patch:
     name: Publish Patch
     runs-on: ubuntu-latest
+    needs: check
+    if: needs.check.outputs.needs_release == 'false'
 
     steps:
       - name: Checkout
@@ -35,6 +60,19 @@ jobs:
           token: ${{ secrets.SHOREBIRD_TOKEN }}
 
       - name: Shorebird Patch
-        run: shorebird patch android
+        run: shorebird patch android --target-platform=android-arm64
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+
+  warn:
+    name: Release Required
+    runs-on: ubuntu-latest
+    needs: check
+    if: needs.check.outputs.needs_release == 'true'
+    steps:
+      - name: Warning
+        run: |
+          echo "::warning::Native changes detected! This push will NOT auto-patch."
+          echo "::warning::Create a version tag (v*) to trigger a full release."
+          echo ""
+          echo "Run: git tag v1.x.x && git push origin v1.x.x"
