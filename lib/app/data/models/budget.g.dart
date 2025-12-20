@@ -22,13 +22,14 @@ class BudgetAdapter extends TypeAdapter<Budget> {
       amount: (fields[2] as num).toDouble(),
       year: (fields[5] as num).toInt(),
       month: (fields[6] as num).toInt(),
+      rolloverEnabled: fields[7] == null ? false : fields[7] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Budget obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class BudgetAdapter extends TypeAdapter<Budget> {
       ..writeByte(5)
       ..write(obj.year)
       ..writeByte(6)
-      ..write(obj.month);
+      ..write(obj.month)
+      ..writeByte(7)
+      ..write(obj.rolloverEnabled);
   }
 
   @override
