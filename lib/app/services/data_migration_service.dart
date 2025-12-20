@@ -6,7 +6,8 @@ import 'package:koaa/app/data/models/savings_goal.dart';
 /// Data migration service for managing schema changes across app versions
 /// SECURITY: Handles migration of encrypted and unencrypted data safely
 class DataMigrationService {
-  static const int _currentSchemaVersion = 2; // Increment with each schema change
+  static const int _currentSchemaVersion =
+      2; // Increment with each schema change
   static const String _versionKey = 'schemaVersion';
   static const String _lastMigrationDateKey = 'lastMigrationDate';
 
@@ -15,10 +16,12 @@ class DataMigrationService {
   Future<void> runMigrations() async {
     try {
       final migrationBox = await Hive.openBox('migrationBox');
-      final lastSchemaVersion = migrationBox.get(_versionKey, defaultValue: 0) as int;
+      final lastSchemaVersion =
+          migrationBox.get(_versionKey, defaultValue: 0) as int;
 
       if (lastSchemaVersion < _currentSchemaVersion) {
-        debugPrint('Starting data migrations from version $lastSchemaVersion to $_currentSchemaVersion');
+        debugPrint(
+            'Starting data migrations from version $lastSchemaVersion to $_currentSchemaVersion');
 
         // Run migrations sequentially
         if (lastSchemaVersion < 1) {
@@ -31,9 +34,11 @@ class DataMigrationService {
 
         // Update schema version and migration timestamp
         await migrationBox.put(_versionKey, _currentSchemaVersion);
-        await migrationBox.put(_lastMigrationDateKey, DateTime.now().toIso8601String());
+        await migrationBox.put(
+            _lastMigrationDateKey, DateTime.now().toIso8601String());
 
-        debugPrint('Data migrations completed successfully. Current schema version: $_currentSchemaVersion');
+        debugPrint(
+            'Data migrations completed successfully. Current schema version: $_currentSchemaVersion');
       } else {
         debugPrint('Schema is up to date. No migrations needed.');
       }
@@ -70,18 +75,13 @@ class DataMigrationService {
       int migratedCount = 0;
       for (var oldGoal in savingsGoalBox.values) {
         try {
-          final newGoal = FinancialGoal(
-            id: oldGoal.id,
+          final newGoal = FinancialGoal.create(
             title: 'Objectif d\'épargne ${oldGoal.year}-${oldGoal.month}',
             description: 'Migré depuis l\'ancien objectif d\'épargne',
             targetAmount: oldGoal.targetAmount,
             currentAmount: 0.0,
             type: GoalType.savings,
             status: GoalStatus.active,
-            createdAt: DateTime(oldGoal.year, oldGoal.month, 1),
-            completedAt: null,
-            iconKey: null,
-            colorValue: null,
           );
           await financialGoalBox.put(newGoal.id, newGoal);
           migratedCount++;
@@ -91,7 +91,8 @@ class DataMigrationService {
         }
       }
 
-      debugPrint('Migration V0 to V1 completed: $migratedCount goals migrated.');
+      debugPrint(
+          'Migration V0 to V1 completed: $migratedCount goals migrated.');
     } catch (e) {
       debugPrint('Migration V0 to V1 failed: $e');
       rethrow;
@@ -132,7 +133,8 @@ class DataMigrationService {
       await settingsBox.put('dataEncrypted', true);
       await settingsBox.put('encryptionVersion', 1);
 
-      debugPrint('Migration V1 to V2 completed: Encryption verification successful.');
+      debugPrint(
+          'Migration V1 to V2 completed: Encryption verification successful.');
     } catch (e) {
       debugPrint('Migration V1 to V2 failed: $e');
       rethrow;
@@ -145,11 +147,11 @@ class DataMigrationService {
     try {
       final migrationBox = await Hive.openBox('migrationBox');
       await migrationBox.clear();
-      debugPrint('Schema version reset. App will re-run all migrations on next start.');
+      debugPrint(
+          'Schema version reset. App will re-run all migrations on next start.');
     } catch (e) {
       debugPrint('Failed to reset schema version: $e');
       rethrow;
     }
   }
 }
-
