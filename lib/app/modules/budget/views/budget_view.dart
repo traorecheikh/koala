@@ -97,6 +97,7 @@ class BudgetView extends GetView<BudgetController> {
     final formKey = GlobalKey<FormState>();
     final amountController = TextEditingController();
     Rx<Category?> selectedCategory = Rx<Category?>(null);
+    RxBool isRollover = false.obs;
 
     Get.bottomSheet(
       KoalaBottomSheet(
@@ -145,7 +146,8 @@ class BudgetView extends GetView<BudgetController> {
                               Container(
                                 padding: EdgeInsets.all(6.w),
                                 decoration: BoxDecoration(
-                                  color: Color(cat.colorValue).withValues(alpha: 0.2),
+                                  color: Color(cat.colorValue)
+                                      .withValues(alpha: 0.2),
                                   shape: BoxShape.circle,
                                 ),
                                 child: CategoryIcon(
@@ -186,6 +188,37 @@ class BudgetView extends GetView<BudgetController> {
                     return null;
                   },
                 ),
+                SizedBox(height: 24.h),
+                // Rollover Toggle
+                Obx(() => Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: KoalaColors.inputBackground(context),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: KoalaColors.border(context)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Reporter l\'excédent',
+                                  style: KoalaTypography.bodyMedium(context)),
+                              SizedBox(height: 4.h),
+                              Text('Ajouter le reste du mois dernier',
+                                  style: KoalaTypography.caption(context)),
+                            ],
+                          ),
+                          Switch.adaptive(
+                            value: isRollover.value,
+                            onChanged: (val) => isRollover.value = val,
+                            activeColor: KoalaColors.primaryUi(context),
+                          ),
+                        ],
+                      ),
+                    )),
                 SizedBox(height: 32.h),
                 SizedBox(
                   width: double.infinity,
@@ -197,6 +230,7 @@ class BudgetView extends GetView<BudgetController> {
                         controller.addBudget(
                           selectedCategory.value!.id,
                           double.parse(amountController.text),
+                          rolloverEnabled: isRollover.value,
                         );
                         NavigationHelper.safeBack();
                       }
@@ -439,7 +473,8 @@ class _GlobalBudgetCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              NumberFormat.compact(locale: 'fr_FR').format(totalSpent),
+                              NumberFormat.compact(locale: 'fr_FR')
+                                  .format(totalSpent),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 13.sp,
@@ -524,9 +559,13 @@ class _BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final budgetController = Get.find<BudgetController>();
     final spent = budgetController.getSpentAmount(budget.categoryId);
+    final rollover = budgetController.getRolloverAmount(
+        budget.categoryId, budget.year, budget.month);
+    final effectiveBudget = budget.amount + rollover;
+
     final percent =
-        budget.amount > 0 ? (spent / budget.amount).clamp(0.0, 1.0) : 0.0;
-    final remaining = budget.amount - spent;
+        effectiveBudget > 0 ? (spent / effectiveBudget).clamp(0.0, 1.0) : 0.0;
+    final remaining = effectiveBudget - spent;
     final budgetStatus = budgetController.getBudgetStatus(
         budget.categoryId, budget.year, budget.month);
 
@@ -617,22 +656,38 @@ class _BudgetCard extends StatelessWidget {
                       ),
                     ),
                     // Amount remaining
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: statusBgColor,
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Text(
-                        remaining >= 0
-                            ? '${_formatAmount(remaining)} F'
-                            : '-${_formatAmount(remaining.abs())} F',
-                        style: KoalaTypography.bodyMedium(context).copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.bold,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 10.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: statusBgColor,
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Text(
+                            remaining >= 0
+                                ? '${_formatAmount(remaining)} F'
+                                : '-${_formatAmount(remaining.abs())} F',
+                            style: KoalaTypography.bodyMedium(context).copyWith(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (rollover > 0)
+                          Padding(
+                            padding: EdgeInsets.only(top: 4.h),
+                            child: Text(
+                              '+${_formatAmount(rollover)} reportés',
+                              style: KoalaTypography.caption(context).copyWith(
+                                color: KoalaColors.textSecondary(context),
+                                fontSize: 10.sp,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
