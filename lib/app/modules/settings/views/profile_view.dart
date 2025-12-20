@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:intl/intl.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
@@ -437,10 +438,10 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     );
 
     // Save to Hive
-    final userBox = Hive.box<LocalUser>('userBox');
+    final user = IsarService.getUser();
     // Using key from original user if available, else 'currentUser' if we used a string key before
     // The previous code used 'currentUser' string key.
-    await userBox.put('currentUser', updatedUser);
+    await updatedUser.save();
 
     // update controller
     _homeController.user.value = updatedUser;
