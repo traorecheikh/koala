@@ -507,22 +507,37 @@ class _AddGoalViewState extends State<AddGoalView> {
       return;
     }
 
-    final newGoal = FinancialGoal(
-      id: widget.goalToEdit?.id,
-      title: titleController.text,
-      description: descriptionController.text.isNotEmpty
-          ? descriptionController.text
-          : null,
-      targetAmount: double.parse(amountController.text),
-      currentAmount: widget.goalToEdit?.currentAmount ?? 0.0,
-      type: selectedType,
-      status: widget.goalToEdit?.status ?? GoalStatus.active,
-      createdAt: widget.goalToEdit?.createdAt,
-      targetDate: selectedDate,
-      iconKey: selectedIcon,
-      colorValue: selectedColor.toARGB32(),
-      linkedCategoryId: selectedCategory?.id,
-    );
+    final FinancialGoal newGoal;
+
+    if (widget.goalToEdit != null) {
+      // Editing existing goal
+      newGoal = widget.goalToEdit!.copyWith(
+        title: titleController.text,
+        description: descriptionController.text.isNotEmpty
+            ? descriptionController.text
+            : null,
+        targetAmount: double.parse(amountController.text),
+        type: selectedType,
+        targetDate: selectedDate,
+        iconKey: selectedIcon,
+        colorValue: selectedColor.toARGB32(),
+        linkedCategoryId: selectedCategory?.id,
+      );
+    } else {
+      // Creating new goal
+      newGoal = FinancialGoal.create(
+        title: titleController.text,
+        description: descriptionController.text.isNotEmpty
+            ? descriptionController.text
+            : null,
+        targetAmount: double.parse(amountController.text),
+        type: selectedType,
+        targetDate: selectedDate,
+        iconKey: selectedIcon,
+        colorValue: selectedColor.toARGB32(),
+        linkedCategoryId: selectedCategory?.id,
+      );
+    }
 
     if (widget.goalToEdit != null) {
       await controller.updateGoal(newGoal);
