@@ -9,6 +9,7 @@ import 'package:koaa/app/core/theme.dart';
 import 'app/routes/app_pages.dart';
 
 import 'package:koaa/app/core/widgets/global_hero_background.dart';
+import 'package:accessibility_tools/accessibility_tools.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +44,10 @@ class KoalaApp extends StatelessWidget {
               initialRoute: Routes.splash,
               getPages: AppPages.routes,
               builder: (context, child) {
-                return GlobalHeroBackground(child: child ?? const SizedBox());
+                // Wrap with AccessibilityTools for dev-time checks
+                return AccessibilityTools(
+                  child: GlobalHeroBackground(child: child ?? const SizedBox()),
+                );
               },
             );
           },

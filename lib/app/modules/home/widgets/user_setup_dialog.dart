@@ -863,6 +863,7 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       amount: _selectedSalary,
       frequency: _selectedFrequency,
       paymentDate: _paymentDate,
+      createdAt: DateTime.now(), // Added missing required argument
       endDate: _getDurationEndDate(),
     );
 
@@ -1027,23 +1028,9 @@ class _UserSetupSheetState extends State<_UserSetupSheet> {
       );
     }).toList();
 
-    // TRY to load from Hive if available (better IDs for matching later)
-    try {
-      if (Hive.isBoxOpen('categoryBox')) {
-        final categoryBox = Hive.box<Category>('categoryBox');
-        if (categoryBox.isNotEmpty) {
-          final hiveCategories = categoryBox.values
-              .where((c) => c.type == TransactionType.expense)
-              .take(8)
-              .toList();
-          if (hiveCategories.isNotEmpty) {
-            expenseCategories = hiveCategories;
-          }
-        }
-      }
-    } catch (_) {
-      // Keep using hardcoded defaults
-    }
+    // Use hardcoded defaults for catch-up categories
+    // This allows us to map to accurate IDs for initial transactions
+    // without relying on legacy Hive boxes which may be empty.
 
     return Column(
       key: const ValueKey('catchUpStep'),

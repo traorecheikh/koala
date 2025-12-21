@@ -24,7 +24,9 @@ class PredictiveSpendingService {
     // 2. Filter transactions for this month and expenses only
     final thisMonthTransactions = transactions
         .where((t) =>
-            t.type == TransactionType.expense && !t.date.isBefore(monthStart))
+            t.type == TransactionType.expense &&
+            !t.date.isBefore(monthStart) &&
+            (t.linkedDebtId == null || t.linkedDebtId!.isEmpty))
         .toList();
 
     // 3. Analyze each budget

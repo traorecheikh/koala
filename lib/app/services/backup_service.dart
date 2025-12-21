@@ -16,6 +16,7 @@ import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/data/models/recurring_transaction.dart';
 import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:koaa/app/data/models/envelope.dart'; // Added import
 import 'package:koaa/app/services/isar_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:restart_app/restart_app.dart';
@@ -105,20 +106,30 @@ class BackupService extends GetxService {
 
   Future<Map<String, dynamic>> _gatherAllData() async {
     final transactions = await IsarService.getAllTransactions();
+    final user = IsarService.getUser();
+    final jobs = await IsarService.getAllJobs();
+    final recurring = await IsarService.getAllRecurringTransactions();
+    final savingsGoals = IsarService.getAllSavingsGoals(); // Sync
+    final budgets = await IsarService.getAllBudgets();
+    final debts = await IsarService.getAllDebts();
+    final goals = await IsarService.getAllGoals();
+    final categories = await IsarService.getAllCategories();
+    final envelopes = await IsarService.getAllEnvelopes(); // Sync
+
     return {
       'version': _backupVersion,
       'timestamp': DateTime.now().toIso8601String(),
       'boxes': {
-        'userBox': _boxToList<LocalUser>('userBox'),
+        'userBox': user != null ? [user.toJson()] : [],
         'transactionBox': transactions.map((e) => e.toJson()).toList(),
-        'recurringTransactionBox':
-            _boxToList<RecurringTransaction>('recurringTransactionBox'),
-        'jobBox': _boxToList<Job>('jobBox'),
-        'savingsGoalBox': _boxToList<SavingsGoal>('savingsGoalBox'),
-        'budgetBox': _boxToList<Budget>('budgetBox'),
-        'debtBox': _boxToList<Debt>('debtBox'),
-        'financialGoalBox': _boxToList<FinancialGoal>('financialGoalBox'),
-        'categoryBox': _boxToList<koala_category.Category>('categoryBox'),
+        'recurringTransactionBox': recurring.map((e) => e.toJson()).toList(),
+        'jobBox': jobs.map((e) => _jobToJson(e)).toList(),
+        'savingsGoalBox': savingsGoals.map((e) => e.toJson()).toList(),
+        'budgetBox': budgets.map((e) => e.toJson()).toList(),
+        'debtBox': debts.map((e) => e.toJson()).toList(),
+        'financialGoalBox': goals.map((e) => e.toJson()).toList(),
+        'categoryBox': categories.map((e) => _categoryToJson(e)).toList(),
+        'envelopeBox': envelopes.map((e) => e.toJson()).toList(),
         'userChallengeBox': _boxToList<UserChallenge>('userChallengeBox'),
         'userBadgeBox': _boxToList<UserBadge>('userBadgeBox'),
         'settings': _serializeSettings(),
@@ -210,11 +221,16 @@ class BackupService extends GetxService {
   Future<void> _wipeAndRestore(Map<String, dynamic> data) async {
     final boxesData = data['boxes'] as Map<String, dynamic>;
 
-    // Clear and restore each box
-    await _restoreBox<LocalUser>(
-        'userBox', boxesData['userBox'], (json) => LocalUser.fromJson(json));
+    // 1. User
+    if (boxesData['userBox'] != null) {
+      final list = boxesData['userBox'] as List;
+      if (list.isNotEmpty) {
+        final user = LocalUser.fromJson(list.first);
+        await IsarService.saveUser(user);
+      }
+    }
 
-    // Restore Isar transactions
+    // 2. Transactions
     if (boxesData['transactionBox'] != null) {
       final list = boxesData['transactionBox'] as List;
       final txs = list.map((e) => LocalTransaction.fromJson(e)).toList();
@@ -222,11 +238,77 @@ class BackupService extends GetxService {
       IsarService.addTransactions(txs);
     }
 
-    await _restoreBox<RecurringTransaction>(
-        'recurringTransactionBox',
-        boxesData['recurringTransactionBox'],
-        (json) => RecurringTransaction.fromJson(json));
-    // ... add others ...
+    // 3. Jobs
+    if (boxesData['jobBox'] != null) {
+      final list = boxesData['jobBox'] as List;
+      final jobs = list.map((e) => _jobFromJson(e)).toList();
+      IsarService.clearJobs();
+      IsarService.addJobs(jobs);
+    }
+
+    // 4. Recurring
+    if (boxesData['recurringTransactionBox'] != null) {
+      final list = boxesData['recurringTransactionBox'] as List;
+      final recs = list.map((e) => RecurringTransaction.fromJson(e)).toList();
+      IsarService.clearRecurringTransactions();
+      IsarService.addRecurringTransactions(recs);
+    }
+
+    // 5. Budgets
+    if (boxesData['budgetBox'] != null) {
+      final list = boxesData['budgetBox'] as List;
+      final items = list.map((e) => _budgetFromJson(e)).toList();
+      IsarService.clearBudgets();
+      IsarService.addBudgets(items);
+    }
+
+    // 6. Debts
+    if (boxesData['debtBox'] != null) {
+      final list = boxesData['debtBox'] as List;
+      final items = list.map((e) => _debtFromJson(e)).toList();
+      IsarService.clearDebts();
+      IsarService.addDebts(items);
+    }
+
+    // 7. Goals
+    if (boxesData['financialGoalBox'] != null) {
+      final list = boxesData['financialGoalBox'] as List;
+      final items = list.map((e) => _financialGoalFromJson(e)).toList();
+      IsarService.clearGoals();
+      IsarService.addGoals(items);
+    }
+
+    // 8. Categories
+    if (boxesData['categoryBox'] != null) {
+      final list = boxesData['categoryBox'] as List;
+      final items = list.map((e) => _categoryFromJson(e)).toList();
+      IsarService.clearCategories();
+      IsarService.addCategories(items);
+    }
+
+    // 9. Savings Goals (Legacy or New)
+    if (boxesData['savingsGoalBox'] != null) {
+      final list = boxesData['savingsGoalBox'] as List;
+      final items = list.map((e) => _savingsGoalFromJson(e)).toList();
+      await IsarService.clearSavingsGoals();
+      IsarService.addSavingsGoals(items);
+    }
+
+    // 10. Envelopes
+    if (boxesData['envelopeBox'] != null) {
+      final list = boxesData['envelopeBox'] as List;
+      final items = list.map((e) => _envelopeFromJson(e)).toList();
+      IsarService
+          .clearEnvelopes(); // Need to ensure this exists or addEnvelopes handles it
+      IsarService.addEnvelopes(items);
+    }
+
+    // 11. Legacy Achievements (Hive)
+    await _restoreBox<UserChallenge>('userChallengeBox',
+        boxesData['userChallengeBox'], (json) => _userChallengeFromJson(json));
+
+    await _restoreBox<UserBadge>('userBadgeBox', boxesData['userBadgeBox'],
+        (json) => _userBadgeFromJson(json));
 
     // Settings
     if (boxesData.containsKey('settings')) {
@@ -283,5 +365,190 @@ class BackupService extends GetxService {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
     return encrypt.Key(Uint8List.fromList(digest.bytes));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Serialization Helpers
+  // ---------------------------------------------------------------------------
+
+  Map<String, dynamic> _jobToJson(Job job) {
+    return {
+      'id': job.id,
+      'name': job.name,
+      'amount': job.amount,
+      'frequency': job.frequency.toString().split('.').last,
+      'paymentDate': job.paymentDate.toIso8601String(),
+      'isActive': job.isActive,
+      'createdAt': job.createdAt.toIso8601String(), // Added createdAt to export
+      'endDate': job.endDate?.toIso8601String(),
+    };
+  }
+
+  Job _jobFromJson(Map<String, dynamic> json) {
+    return Job(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      frequency: PaymentFrequency.values
+          .firstWhere((e) => e.toString().split('.').last == json['frequency']),
+      paymentDate: DateTime.parse(json['paymentDate'] as String),
+      isActive: json['isActive'] as bool,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(), // Fixed missing createdAt
+      endDate: json['endDate'] != null
+          ? DateTime.parse(json['endDate'] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> _categoryToJson(koala_category.Category cat) {
+    return {
+      'id': cat.id,
+      'name': cat.name,
+      'icon': cat.icon,
+      'colorValue': cat.colorValue,
+      'type': cat.type.toString().split('.').last,
+      'isDefault': cat.isDefault,
+    };
+  }
+
+  koala_category.Category _categoryFromJson(Map<String, dynamic> json) {
+    return koala_category.Category(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      icon: json['icon'] as String,
+      colorValue: json['colorValue'] as int,
+      type: TransactionType.values
+          .firstWhere((e) => e.toString().split('.').last == json['type']),
+      isDefault: json['isDefault'] as bool? ?? false,
+    );
+  }
+
+  Budget _budgetFromJson(Map<String, dynamic> json) {
+    return Budget(
+      id: json['id'] as String,
+      categoryId: json['categoryId'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      year: json['year'] as int,
+      month: json['month'] as int,
+      rolloverEnabled: json['rolloverEnabled'] as bool? ?? false,
+    );
+  }
+
+  Debt _debtFromJson(Map<String, dynamic> json) {
+    return Debt(
+      id: json['id'] as String,
+      personName: json['personName'] as String,
+      originalAmount: (json['originalAmount'] as num).toDouble(),
+      remainingAmount: (json['remainingAmount'] as num).toDouble(),
+      type: DebtType.values
+          .firstWhere((e) => e.toString().split('.').last == json['type']),
+      dueDate: json['dueDate'] != null
+          ? DateTime.parse(json['dueDate'] as String)
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      transactionIds: (json['transactionIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      minPayment: (json['minPayment'] as num?)?.toDouble() ?? 0.0,
+      dueDayOfMonth: json['dueDayOfMonth'] as int?,
+    );
+  }
+
+  FinancialGoal _financialGoalFromJson(Map<String, dynamic> json) {
+    return FinancialGoal(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      targetAmount: (json['targetAmount'] as num).toDouble(),
+      currentAmount: (json['currentAmount'] as num?)?.toDouble() ?? 0.0,
+      type: GoalType.values.firstWhere(
+          (e) => e.toString().split('.').last == json['type'],
+          orElse: () => GoalType.savings),
+      status: GoalStatus.values.firstWhere(
+          (e) => e.toString().split('.').last == json['status'],
+          orElse: () => GoalStatus.active),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      targetDate: json['targetDate'] != null
+          ? DateTime.parse(json['targetDate'] as String)
+          : null,
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'] as String)
+          : null,
+      linkedDebtId: json['linkedDebtId'] as String?,
+      linkedCategoryId: json['linkedCategoryId'] as String?,
+      milestones: (json['milestones'] as List<dynamic>?)
+          ?.map((e) => _goalMilestoneFromJson(e))
+          .toList(),
+      iconKey: json['iconKey'] as int?,
+      colorValue: json['colorValue'] as int?,
+    );
+  }
+
+  GoalMilestone _goalMilestoneFromJson(dynamic json) {
+    final map = json as Map<String, dynamic>;
+    return GoalMilestone(
+      id: map['id'] as String?,
+      title: map['title'] as String,
+      targetAmount: (map['targetAmount'] as num).toDouble(),
+      isCompleted: map['isCompleted'] as bool? ?? false,
+      completedAt: map['completedAt'] != null
+          ? DateTime.parse(map['completedAt'] as String)
+          : null,
+    );
+  }
+
+  SavingsGoal _savingsGoalFromJson(Map<String, dynamic> json) {
+    return SavingsGoal(
+      id: json['id'] as String,
+      targetAmount: (json['targetAmount'] as num).toDouble(),
+      year: json['year'] as int,
+      month: json['month'] as int,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+
+  Envelope _envelopeFromJson(Map<String, dynamic> json) {
+    return Envelope(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      targetAmount: (json['targetAmount'] as num).toDouble(),
+      currentAmount: (json['currentAmount'] as num).toDouble(),
+      icon: json['icon'] as String?,
+      color: json['color'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      targetDate: json['targetDate'] != null
+          ? DateTime.parse(json['targetDate'] as String)
+          : null,
+    );
+  }
+
+  UserChallenge _userChallengeFromJson(Map<String, dynamic> json) {
+    return UserChallenge(
+      id: json['id'] as String?,
+      challengeId: json['challengeId'] as String,
+      startedAt: DateTime.parse(json['startedAt'] as String),
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'] as String)
+          : null,
+      currentProgress: json['currentProgress'] as int? ?? 0,
+      isActive: json['isActive'] as bool? ?? true,
+      isFailed: json['isFailed'] as bool? ?? false,
+    );
+  }
+
+  UserBadge _userBadgeFromJson(Map<String, dynamic> json) {
+    return UserBadge(
+      id: json['id'] as String?,
+      badgeId: json['badgeId'] as String,
+      earnedAt: json['earnedAt'] != null
+          ? DateTime.parse(json['earnedAt'] as String)
+          : null,
+      challengeId: json['challengeId'] as String?,
+    );
   }
 }

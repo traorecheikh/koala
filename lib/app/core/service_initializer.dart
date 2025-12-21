@@ -165,6 +165,15 @@ class ServiceInitializer {
     await _migrateLocalUserToIsar();
     await _migrateEnvelopesToIsar();
 
+    // Rescue categories (V8) - Fixes "Other" transactions using new keyword intelligence
+    await _fixBrokenCategories_v8();
+
+    // Rescue Custom Categories (V9) - Fixes "Zombie" categories with correct names but wrong icons
+    await _fixBrokenCustomCategories_v9();
+
+    // Rescue V10 - Aggressive fix with Debugging
+    await _fixBrokenCategories_v10_debug();
+
     // Rescue data from legacy DB (koala_isar) to current (koala_isar_v5)
     await _rescueLegacyData();
   }
@@ -349,6 +358,162 @@ class ServiceInitializer {
       }
     } catch (e) {
       debugPrint('[Migration] ❌ Rattrapage fix failed: $e');
+    }
+  }
+
+  /// V8 Migration (Revised): Fix broken categories using keyword intelligence & case-insensitive matching
+  /// Many imported transactions are stuck as "Other" because of migration gaps
+  static Future<void> _fixBrokenCategories_v8() async {
+    // UPDATED KEY to force re-run for users who already ran the buggy version
+    final done = await _secureStorage.read(key: 'category_rescue_v8_revised');
+    if (done == 'true') return;
+
+    try {
+      debugPrint('[Migration] Starting V8 Category Rescue...');
+      final allTx = await IsarService.getAllTransactions();
+      int fixed = 0;
+
+      // Local keyword map (duplicated from ContextualBrain for safety during migration)
+      final keywordMap = {
+        // Food
+        'mcdo': 'food', 'kfc': 'food', 'burger': 'food', 'pizza': 'food',
+        'sushi': 'food', 'resto': 'food', 'uber eats': 'food', 'glovo': 'food',
+        'boulangerie': 'food', 'pain': 'food', 'café': 'food',
+        'starbucks': 'food',
+        // Transport
+        'uber': 'transport', 'bolt': 'transport', 'yango': 'transport',
+        'taxi': 'transport', 'essence': 'transport', 'total': 'transport',
+        'shell': 'transport', 'parking': 'transport', 'peage': 'transport',
+        // Shopping
+        'amazon': 'shopping', 'zara': 'shopping', 'h&m': 'shopping',
+        'nike': 'shopping', 'adidas': 'shopping', 'jumbo': 'shopping',
+        'carrefour': 'groceries', 'auchan': 'groceries', 'clerc': 'groceries',
+        'lidl': 'groceries', 'supermarché': 'groceries',
+        // Bills
+        'orange': 'bills', 'mtn': 'bills', 'moov': 'bills', 'canal': 'bills',
+        'netflix': 'subscriptions', 'spotify': 'subscriptions',
+        'apple': 'subscriptions', 'google': 'subscriptions',
+        'cie': 'bills', 'sodeci': 'bills', 'loyer': 'rent',
+        // Health
+        'pharmacie': 'health', 'docteur': 'health', 'hopital': 'health',
+        'clinique': 'health',
+      };
+
+      for (final tx in allTx) {
+        // Only target transactions that are "Other"
+        if (tx.category == TransactionCategory.otherExpense ||
+            tx.category == TransactionCategory.otherIncome) {
+          bool needsUpdate = false;
+          String? newCategoryId;
+
+          // 1. Try to find match from description keywords
+          final lowerDesc = tx.description.toLowerCase();
+          for (final entry in keywordMap.entries) {
+            if (lowerDesc.contains(entry.key)) {
+              newCategoryId = entry.value;
+              break;
+            }
+          }
+
+          // 2. If no keyword match, check if there's already a valid categoryId
+          // that just isn't reflected in the Enum
+          if (newCategoryId == null &&
+              tx.categoryId != null &&
+              tx.categoryId!.isNotEmpty) {
+            // If categoryId matches a known enum name (e.g. 'food'), use it
+            // This fixes cases where ID is correct but Enum is default
+            newCategoryId = tx.categoryId;
+          }
+
+          if (newCategoryId != null) {
+            try {
+              // Try to map string ID -> Enum
+              // This relies on simple name matching (e.g. 'transport' -> TransactionCategory.transport)
+              // But displayName is distinct. We need to match by name or look up.
+              // TransactionCategory.values.byName is case sensitive.
+
+              final newEnum = TransactionCategory.values.firstWhere(
+                (e) =>
+                    e.iconKey.toLowerCase() == newCategoryId!.toLowerCase() ||
+                    e.name.toLowerCase() == newCategoryId.toLowerCase() ||
+                    e.displayName.toLowerCase() == newCategoryId.toLowerCase(),
+                orElse: () => tx.category,
+              );
+
+              if (newEnum != tx.category) {
+                tx.category = newEnum;
+                // Standardize categoryId to the enum name (e.g. "transport") instead of "Transport"
+                tx.categoryId = newEnum.name;
+                needsUpdate = true;
+                fixed++;
+              }
+            } catch (e) {
+              // Ignore mapping errors
+            }
+          }
+
+          if (needsUpdate) {
+            IsarService.updateTransaction(tx);
+          }
+        }
+      }
+
+      await _secureStorage.write(
+          key: 'category_rescue_v8_revised', value: 'true');
+      if (fixed > 0) {
+        debugPrint('[Migration] ✅ V8 Rescue fixed $fixed transactions!');
+      } else {
+        debugPrint('[Migration] V8 Rescue found no transactions to fix.');
+      }
+    } catch (e) {
+      debugPrint('[Migration] ❌ V8 Category Rescue failed: $e');
+    }
+  }
+
+  /// V9 Migration: Fix Custom Categories that replicate standard ones but have wrong icons
+  /// E.g. A category named "Transport" but with 'other' icon.
+  static Future<void> _fixBrokenCustomCategories_v9() async {
+    final done = await _secureStorage.read(key: 'category_rescue_v9');
+    if (done == 'true') return;
+
+    try {
+      debugPrint('[Migration] Starting V9 Custom Category Rescue...');
+      final allCats = await IsarService.getAllCategories();
+      int fixed = 0;
+
+      for (final cat in allCats) {
+        // Check if this custom category name matches a standard one
+        final standardEnum = TransactionCategory.values.firstWhereOrNull((e) =>
+            e.name.toLowerCase() == cat.name.toLowerCase() ||
+            e.displayName.toLowerCase() == cat.name.toLowerCase());
+
+        if (standardEnum != null) {
+          // It's a duplicate of a standard category. Check if icon is wrong.
+          if (cat.icon != standardEnum.iconKey) {
+            // Fix the icon
+            cat.icon = standardEnum.iconKey;
+
+            // Also ensure type matches
+            // (e.g. if it was income but matched an expense name, though unlikely)
+            // cat.type = standardEnum.isIncome ? TransactionType.income : TransactionType.expense;
+
+            IsarService.updateCategory(cat);
+            fixed++;
+            debugPrint(
+                '[Migration] Fixed Category: ${cat.name} (icon: ${cat.icon})');
+          }
+        }
+      }
+
+      await _secureStorage.write(key: 'category_rescue_v9', value: 'true');
+      if (fixed > 0) {
+        debugPrint('[Migration] ✅ V9 Category Rescue fixed $fixed categories!');
+      } else {
+        debugPrint(
+            '[Migration] V9 Category Rescue found no broken categories.');
+      }
+    } catch (e) {
+      debugPrint('[Migration] ❌ V9 Category Rescue failed: $e');
     }
   }
 
@@ -877,6 +1042,90 @@ class ServiceInitializer {
             'Critical: Failed to open box "$name" even without encryption: $e2');
         rethrow;
       }
+    }
+  }
+
+  /// V10 Rescue: Aggressive fix with detailed logging to diagnose why V8/V9 passed
+  static Future<void> _fixBrokenCategories_v10_debug() async {
+    final done = await _secureStorage.read(key: 'category_rescue_v10');
+    if (done == 'true') return;
+
+    try {
+      debugPrint('[Migration] Starting V10 Aggressive Rescue...');
+      final allTx = await IsarService.getAllTransactions();
+      int fixed = 0;
+      int checked = 0;
+
+      for (final tx in allTx) {
+        checked++;
+        bool needsUpdate = false;
+
+        // DEBUG: Print first 3 "Transport" transactions to see their state
+        if (tx.description.toLowerCase().trim() == 'transport' &&
+            checked < 1000) {
+          debugPrint('[Migration DEBUG] Found Transport TX: ${tx.id}');
+          debugPrint('  - Category Enum: ${tx.category}');
+          debugPrint('  - Category ID: ${tx.categoryId}');
+        }
+
+        String? targetName;
+
+        // Strategy: Match Description OR CategoryID against Standard Names
+        // This bypasses the "Other" check in case they are set to something weird
+        final desc = tx.description.toLowerCase().trim();
+        final catId = tx.categoryId?.toLowerCase().trim() ?? '';
+
+        // Explicit Hardcoded Fixes for common legacy names seen in screenshot
+        if (desc == 'transport' || catId == 'transport')
+          targetName = 'transport';
+        else if (desc == 'divertissement' || catId == 'divertissement')
+          targetName = 'entertainment';
+        else if (desc == 'salaire' || catId == 'salaire')
+          targetName = 'salary';
+        else if (desc == 'courses' || catId == 'courses')
+          targetName = 'groceries';
+        else {
+          // Generic fallback: check if description matches any known category displayName or name explicitly
+          final match = TransactionCategory.values.firstWhereOrNull((e) =>
+              e.displayName.toLowerCase() == desc ||
+              e.name.toLowerCase() == desc);
+          if (match != null) targetName = match.name;
+        }
+
+        if (targetName != null) {
+          final newEnum = TransactionCategory.values
+              .firstWhereOrNull((e) => e.name == targetName);
+
+          // If we found a target, AND the current state is not reflecting it
+          if (newEnum != null) {
+            if (tx.category != newEnum) {
+              debugPrint(
+                  '[Migration] FIXING ${tx.description} (was ${tx.category}) -> ${newEnum}');
+              tx.category = newEnum;
+              tx.categoryId = newEnum.name; // enforce standard ID
+              needsUpdate = true;
+              fixed++;
+            } else if (tx.categoryId != newEnum.name) {
+              // Fix ID consistency even if Enum is right
+              debugPrint(
+                  '[Migration] FIXING ID for ${tx.description} (was ${tx.categoryId}) -> ${newEnum.name}');
+              tx.categoryId = newEnum.name;
+              needsUpdate = true;
+              fixed++;
+            }
+          }
+        }
+
+        if (needsUpdate) {
+          IsarService.updateTransaction(tx);
+        }
+      }
+
+      await _secureStorage.write(key: 'category_rescue_v10', value: 'true');
+      debugPrint(
+          '[Migration] ✅ V10 Rescue checked $checked, fixed $fixed transactions.');
+    } catch (e) {
+      debugPrint('[Migration] ❌ V10 Rescue failed: $e');
     }
   }
 }

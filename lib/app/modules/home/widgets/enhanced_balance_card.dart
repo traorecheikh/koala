@@ -323,30 +323,38 @@ class _FrontCard extends GetView<HomeController> {
               }),
         Row(
           children: [
-            GestureDetector(
-              onTap: () {
-                if (!isPreview) {
-                  HapticFeedback.lightImpact();
-                  controller.toggleBalanceVisibility();
-                }
-              },
-              child: isPreview
-                  ? Icon(
-                      CupertinoIcons.eye_fill,
-                      size: 24,
-                      color: subTextColor,
-                    )
-                  : Obx(
-                      () => Icon(
-                        controller.balanceVisible.value
-                            ? CupertinoIcons.eye_slash_fill
-                            : CupertinoIcons.eye_fill,
-                        size: 24,
-                        color: subTextColor,
-                      ),
-                    ),
+            Semantics(
+              label: 'Masquer ou afficher le solde',
+              button: true,
+              child: GestureDetector(
+                onTap: () {
+                  if (!isPreview) {
+                    HapticFeedback.lightImpact();
+                    controller.toggleBalanceVisibility();
+                  }
+                },
+                child: Container(
+                  color: Colors.transparent,
+                  padding: EdgeInsets.all(12.w),
+                  child: isPreview
+                      ? Icon(
+                          CupertinoIcons.eye_fill,
+                          size: 24,
+                          color: subTextColor,
+                        )
+                      : Obx(
+                          () => Icon(
+                            controller.balanceVisible.value
+                                ? CupertinoIcons.eye_slash_fill
+                                : CupertinoIcons.eye_fill,
+                            size: 24,
+                            color: subTextColor,
+                          ),
+                        ),
+                ),
+              ),
             ),
-            SizedBox(width: 12.w),
+            SizedBox(width: 0.w), // Adjusted spacing due to padding
             Icon(
               CupertinoIcons.arrow_2_circlepath,
               size: 20.sp,

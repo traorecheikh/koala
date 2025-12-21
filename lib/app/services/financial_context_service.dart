@@ -234,10 +234,22 @@ class FinancialContextService extends GetxService {
               isValidRepayment = tx.type == TransactionType.expense;
             }
 
-            // Log unexpected types
+            // Log unexpected types ONLY if it's not the funding transaction
             if (!isValidRepayment && tx.linkedDebtId == debt.id) {
-              _logger.w('Unexpected transaction type for debt repayment: '
-                  'Debt type: ${debt.type}, TX type: ${tx.type}, TX: $tx');
+              // A borrowed debt might have an INCOME transaction associated with it (the loan reception).
+              // A lent debt might have an EXPENSE transaction associated with it (the loan issuance).
+              // We should only warn if it's something truly weird (like transfer?) or purely just skip it silently.
+
+              // Check if it's the funding transaction (opposite of repayment)
+              bool isFunding = (debt.type == DebtType.borrowed &&
+                      tx.type == TransactionType.income) ||
+                  (debt.type == DebtType.lent &&
+                      tx.type == TransactionType.expense);
+
+              if (!isFunding) {
+                _logger.w('Unexpected transaction type for debt repayment: '
+                    'Debt type: ${debt.type}, TX type: ${tx.type}, TX: ${tx.id}');
+              }
             }
 
             if (isValidRepayment) {
@@ -312,7 +324,8 @@ class FinancialContextService extends GetxService {
         .where((tx) =>
             tx.type == TransactionType.income &&
             !tx.date.isBefore(startOfMonth) &&
-            tx.date.isBefore(endOfMonth))
+            tx.date.isBefore(endOfMonth) &&
+            (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
     // Expenses from transactions (include first day of month!)
@@ -320,7 +333,8 @@ class FinancialContextService extends GetxService {
         .where((tx) =>
             tx.type == TransactionType.expense &&
             !tx.date.isBefore(startOfMonth) &&
-            tx.date.isBefore(endOfMonth))
+            tx.date.isBefore(endOfMonth) &&
+            (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
     totalMonthlyIncome.value = income;
@@ -372,14 +386,16 @@ class FinancialContextService extends GetxService {
           .where((tx) =>
               tx.type == TransactionType.income &&
               tx.date.isAfter(start) &&
-              tx.date.isBefore(end))
+              tx.date.isBefore(end) &&
+              (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
           .fold(0.0, (sum, tx) => sum + tx.amount);
 
       final monthExpenses = allTransactions
           .where((tx) =>
               tx.type == TransactionType.expense &&
               tx.date.isAfter(start) &&
-              tx.date.isBefore(end))
+              tx.date.isBefore(end) &&
+              (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
           .fold(0.0, (sum, tx) => sum + tx.amount);
 
       // Only count months that have activity

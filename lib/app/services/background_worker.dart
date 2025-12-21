@@ -3,10 +3,7 @@ import 'package:flutter/material.dart'; // Needed for WidgetsFlutterBinding.ensu
 import 'package:hive_ce/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:koaa/app/data/models/local_transaction.dart'; // Import models
-import 'package:koaa/app/data/models/recurring_transaction.dart';
-import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/hive_registrar.g.dart'; // Import generated Hive adapters
-import 'package:koaa/app/services/encryption_service.dart'; // Import encryption service
 import 'package:koaa/app/services/notification_service.dart'; // NEW: Import NotificationService
 import 'package:koaa/app/services/intelligence/intelligence_service.dart'; // Import for ProactiveAlert logic
 import 'package:koaa/app/services/isar_service.dart';
@@ -37,22 +34,16 @@ void callbackDispatcher() {
       Hive.init(appDocDir.path);
       Hive.registerAdapters(); // Register all adapters from hive_registrar.g.dart
 
-      // 3. Initialize EncryptionService and get cipher
-      final EncryptionService encryptionService = EncryptionService();
-      final List<int> encryptionKey =
-          await encryptionService.getEncryptionKey();
-      final HiveAesCipher hiveCipher = HiveAesCipher(encryptionKey);
+      // 3. Initialize EncryptionService (Settings/Insights are unencrypted or handle it internally?
+      // Actually settingsBox is usually unencrypted. Insights might be too.
+      // If we don't need cipher for budget/recurring, we might not need it at all here
+      // unless settings/insights need it. Based on service_initializer, settings is openBox('settingsBox') (no cipher).
+      // So removing cipher is safe.
 
       // Initialize Isar for background isolate
       await IsarService.init();
 
-      // 4. Open encrypted boxes required by background tasks
-      // Removed transactionBox as we use Isar
-      final Box<Budget> budgetBox =
-          await Hive.openBox<Budget>('budgetBox', encryptionCipher: hiveCipher);
-      final Box<RecurringTransaction> recurringTransactionBox =
-          await Hive.openBox<RecurringTransaction>('recurringTransactionBox',
-              encryptionCipher: hiveCipher);
+      // 4. Open boxes required by background tasks
       final Box settingsBox =
           await Hive.openBox('settingsBox'); // Needed for welcomeShown flag
       final Box insightsBox = await Hive.openBox('insightsBox',
@@ -97,12 +88,14 @@ void callbackDispatcher() {
 
           final txCount = await IsarService.getTransactionCount();
           logger.d("Transaction count: $txCount");
-          logger.d("Budget count: ${budgetBox.length}");
-          logger.d(
-              "Recurring transaction count: ${recurringTransactionBox.length}");
+
+          final budgets = await IsarService.getAllBudgets();
+          final recurring = await IsarService.getAllRecurringTransactions();
+
+          logger.d("Budget count: ${budgets.length}");
+          logger.d("Recurring transaction count: ${recurring.length}");
 
           // Logic from previous _runDailyCheck, adapted:
-          final budgets = budgetBox.values.toList();
           final transactions = await IsarService.getAllTransactions();
           final now = DateTime.now();
           final startOfMonth = DateTime(now.year, now.month, 1);

@@ -11,6 +11,7 @@ import 'package:koaa/app/core/design_system.dart';
 import 'package:koaa/app/services/ml/smart_financial_brain.dart';
 import 'package:koaa/app/data/models/ml/financial_intelligence.dart';
 import 'package:koaa/app/services/intelligence/intelligence_service.dart';
+import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/routes/app_pages.dart';
 import 'package:koaa/app/modules/settings/controllers/categories_controller.dart';
@@ -22,9 +23,20 @@ class IntelligenceView extends StatelessWidget {
   String _getCategoryName(String categoryId) {
     try {
       final controller = Get.find<CategoriesController>();
+
+      // 1. Try Custom Category
       final category =
           controller.categories.firstWhereOrNull((c) => c.id == categoryId);
-      return category?.name ?? 'Autre';
+      if (category != null) return category.name;
+
+      // 2. Try Standard Enum Name (V8/V10 fixes set categoryId = enum.name)
+      final standardEnum = TransactionCategory.values.firstWhereOrNull((e) =>
+          e.name.toLowerCase() == categoryId.toLowerCase() ||
+          e.displayName.toLowerCase() == categoryId.toLowerCase());
+
+      if (standardEnum != null) return standardEnum.displayName;
+
+      return 'Autre';
     } catch (e) {
       return 'Autre';
     }

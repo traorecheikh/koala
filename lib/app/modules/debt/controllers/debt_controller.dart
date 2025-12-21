@@ -40,7 +40,6 @@ class DebtController extends GetxController {
     DateTime? dueDate,
     double? minPayment,
   }) async {
-
     final debtId = const Uuid().v4();
     final debt = Debt(
       id: debtId,
@@ -122,6 +121,12 @@ class DebtController extends GetxController {
     if (updatedDebt.remainingAmount <= 0) {
       _financialEventsService.emitDebtPaidOff(updatedDebt);
     }
+  }
+
+  /// Instantly settle the entire debt amount
+  Future<void> settleDebt(Debt debt) async {
+    if (debt.remainingAmount <= 0) return;
+    await recordRepayment(debt, debt.remainingAmount);
   }
 
   // --- New Methods for Enhanced Integration ---

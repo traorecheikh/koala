@@ -63,6 +63,9 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       _amountFocusNode.requestFocus();
       _checkContextualPrediction();
       _applyInitialCategory();
+
+      // Listen for description changes to trigger auto-categorization
+      _descriptionController.addListener(_onDescriptionChanged);
     });
   }
 
@@ -92,6 +95,30 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     super.dispose();
   }
 
+  void _onDescriptionChanged() {
+    // Basic debounce manually or just check on every char (lightweight map lookup)
+    final text = _descriptionController.text;
+    if (text.length > 2) {
+      final brain = Get.find<ContextualBrain>();
+      final prediction = brain.predictByDescription(text);
+      if (prediction != null) {
+        // Only override if user hasn't explicitly picked one?
+        // Or always override for "smartness"?
+        // Let's override only if current is null or "Other" to be safe?
+        // Actually, if I type "Uber", I definitely equal "Transport".
+
+        // Auto-select
+        setState(() {
+          _prediction = prediction;
+          _showSparkle = true;
+          // Only show sparkle if confidence high
+        });
+
+        _applyPrediction(prediction, updateAmount: false);
+      }
+    }
+  }
+
   Future<void> _checkContextualPrediction() async {
     if (widget.type != TransactionType.expense) return;
 
@@ -114,18 +141,28 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
     }
   }
 
-  void _applyPrediction(ContextualPrediction prediction) {
+  void _applyPrediction(ContextualPrediction prediction,
+      {bool updateAmount = true}) {
     final financialContext = Get.find<FinancialContextService>();
-    final category = financialContext.allCategories
+    // Match by ID (preferred) or IconKey (fallback)
+    Category? category = financialContext.allCategories
         .firstWhereOrNull((c) => c.id == prediction.categoryId);
+
+    // Fallback: finding by iconKey (since keywordMap uses icon identifiers like 'food')
+    if (category == null) {
+      category = financialContext.allCategories
+          .firstWhereOrNull((c) => c.icon == prediction.categoryId);
+    }
 
     if (category != null) {
       setState(() {
         _selectedCategory = category;
-        _amountController.text =
-            _formatAmount(prediction.amount.toInt().toString());
+        if (updateAmount && prediction.amount > 0) {
+          _amountController.text =
+              _formatAmount(prediction.amount.toInt().toString());
+        }
       });
-      HapticFeedback.mediumImpact();
+      if (updateAmount) HapticFeedback.mediumImpact();
     }
   }
 

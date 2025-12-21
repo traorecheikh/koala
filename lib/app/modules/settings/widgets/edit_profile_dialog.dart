@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart'; // Added Hive import
+import 'package:koaa/app/services/isar_service.dart'; // Added IsarService import
 import 'package:koaa/app/data/models/local_user.dart';
 import 'package:koaa/app/modules/home/controllers/home_controller.dart';
 import 'package:koaa/app/core/utils/navigation_helper.dart';
@@ -67,6 +67,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       final currentUser = _homeController.user.value;
 
       final updatedUser = LocalUser(
+        id: currentUser?.id ?? '', // Preserve ID
         fullName: _fullNameController.text,
         salary: double.parse(_salaryController.text),
         payday: int.parse(_paydayController.text),
@@ -77,7 +78,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       );
 
       // Using IsarService
-      await userBox.put('currentUser', updatedUser);
+      IsarService.saveUser(updatedUser);
 
       _homeController.user.value = updatedUser;
 

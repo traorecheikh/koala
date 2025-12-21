@@ -86,6 +86,7 @@ class FinancialHealthScorer {
     // ═══════════════════════════════════════════════════════════════════
     // 4. LENDING RISK (NEW - 5%) - Money you lent that might not come back
     // ═══════════════════════════════════════════════════════════════════
+
     final lendingResult = _calculateLendingRisk(context, monthlyIncome);
     _logger.d(
         'Lending Risk Score: ${lendingResult.score} (Lent: ${lendingResult.totalLent} FCFA)');
@@ -95,6 +96,7 @@ class FinancialHealthScorer {
       weight: 0.05,
       description: lendingResult.description,
     ));
+    
     totalScore += lendingResult.score * 0.05;
     if (lendingResult.penalty != null) penalties.add(lendingResult.penalty!);
 
@@ -428,7 +430,8 @@ class FinancialHealthScorer {
         .where((tx) =>
             tx.type == TransactionType.expense &&
             tx.date.isAfter(monthStart) &&
-            tx.date.isBefore(now.add(const Duration(days: 1))))
+            tx.date.isBefore(now.add(const Duration(days: 1))) &&
+            (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
         .toList();
 
     // ═══════════════════════════════════════════════════════════════════
@@ -436,13 +439,16 @@ class FinancialHealthScorer {
     // A single transaction > 30% of monthly income is reckless
     // ═══════════════════════════════════════════════════════════════════
     final recklessThreshold = monthlyIncome * 0.30;
-    final recklessTransactions =
-        thisMonthExpenses.where((tx) => tx.amount > recklessThreshold).toList();
+    final recklessTransactions = thisMonthExpenses
+        .where((tx) =>
+            tx.amount > recklessThreshold &&
+            (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
+        .toList();
     final recklessCount = recklessTransactions.length;
 
     if (recklessCount > 0) {
       final penaltyPoints =
-          (recklessCount * 15).clamp(0, 45); // Increased penalty
+          (recklessCount * 15).clamp(0, 45);
       score -= penaltyPoints;
       penalties.add(HealthPenalty(
         reason: '$recklessCount dépense(s) massive(s) (>30% du revenu)',

@@ -480,22 +480,33 @@ class HomeController extends GetxController {
       final userBox = Hive.box<LocalUser>('userBox');
       final settingsBox = Hive.box('settingsBox');
 
-      final hasUser = userBox.isNotEmpty;
-      // Also check settingsBox for legacy flags if needed, but userBox presence is definitive source of truth now
-      // settingsBox.get('hasUser', defaultValue: false);
+      // V7 Migration Fix: Check Isar primarily as it's the new source of truth
+      final isarUser = IsarService.getUser();
+
+      // Fallback to Hive only if Isar is empty (unlikely after migration, but safe)
+      final hasUser = isarUser != null || userBox.isNotEmpty;
 
       if (hasUser) {
-        final currentUser = userBox.values.first;
+        final currentUser = isarUser ?? userBox.values.first;
 
         // V7 Migration: Add ID if missing
         if (currentUser.id.isEmpty) {
           currentUser.id = _generateShortId();
-          currentUser.save(); // Save back to Hive
+          if (isarUser != null) {
+            IsarService.saveUser(currentUser);
+          } else {
+            currentUser.save();
+          }
           _logger.i('Migrated User ID: ${currentUser.id}');
         }
 
         user.value = currentUser;
         userName.value = currentUser.fullName;
+
+        // Ensure Isar has the user if we found it in Hive but not Isar
+        if (isarUser == null && userBox.isNotEmpty) {
+          IsarService.saveUser(currentUser);
+        }
       } else {
         userName.value = 'User';
       }
@@ -701,17 +712,16 @@ class HomeController extends GetxController {
   // ---------------------------------------------------------------------------
 
   Future<void> generateJobIncomeTransactions() async {
-    final jobBox =
-        Hive.box<Job>('jobBox'); // Fixed: name mismatch (was jobsBox)
-    if (jobBox.isEmpty) return;
+    // V7 Fix: Load from Isar instead of Hive (Hive is cleared after migration)
+    final jobs = await IsarService.getAllJobs();
+    if (jobs.isEmpty) return;
 
-    final jobs = jobBox.values.toList();
     final today = DateTime.now();
 
     try {
       final allTransactions = await IsarService.getAllTransactions();
 
-      // Detach jobs from Hive box before sending to isolate
+      // Detach jobs from Isar (managed objects) before sending to isolate
       final detachedJobs = jobs
           .map((j) => Job(
                 id: j.id,
@@ -806,17 +816,17 @@ class HomeController extends GetxController {
   // ---------------------------------------------------------------------------
 
   Future<void> generateRecurringTransactions() async {
-    final recurringBox =
-        Hive.box<RecurringTransaction>('recurringTransactionBox');
-    if (recurringBox.isEmpty) return;
+    // V7 Fix: Load from Isar instead of Hive
+    final recurringTransactions =
+        await IsarService.getAllRecurringTransactions();
+    if (recurringTransactions.isEmpty) return;
 
-    final recurringTransactions = recurringBox.values.toList();
     final today = DateTime.now();
 
     try {
       final allTransactions = await IsarService.getAllTransactions();
 
-      // Detach recurring transactions from Hive box before sending to isolate
+      // Detach recurring transactions from Isar before sending to isolate
       final detachedRecurring = recurringTransactions
           .map((r) => RecurringTransaction(
                 id: r.id,
@@ -853,10 +863,10 @@ class HomeController extends GetxController {
         for (var entry in result.updatedLastGeneratedDates.entries) {
           final id = entry.key;
           final newDate = entry.value;
-          final recurring = recurringBox.get(id);
+          final recurring = await IsarService.getRecurringTransactionById(id);
           if (recurring != null) {
             recurring.lastGeneratedDate = newDate;
-            recurring.save();
+            IsarService.updateRecurringTransaction(recurring);
           }
         }
         _logger.i(

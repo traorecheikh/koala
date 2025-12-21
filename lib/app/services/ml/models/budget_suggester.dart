@@ -14,8 +14,10 @@ class BudgetSuggester {
     final relevantTransactions = history
         .where((t) =>
             t.type == TransactionType.expense &&
+            t.type == TransactionType.expense &&
             t.categoryId == categoryId &&
-            t.date.isAfter(cutoffDate))
+            t.date.isAfter(cutoffDate) &&
+            (t.linkedDebtId == null || t.linkedDebtId!.isEmpty))
         .toList();
 
     if (relevantTransactions.isEmpty) {

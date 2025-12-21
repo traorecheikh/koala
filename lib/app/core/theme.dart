@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:koaa/app/core/utils/color_utils.dart';
 
 enum AppSkin {
   blue(Color(0xFF3E69FE), 'Bleu Koala'),
@@ -50,14 +51,23 @@ class AppTheme {
     required AppSkin skin,
     required Brightness brightness,
   }) {
-    final isDark = brightness == Brightness.dark;
+    // Enforce dark mode for specific skins if needed (e.g., Batman)
+    final effectiveBrightness =
+        (skin == AppSkin.batmanDark) ? Brightness.dark : brightness;
+    final isDark = effectiveBrightness == Brightness.dark;
     final primaryColor = skin.color;
 
     // Base Colors
     final scaffoldBg =
         isDark ? const Color(0xFF1A1B1E) : const Color(0xFFF2F2F7);
     final surface = isDark ? const Color(0xFF242529) : Colors.white;
-    final onSurface = isDark ? Colors.white : const Color(0xFF1C1C1E);
+
+    // Dynamic Contrast Enforcement
+    final onSurface = ColorUtils.ensureContrast(
+        isDark ? Colors.white : const Color(0xFF1C1C1E), surface);
+
+    final onPrimary = ColorUtils.getLegibleOn(primaryColor);
+    final onSecondary = ColorUtils.getLegibleOn(const Color(0xFF30D5C8));
 
     // Text Theme Base
     final baseTextTheme =
@@ -74,16 +84,15 @@ class AppTheme {
     );
 
     return ThemeData(
-      brightness: brightness,
+      brightness: effectiveBrightness,
       primaryColor: primaryColor,
       scaffoldBackgroundColor: scaffoldBg,
       colorScheme: ColorScheme(
-        brightness: brightness,
+        brightness: effectiveBrightness,
         primary: primaryColor,
-        onPrimary: Colors.white, // Assuming white text on primary color buttons
-        secondary: const Color(
-            0xFF30D5C8), // Fixed secondary or derived? Keeping fixed for now or could match skin
-        onSecondary: Colors.white,
+        onPrimary: onPrimary,
+        secondary: const Color(0xFF30D5C8),
+        onSecondary: onSecondary,
         surface: surface,
         onSurface: onSurface,
         error: Colors.redAccent,

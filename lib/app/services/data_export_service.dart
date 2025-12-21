@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart';
+// import 'package:hive_ce/hive.dart'; // Removed
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/data/models/budget.dart';
 import 'package:koaa/app/data/models/debt.dart';
@@ -55,8 +55,8 @@ class DataExportService extends GetxService {
 
       buffer.writeln('\n=== BUDGETS ===');
       buffer.writeln('Category,Amount,Year,Month');
-      final budgetBox = Hive.box<Budget>('budgetBox');
-      for (var budget in budgetBox.values) {
+      final allBudgets = await IsarService.getAllBudgets();
+      for (var budget in allBudgets) {
         buffer.writeln(
           '${budget.categoryId},${budget.amount},${budget.year},${budget.month}',
         );
@@ -64,8 +64,8 @@ class DataExportService extends GetxService {
 
       buffer.writeln('\n=== DEBTS ===');
       buffer.writeln('Person,Original Amount,Remaining,Type,Due Date');
-      final debtBox = Hive.box<Debt>('debtBox');
-      for (var debt in debtBox.values) {
+      final allDebts = await IsarService.getAllDebts();
+      for (var debt in allDebts) {
         buffer.writeln(
           '${debt.personName},${debt.originalAmount},${debt.remainingAmount},${debt.type},${debt.dueDate}',
         );
@@ -73,8 +73,8 @@ class DataExportService extends GetxService {
 
       buffer.writeln('\n=== GOALS ===');
       buffer.writeln('Title,Target,Current,Status,Target Date');
-      final goalBox = Hive.box<FinancialGoal>('financialGoalBox');
-      for (var goal in goalBox.values) {
+      final allGoals = await IsarService.getAllGoals();
+      for (var goal in allGoals) {
         buffer.writeln(
           '${goal.title},${goal.targetAmount},${goal.currentAmount},${goal.status},${goal.targetDate}',
         );
@@ -90,9 +90,9 @@ class DataExportService extends GetxService {
   /// Get financial summary as formatted text
   Future<String> exportFinancialSummary() async {
     try {
-      final budgetBox = Hive.box<Budget>('budgetBox');
-      final debtBox = Hive.box<Debt>('debtBox');
-      final goalBox = Hive.box<FinancialGoal>('financialGoalBox');
+      final allBudgets = await IsarService.getAllBudgets();
+      final allDebts = await IsarService.getAllDebts();
+      final allGoals = await IsarService.getAllGoals();
 
       double totalIncome = 0.0;
       double totalExpense = 0.0;
@@ -108,7 +108,7 @@ class DataExportService extends GetxService {
       }
 
       double totalDebt = 0.0;
-      for (var debt in debtBox.values) {
+      for (var debt in allDebts) {
         if (!debt.isPaidOff) {
           totalDebt += debt.remainingAmount;
         }
@@ -126,12 +126,12 @@ class DataExportService extends GetxService {
       buffer.writeln('');
       buffer.writeln('DEBTS');
       buffer.writeln('Total Outstanding: ${totalDebt.toStringAsFixed(2)} FCFA');
-      buffer.writeln('Number of Debts: ${debtBox.length}');
+      buffer.writeln('Number of Debts: ${allDebts.length}');
       buffer.writeln('');
       buffer.writeln('GOALS');
-      buffer.writeln('Total Goals: ${goalBox.length}');
+      buffer.writeln('Total Goals: ${allGoals.length}');
       int completedGoals = 0;
-      for (var goal in goalBox.values) {
+      for (var goal in allGoals) {
         if (goal.status == GoalStatus.completed) {
           completedGoals++;
         }
@@ -139,7 +139,7 @@ class DataExportService extends GetxService {
       buffer.writeln('Completed Goals: $completedGoals');
       buffer.writeln('');
       buffer.writeln('BUDGETS');
-      buffer.writeln('Total Budgets: ${budgetBox.length}');
+      buffer.writeln('Total Budgets: ${allBudgets.length}');
 
       return buffer.toString();
     } catch (e, st) {
@@ -155,8 +155,8 @@ class DataExportService extends GetxService {
   }
 
   Future<List<Map<String, dynamic>>> _exportBudgets() async {
-    final box = Hive.box<Budget>('budgetBox');
-    return box.values
+    final allBudgets = await IsarService.getAllBudgets();
+    return allBudgets
         .map((b) => {
               'id': b.id,
               'categoryId': b.categoryId,
@@ -168,8 +168,8 @@ class DataExportService extends GetxService {
   }
 
   Future<List<Map<String, dynamic>>> _exportDebts() async {
-    final box = Hive.box<Debt>('debtBox');
-    return box.values
+    final allDebts = await IsarService.getAllDebts();
+    return allDebts
         .map((d) => {
               'id': d.id,
               'personName': d.personName,
@@ -182,8 +182,8 @@ class DataExportService extends GetxService {
   }
 
   Future<List<Map<String, dynamic>>> _exportGoals() async {
-    final box = Hive.box<FinancialGoal>('financialGoalBox');
-    return box.values
+    final allGoals = await IsarService.getAllGoals();
+    return allGoals
         .map((g) => {
               'id': g.id,
               'title': g.title,
@@ -196,8 +196,8 @@ class DataExportService extends GetxService {
   }
 
   Future<List<Map<String, dynamic>>> _exportCategories() async {
-    final box = Hive.box<Category>('categoryBox');
-    return box.values
+    final allCategories = await IsarService.getAllCategories();
+    return allCategories
         .map((c) => {
               'id': c.id,
               'name': c.name,

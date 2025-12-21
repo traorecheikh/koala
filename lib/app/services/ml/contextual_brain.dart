@@ -178,6 +178,88 @@ class ContextualBrain extends GetxService {
     return '${d.weekday}-${d.hour}';
   }
 
+  // Keyword Knowledge Base
+  // Key: "keyword" (lowercase) -> CategoryID
+  final Map<String, String> _keywordMap = {
+    // Food
+    'mcdo': 'food',
+    'kfc': 'food',
+    'burger': 'food',
+    'pizza': 'food',
+    'sushi': 'food',
+    'resto': 'food',
+    'uber eats': 'food',
+    'glovo': 'food',
+    'boulangerie': 'food',
+    'pain': 'food',
+    'café': 'food',
+    'starbucks': 'food',
+
+    // Transport
+    'uber': 'transport',
+    'bolt': 'transport',
+    'yango': 'transport',
+    'taxi': 'transport',
+    'essence': 'transport',
+    'total': 'transport',
+    'shell': 'transport',
+    'parking': 'transport',
+    'peage': 'transport',
+
+    // Shopping
+    'amazon': 'shopping',
+    'zara': 'shopping',
+    'h&m': 'shopping',
+    'nike': 'shopping',
+    'adidas': 'shopping',
+    'jumbo': 'shopping',
+    'carrefour': 'groceries',
+    'auchan': 'groceries',
+    'clerc': 'groceries',
+    'lidl': 'groceries',
+    'supermarché': 'groceries',
+
+    // Bills
+    'orange': 'bills',
+    'mtn': 'bills',
+    'moov': 'bills',
+    'canal': 'bills',
+    'netflix': 'subscriptions',
+    'spotify': 'subscriptions',
+    'apple': 'subscriptions',
+    'google': 'subscriptions',
+    'cie': 'bills',
+    'sodeci': 'bills',
+    'loyer': 'rent',
+
+    // Health
+    'pharmacie': 'health',
+    'docteur': 'health',
+    'hopital': 'health',
+    'clinique': 'health',
+  };
+
+  /// Predict category based on description (Keyword Matching)
+  ContextualPrediction? predictByDescription(String description) {
+    if (description.isEmpty) return null;
+    final lowerDesc = description.toLowerCase();
+
+    // 1. Direct Keyword Match
+    for (final entry in _keywordMap.entries) {
+      if (lowerDesc.contains(entry.key)) {
+        return ContextualPrediction(
+          categoryId: entry.value,
+          amount: _getSmartPrice(entry.value),
+          confidence: 0.9, // High confidence for explicit keywords
+          reason: 'Basé sur "${entry.key}"',
+          dataQuality: 'high',
+        );
+      }
+    }
+
+    return null;
+  }
+
   String _getReason(DateTime date) {
     return 'Habitude détectée vers ${date.hour}h';
   }

@@ -24,9 +24,13 @@ class TimeSeriesEngine {
   Future<void> train(List<LocalTransaction> history) async {
     if (history.isEmpty) return;
 
-    // Filter to expenses only - income spikes corrupt the trend
-    final expenses =
-        history.where((tx) => tx.type == TransactionType.expense).toList();
+    // Filter to expenses only AND exclude debt repayments
+    // Income spikes and debt repayments corrupt the trend
+    final expenses = history
+        .where((tx) =>
+            tx.type == TransactionType.expense &&
+            (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
+        .toList();
 
     if (expenses.isEmpty) {
       _isTrained = false;

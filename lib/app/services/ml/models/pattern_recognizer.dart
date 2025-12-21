@@ -33,6 +33,7 @@ class PatternRecognizer {
 
     for (var tx in txs) {
       if (tx.type != TransactionType.expense) continue;
+      if (tx.linkedDebtId != null && tx.linkedDebtId!.isNotEmpty) continue;
       // Key: Amount rounded + Description (first 2 words)
       final key = '${tx.amount.round()}_${_getFirstWords(tx.description, 2)}';
       groups.putIfAbsent(key, () => []);
@@ -97,7 +98,8 @@ class PatternRecognizer {
     // Top merchants
     final counts = <String, int>{};
     for (var tx in txs) {
-      if (tx.type == TransactionType.expense) {
+      if (tx.type == TransactionType.expense &&
+          (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty)) {
         // Extract merchant name guess (first word?)
         final name = _getFirstWords(tx.description, 1).toUpperCase();
         if (name.length > 2) {

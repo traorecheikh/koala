@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart';
+// import 'package:hive_ce/hive.dart'; // Removed unused import
 import 'package:koaa/app/data/models/financial_goal.dart'; // New import
 import 'package:koaa/app/data/models/job.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
@@ -531,14 +531,12 @@ class AnalyticsController extends GetxController {
   }
 
   Future<void> deleteJob(String jobId) async {
-    final jobBox = Hive.box<Job>('jobBox');
-    final job = jobBox.get(jobId);
+    final job = await IsarService.getJobById(jobId);
     if (job != null) {
       final updatedJob = job.copyWith(isActive: false);
-      await jobBox.put(jobId, updatedJob);
+      IsarService.updateJob(updatedJob);
     }
   }
-
 
   Future<void> setSavingsGoal(double targetAmount) async {
     final existingGoal = IsarService.getSavingsGoalByPeriod(

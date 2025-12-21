@@ -1,8 +1,8 @@
 {
-  "version": "1.7.0",
+  "version": "1.7.1",
   "apk_url": "https://github.com/traorecheikh/koala/raw/refs/heads/main/build/app/outputs/flutter-apk/app-release.apk",
   "checksum": "REPLACE_WITH_ACTUAL_SHA256_CHECKSUM",
-  "release_notes": "Mise à jour majeure 1.7.0 : Migration sécurisée des données, correctifs critiques pour la récupération des emplois et dettes, et ajout des fonctionnalités manquantes.",
+  "release_notes": "Hotfix 1.7.1 : Correction de l'Intelligence IA (catégories 'Autre'), migration des icônes brisées, et suppression des fausses alertes sur les dettes.",
   "min_supported_version": "1.2.0",
-  "release_date": "2025-12-20"
+  "release_date": "2025-12-21"
 }

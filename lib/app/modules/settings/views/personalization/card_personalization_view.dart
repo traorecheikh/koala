@@ -259,7 +259,7 @@ class CardPersonalizationView extends GetView<SettingsController> {
                         ],
                       ],
 
-                      const Spacer(),
+                      SizedBox(height: 24.h),
 
                       // APPLY BUTTON
                       SizedBox(

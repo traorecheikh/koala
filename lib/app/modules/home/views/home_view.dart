@@ -386,6 +386,7 @@ class _Header extends GetView<HomeController> {
                     size: 28.sp, color: KoalaColors.text(context)),
                 onPressed: () => Get.toNamed(Routes.settings),
                 splashRadius: 24,
+                tooltip: 'Paramètres',
               ),
             ],
           ),
@@ -1095,13 +1096,21 @@ class _TransactionsHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text('Activité récente', style: KoalaTypography.heading3(context)),
-          GestureDetector(
-            onTap: () => showSearch(
-              context: context,
-              delegate: TransactionSearchDelegate(),
+          Semantics(
+            label: 'Rechercher des transactions',
+            button: true,
+            child: GestureDetector(
+              onTap: () => showSearch(
+                context: context,
+                delegate: TransactionSearchDelegate(),
+              ),
+              child: Container(
+                color: Colors.transparent, // Hit test for the whole area
+                padding: EdgeInsets.all(12.w), // Padding to reach ~48dp
+                child: Icon(CupertinoIcons.search,
+                    size: 24.sp, color: KoalaColors.text(context)),
+              ),
             ),
-            child: Icon(CupertinoIcons.search,
-                size: 24.sp, color: KoalaColors.text(context)),
           ),
         ],
       ),

@@ -14,6 +14,7 @@ import 'package:koaa/app/modules/settings/views/terms_view.dart';
 import 'package:koaa/app/modules/settings/views/data_management_view.dart';
 import 'package:koaa/app/services/notification_service.dart';
 import 'package:koaa/app/services/changelog_service.dart';
+import 'package:koaa/app/core/utils/color_utils.dart';
 
 import 'package:koaa/app/routes/app_pages.dart';
 import '../controllers/settings_controller.dart';
@@ -65,18 +66,36 @@ class SettingsView extends GetView<SettingsController> {
                     ),
                     onTap: () => Get.toNamed(Routes.cardPersonalization),
                   )),
-              _buildSettingsItem(
-                context,
-                icon: CupertinoIcons.moon_fill,
-                title: 'Mode sombre',
-                trailing: Obx(
-                  () => CupertinoSwitch(
+              Obx(() {
+                final isHeroMode =
+                    controller.currentCardStyle.value == BalanceCardStyle.hero;
+                return _buildSettingsItem(
+                  context,
+                  icon: isHeroMode
+                      ? CupertinoIcons.lock_fill
+                      : CupertinoIcons.moon_fill,
+                  title: isHeroMode ? 'Mode sombre (Imposé)' : 'Mode sombre',
+                  iconColor:
+                      isHeroMode ? KoalaColors.textSecondary(context) : null,
+                  textColor:
+                      isHeroMode ? KoalaColors.textSecondary(context) : null,
+                  trailing: CupertinoSwitch(
                     value: controller.isDarkMode.value,
-                    activeTrackColor: KoalaColors.primaryUi(context),
-                    onChanged: controller.toggleTheme,
+                    activeTrackColor: isHeroMode
+                        ? KoalaColors.textSecondary(context)
+                            .withValues(alpha: 0.3)
+                        : KoalaColors.primaryUi(context),
+                    // Disable interaction in Hero Mode
+                    onChanged: isHeroMode
+                        ? (v) => Get.snackbar('Thème Héros Actif',
+                            'Ce thème impose un mode d\'affichage spécifique pour une meilleure expérience.',
+                            snackPosition: SnackPosition.TOP,
+                            backgroundColor: KoalaColors.surface(context),
+                            colorText: KoalaColors.text(context))
+                        : controller.toggleTheme,
                   ),
-                ),
-              ),
+                );
+              }),
             ],
           ),
           const SizedBox(height: 16),
@@ -91,13 +110,17 @@ class SettingsView extends GetView<SettingsController> {
                   children: [
                     Icon(
                       CupertinoIcons.cloud_download,
-                      color: KoalaColors.primaryUi(context),
+                      color: ColorUtils.ensureContrast(
+                          KoalaColors.primaryUi(context),
+                          KoalaColors.background(context)),
                     ),
                     const SizedBox(width: 16),
                     Text(
                       'Vérifier les mises à jour',
-                      style: KoalaTypography.bodyMedium(context)
-                          .copyWith(color: KoalaColors.primaryUi(context)),
+                      style: KoalaTypography.bodyMedium(context).copyWith(
+                          color: ColorUtils.ensureContrast(
+                              KoalaColors.primaryUi(context),
+                              KoalaColors.background(context))),
                     ),
                   ],
                 ),
@@ -258,7 +281,8 @@ class SettingsView extends GetView<SettingsController> {
             title,
             style: KoalaTypography.bodySmall(context).copyWith(
               fontWeight: FontWeight.bold,
-              color: KoalaColors.primaryUi(context),
+              color: ColorUtils.ensureContrast(KoalaColors.primaryUi(context),
+                  KoalaColors.background(context)),
             ),
           ),
         ),

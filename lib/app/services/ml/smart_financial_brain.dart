@@ -308,11 +308,51 @@ class SmartFinancialBrain extends GetxService {
         .toList();
 
     // Category breakdown
+    // Category breakdown
     final Map<String, double> categorySpending = {};
     for (final t in thisMonthExpenses) {
-      final category = t.categoryId ?? 'other';
+      // Default to Enum name if ID is null or empty
+      String category = (t.categoryId != null && t.categoryId!.isNotEmpty)
+          ? t.categoryId!
+          : t.category.name;
+
+      // If ID says "other" (or variants) but Enum knows better, use the Enum name
+      final lowerCat = category.toLowerCase().trim();
+      if ((lowerCat == 'other' ||
+              lowerCat == 'autre' ||
+              lowerCat == 'autredépense' ||
+              lowerCat == 'autredepense') &&
+          t.category != TransactionCategory.otherExpense &&
+          t.category != TransactionCategory.otherIncome) {
+        category = t.category.name;
+      }
+
+      // FINAL FALLBACK: If it's STILL "Other", check the description (User Request)
+      // e.g. If description is "Transport", count it as Transport
+      if (category.toLowerCase() == 'other' ||
+          category.toLowerCase() == 'autre') {
+        final descLower = t.description.toLowerCase().trim();
+        // Check against standard categories
+        for (final catEnum in TransactionCategory.values) {
+          if (catEnum.name.toLowerCase() == descLower ||
+              catEnum.displayName.toLowerCase() == descLower) {
+            category = catEnum.name;
+            break;
+          }
+        }
+      }
+
+      // DEBUG: Log weird categories if found
+      if (category == 'other' || category == 'Autre') {
+        // print('DATA_DEBUG: Found Generic Category for TX ${t.id} (${t.description}): Enum=${t.category}, ID=${t.categoryId}');
+        // Commented out to avoid log spam, but available if needed
+      }
+
       categorySpending[category] = (categorySpending[category] ?? 0) + t.amount;
     }
+
+    // DEBUG: Print breakdown keys to verify groupings
+    // print('BRAIN_DEBUG: Category Breakdown Keys: ${categorySpending.keys.toList()}');
 
     // Top spending category
     String? topCategory;
@@ -541,7 +581,10 @@ class SmartFinancialBrain extends GetxService {
               t.type == TransactionType.expense &&
               t.categoryId == budget.categoryId &&
               t.date.isAfter(monthStart) &&
-              !t.isCatchUp) // Skip catch-up transactions
+              t.date.isAfter(monthStart) &&
+              !t.isCatchUp && // Skip catch-up transactions
+              (t.linkedDebtId == null ||
+                  t.linkedDebtId!.isEmpty)) // Skip debt/lending
           .fold(0.0, (sum, t) => sum + t.amount);
 
       final usagePercent =

@@ -14,15 +14,7 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:koaa/app/data/models/budget.dart';
-import 'package:koaa/app/data/models/category.dart' as models;
-import 'package:koaa/app/data/models/debt.dart';
-import 'package:koaa/app/data/models/financial_goal.dart';
-import 'package:koaa/app/data/models/job.dart';
-import 'package:koaa/app/data/models/local_transaction.dart';
-import 'package:koaa/app/data/models/local_user.dart';
-import 'package:koaa/app/data/models/recurring_transaction.dart';
-import 'package:koaa/app/data/models/savings_goal.dart';
+import 'package:wakelock_plus/wakelock_plus.dart'; // Added WakelockPlus
 import 'package:restart_app/restart_app.dart'; // Optional: for cleaner restart, or just ask user
 import 'package:koaa/app/core/utils/navigation_helper.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
@@ -58,42 +50,42 @@ class SettingsController extends GetxController {
     'assets/hero-folder/spider.png': HeroThemeData(
       patternAsset: 'assets/patterns/web_spider.png',
       baseColor: Color(0xFFE23636),
-      patternOpacity: 0.08,
+      patternOpacity: 0.05, // Reduced from 0.08
     ),
     'assets/hero-folder/deadpool.png': HeroThemeData(
       patternAsset: 'assets/patterns/deadpool_grunge.png',
       baseColor: Color(0xFF8B0000),
-      patternOpacity: 0.15, // Grunge needs to be visible
+      patternOpacity: 0.1, // Reduced from 0.15
     ),
     'assets/hero-folder/gojo-jujutsu-kaisen.png': HeroThemeData(
       patternAsset: 'assets/patterns/gojo_void.png',
       baseColor: Color(0xFF512DA8),
-      patternOpacity: 0.12,
+      patternOpacity: 0.08, // Reduced from 0.12
     ),
     'assets/hero-folder/batman.png': HeroThemeData(
       patternAsset: 'assets/patterns/bats_pattern.png',
       baseColor: Color(0xFF263238),
-      patternOpacity: 0.06,
+      patternOpacity: 0.04, // Reduced from 0.06
     ),
     'assets/hero-folder/ironman.png': HeroThemeData(
       patternAsset: 'assets/patterns/tech_hud.png',
       baseColor: Color(0xFFBF360C),
-      patternOpacity: 0.1,
+      patternOpacity: 0.06, // Reduced from 0.1
     ),
     'assets/hero-folder/naruto.png': HeroThemeData(
       patternAsset: 'assets/patterns/konoha_symbol.png',
       baseColor: Color(0xFFFF6D00),
-      patternOpacity: 0.08,
+      patternOpacity: 0.05, // Reduced from 0.08
     ),
     'assets/hero-folder/demonslayer.png': HeroThemeData(
       patternAsset: 'assets/patterns/tanjiro_pattern.png',
       baseColor: Color(0xFF2E7D32),
-      patternOpacity: 0.1, // Checkered pattern is bold
+      patternOpacity: 0.06, // Reduced from 0.1
     ),
     'assets/hero-folder/the-flash.png': HeroThemeData(
       patternAsset: 'assets/patterns/lightening_force.png',
       baseColor: Color(0xFFFF0000),
-      patternOpacity: 0.08,
+      patternOpacity: 0.05, // Reduced from 0.08
     ),
   };
 
@@ -142,10 +134,15 @@ class SettingsController extends GetxController {
       currentCardStyle.value = BalanceCardStyle.values[savedCardStyleIndex];
     }
 
-    // Load Hero Asset
+    // Load Hero Asset & Apply Theme
     final savedHeroAsset = _settingsBox.get('heroAsset');
-    if (savedHeroAsset != null) {
+    if (savedHeroAsset != null && savedHeroAsset is String && savedHeroAsset.isNotEmpty) {
       currentHeroAsset.value = savedHeroAsset;
+      // Properly restore the Hero Theme Data for background persistence
+      if (heroThemesData.containsKey(savedHeroAsset)) {
+         currentHeroTheme.value = heroThemesData[savedHeroAsset];
+         AppTheme.heroThemeNotifier.value = currentHeroTheme.value;
+      }
     }
 
     _updateTheme();
@@ -535,9 +532,13 @@ class SettingsController extends GetxController {
     );
   }
 
+  CancelToken? _cancelToken; // Token to cancel download
+
   Future<void> _downloadAndInstallApk(String apkUrl,
       [String? expectedChecksum]) async {
     File? downloadedFile;
+    _cancelToken = CancelToken(); // Initialize new token
+
     try {
       // 1. Request Permission
       if (!await Permission.requestInstallPackages.isGranted) {
@@ -550,21 +551,32 @@ class SettingsController extends GetxController {
         }
       }
 
-      // 2. Prepare Download
+      // 2. Prepare Download & Keep Screen On
+      // Enable wakelock to prevent screen form turning off
+      try {
+        await WakelockPlus.enable();
+      } catch (e) {
+        debugPrint('Failed to enable wakelock: $e');
+      }
+
       final dir = await getTemporaryDirectory();
       final filePath = '${dir.path}/update.apk';
       final file = File(filePath);
+
+      // Check for existing partial file to resume
+      int downloadedBytes = 0;
       if (file.existsSync()) {
-        await file.delete();
+        downloadedBytes = await file.length();
       }
 
       // Progress State
       final RxDouble progress = 0.0.obs;
+      final RxString progressText = '0%'.obs;
 
       // 3. Show Downloading Dialog
       Get.dialog(
         PopScope(
-          canPop: false,
+          canPop: false, // Prevent back button closing
           child: Dialog(
             backgroundColor: KoalaColors.surface(Get.context!),
             shape:
@@ -574,6 +586,12 @@ class SettingsController extends GetxController {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text(
+                    'Téléchargement...',
+                    style: KoalaTypography.heading3(Get.context!)
+                        .copyWith(fontSize: 18),
+                  ),
+                  const SizedBox(height: 24),
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -592,13 +610,24 @@ class SettingsController extends GetxController {
                             )),
                       ),
                       Obx(() => Text(
-                            '${(progress.value * 100).toInt()}%',
-                            style: KoalaTypography.heading3(Get.context!)
-                                .copyWith(fontSize: 18),
+                            progressText.value,
+                            style: KoalaTypography.bodySmall(Get.context!)
+                                .copyWith(fontWeight: FontWeight.bold),
                           )),
                     ],
                   ),
                   const SizedBox(height: 24),
+                  // Cancel Button
+                  KoalaButton(
+                    text: 'Annuler',
+                    onPressed: () {
+                      _cancelToken?.cancel('Cancelled by user');
+                      Get.back(); // Close dialog
+                    },
+                    backgroundColor: Colors.transparent,
+                    textColor: KoalaColors.destructive,
+                    icon: Icons.close_rounded,
+                  ),
                 ],
               ),
             ),
@@ -607,27 +636,39 @@ class SettingsController extends GetxController {
         barrierDismissible: false,
       );
 
-      // 4. Download
+      // 4. Resumable Download
       try {
         await _dio.download(
           apkUrl,
           filePath,
+          cancelToken: _cancelToken,
+          deleteOnError: false, // Keep partial file for resume
           options: Options(
-            receiveTimeout: const Duration(minutes: 5),
+            receiveTimeout: const Duration(minutes: 10), // Longer timeout
             sendTimeout: const Duration(seconds: 30),
+            headers: downloadedBytes > 0
+                ? {'range': 'bytes=$downloadedBytes-'} // Resume header
+                : null,
           ),
           onReceiveProgress: (rec, total) {
             if (total != -1) {
-              progress.value = rec / total;
+              final totalBytes = total + downloadedBytes;
+              final currentBytes = rec + downloadedBytes;
+              progress.value = currentBytes / totalBytes;
+              progressText.value = '${(progress.value * 100).toInt()}%';
             }
           },
         );
       } catch (e) {
-        Get.back(); // Close loading dialog
+        if (e is DioException && CancelToken.isCancel(e)) {
+          // User cancelled, do nothing (dialog already closed)
+          return;
+        }
+        Get.back(); // Close loading dialog on error
         rethrow;
       }
 
-      Get.back(); // Close loading dialog
+      Get.back(); // Close loading dialog success
 
       downloadedFile = file;
 
@@ -635,8 +676,6 @@ class SettingsController extends GetxController {
       if (expectedChecksum != null &&
           expectedChecksum.isNotEmpty &&
           expectedChecksum != 'REPLACE_WITH_ACTUAL_SHA256_CHECKSUM') {
-        // Could assume verification is fast enough or show brief spinner
-        // For now, let's just proceed.
         final fileBytes = await file.readAsBytes();
         final actualChecksum = sha256.convert(fileBytes).toString();
 
@@ -669,11 +708,20 @@ class SettingsController extends GetxController {
       );
     } catch (e) {
       if (downloadedFile != null && await downloadedFile.exists()) {
-        await downloadedFile.delete();
+        // Only delete if it's NOT a user cancellation (to allow resume later)
+        if (e is! DioException || !CancelToken.isCancel(e)) {
+          // await downloadedFile.delete(); // Don't delete, keep for retry!
+        }
       }
+      // Ensure wakelock is disabled
+      WakelockPlus.disable();
+
       Get.closeAllSnackbars();
       Get.snackbar(
-          'Erreur', 'Échec du téléchargement. Vérifiez votre connexion.');
-    }
+          'Erreur', 'Échec du téléchargement. Réessayez pour reprendre.');
+    } finally {
+      // ALWAYS disable wakelock
+      WakelockPlus.disable();
+  }
   }
 }

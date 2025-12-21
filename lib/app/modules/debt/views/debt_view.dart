@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -510,88 +511,147 @@ class _DebtCard extends StatelessWidget {
     final isLent = debt.type == DebtType.lent;
     final accentColor = isLent ? KoalaColors.success : KoalaColors.destructive;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: KoalaColors.surface(context),
-        borderRadius: BorderRadius.circular(20.r),
-        boxShadow: KoalaColors.shadowSubtle,
-        border: Border.all(color: KoalaColors.border(context)),
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Container(
-          width: 50.w,
-          height: 50.w,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20.r),
+      child: Dismissible(
+        key: ValueKey(debt.id),
+        direction:
+            DismissDirection.endToStart, // Swipe Right to Left (Native feel)
+        background: Container(
           decoration: BoxDecoration(
-            color: accentColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(16.r),
+            color:
+                isLent ? KoalaColors.success : KoalaColors.primaryUi(context),
+            borderRadius: BorderRadius.circular(20.r),
           ),
-          child: Center(
-            child: Text(
-              debt.personName.substring(0, 1).toUpperCase(),
-              style: TextStyle(
-                color: accentColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 20.sp,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          debt.personName,
-          style: KoalaTypography.heading4(context),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (debt.dueDate != null)
-              Padding(
-                padding: EdgeInsets.only(top: 4.h),
-                child: Text(
-                  'Échéance: ${DateFormat('dd MMM').format(debt.dueDate ?? DateTime.now())}',
-                  style: KoalaTypography.caption(context),
-                ),
-              ),
-            if (debt.minPayment > 0)
-              Padding(
-                padding: EdgeInsets.only(top: 2.h),
-                child: Text(
-                  'Mensualité: ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0).format(debt.minPayment)}',
-                  style: KoalaTypography.caption(context),
-                ),
-              ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              NumberFormat.currency(
-                      locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
-                  .format(debt.remainingAmount),
-              style: TextStyle(
-                color: accentColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 16.sp,
-              ),
-            ),
-            if (debt.remainingAmount < debt.originalAmount)
+          alignment: Alignment.centerRight,
+          padding: EdgeInsets.only(right: 24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle_outline_rounded,
+                  color: Colors.white, size: 28.sp),
+              SizedBox(height: 4.h),
               Text(
-                'sur ${NumberFormat.compact(locale: 'fr_FR').format(debt.originalAmount)}',
-                style:
-                    KoalaTypography.caption(context).copyWith(fontSize: 10.sp),
+                isLent ? 'Reçu' : 'Payer',
+                style: KoalaTypography.caption(context)
+                    .copyWith(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-          ],
+            ],
+          ),
+        ),
+        confirmDismiss: (direction) async {
+          // Haptic Confirmation feel
+          HapticFeedback.mediumImpact();
+
+          final controller = Get.find<DebtController>();
+
+          final confirm = await Get.dialog<bool>(
+            KoalaConfirmationDialog(
+              title: isLent ? 'Marquer comme reçu ?' : 'Rembourser la dette ?',
+              message: isLent
+                  ? 'Confirmez-vous avoir reçu ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(debt.remainingAmount)} de ${debt.personName} ?'
+                  : 'Voulez-vous marquer la dette de ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA').format(debt.remainingAmount)} envers ${debt.personName} comme payée ?',
+              confirmText:
+                  isLent ? 'Confirmer réception' : 'Confirmer paiement',
+              isDestructive:
+                  !isLent, // Paying is money leaving, technically destructive/loss lol? Or maybe Success. Let's keep normal.
+              onConfirm: () {
+                Get.back(result: true);
+              },
+            ),
+          );
+
+          if (confirm == true) {
+            await controller.settleDebt(debt);
+            return false; // Don't dismiss the widget from tree, allow it to update via Obx/Stream
+          }
+          return false;
+        },
+        child: Container(
+          margin: EdgeInsets.only(
+              bottom:
+                  0), // Margin moved to wrapper or ignored if parent handles it
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: KoalaColors.surface(context),
+            // borderRadius: BorderRadius.circular(20.r), // Handled by ClipRRect parent
+            boxShadow: KoalaColors.shadowSubtle,
+            // border: Border.all(color: KoalaColors.border(context)), // Border might look weird with ClipRRect sliding
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              width: 50.w,
+              height: 50.w,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              child: Center(
+                child: Text(
+                  debt.personName.substring(0, 1).toUpperCase(),
+                  style: TextStyle(
+                    color: accentColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20.sp,
+                  ),
+                ),
+              ),
+            ),
+            title: Text(
+              debt.personName,
+              style: KoalaTypography.heading4(context),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (debt.dueDate != null)
+                  Padding(
+                    padding: EdgeInsets.only(top: 4.h),
+                    child: Text(
+                      'Échéance: ${DateFormat('dd MMM').format(debt.dueDate ?? DateTime.now())}',
+                      style: KoalaTypography.caption(context),
+                    ),
+                  ),
+                if (debt.minPayment > 0)
+                  Padding(
+                    padding: EdgeInsets.only(top: 2.h),
+                    child: Text(
+                      'Mensualité: ${NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0).format(debt.minPayment)}',
+                      style: KoalaTypography.caption(context),
+                    ),
+                  ),
+              ],
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  NumberFormat.currency(
+                          locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
+                      .format(debt.remainingAmount),
+                  style: TextStyle(
+                    color: accentColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                  ),
+                ),
+                if (debt.remainingAmount < debt.originalAmount)
+                  Text(
+                    'sur ${NumberFormat.compact(locale: 'fr_FR').format(debt.originalAmount)}',
+                    style: KoalaTypography.caption(context)
+                        .copyWith(fontSize: 10.sp),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     )
         .animate()
         .fadeIn(duration: 400.ms)
-        .slideY(begin: 0.1, curve: Curves.easeOutQuart);
+        .slideY(begin: 0.1, curve: Curves.easeOutQuart)
+        .paddingOnly(bottom: 12.h); // Move margin here
   }
 }
-
-

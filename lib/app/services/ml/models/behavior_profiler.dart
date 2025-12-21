@@ -39,7 +39,15 @@ class BehaviorProfiler {
   // Minimum transactions for reliable persona classification
   static const int _minTransactions = 30;
 
-  UserFinancialProfile createProfile(List<LocalTransaction> transactions) {
+  UserFinancialProfile createProfile(List<LocalTransaction> rawTransactions) {
+    // Filter out debt repayments from behavioral analysis
+    // Paying off debt is a transfer, not "spending behavior" in the consumption sense
+    final transactions = rawTransactions
+        .where((tx) =>
+            tx.type == TransactionType.income ||
+            (tx.linkedDebtId == null || tx.linkedDebtId!.isEmpty))
+        .toList();
+
     // Check minimum data requirement
     if (transactions.length < _minTransactions) {
       return UserFinancialProfile(

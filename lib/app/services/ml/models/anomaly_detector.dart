@@ -36,6 +36,8 @@ class AnomalyDetector {
     // Check recent transactions for anomalies
     for (final tx in recentTransactions) {
       if (tx.type != TransactionType.expense) continue;
+      // Exclude debt repayments - they are expected to be potentially large/unusual
+      if (tx.linkedDebtId != null && tx.linkedDebtId!.isNotEmpty) continue;
 
       final category = tx.category.displayName;
 

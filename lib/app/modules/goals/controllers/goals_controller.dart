@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:koaa/app/services/isar_service.dart';
 import 'package:koaa/app/data/models/financial_goal.dart';
 import 'package:koaa/app/data/models/local_transaction.dart';
 import 'package:koaa/app/services/financial_context_service.dart';
@@ -9,22 +9,28 @@ import 'dart:async'; // Added import for StreamSubscription
 
 class GoalsController extends GetxController {
   final financialGoals = <FinancialGoal>[].obs;
-  late Box<FinancialGoal> _goalBox;
+  // late Box<FinancialGoal> _goalBox; // Removed Hive Box
   late FinancialContextService _financialContextService;
   late FinancialEventsService _financialEventsService;
-  late StreamSubscription _goalBoxSubscription; // Store Hive box subscription
-  final List<Worker> _workers = []; // List to store GetX workers
+  late StreamSubscription _isarGoalsSubscription;
+  final List<Worker> _workers = [];
 
   @override
   void onInit() {
     super.onInit();
     _financialContextService = Get.find<FinancialContextService>();
     _financialEventsService = Get.find<FinancialEventsService>();
-    _goalBox = Hive.box<FinancialGoal>('financialGoalBox');
-    financialGoals.assignAll(_goalBox.values.toList());
 
-    _workers.add(ever(_financialContextService.allTransactions, (_) => _updateGoalProgress()));
-    _goalBoxSubscription = _goalBox.watch().listen((_) => financialGoals.assignAll(_goalBox.values.toList()));
+    // Initial load
+    IsarService.getAllGoals().then((goals) {
+      financialGoals.assignAll(goals);
+    });
+
+    _workers.add(ever(_financialContextService.allTransactions,
+        (_) => _updateGoalProgress()));
+    _isarGoalsSubscription = IsarService.watchGoals().listen((goals) {
+      financialGoals.assignAll(goals);
+    });
   }
 
   @override
@@ -33,22 +39,20 @@ class GoalsController extends GetxController {
       worker.dispose();
     }
     _workers.clear();
-    _goalBoxSubscription.cancel(); // Cancel Hive box subscription
+    _isarGoalsSubscription.cancel();
     super.onClose();
   }
 
   // Getters for filtered goals
-  List<FinancialGoal> get activeGoals => financialGoals
-      .where((goal) => goal.status == GoalStatus.active)
-      .toList();
+  List<FinancialGoal> get activeGoals =>
+      financialGoals.where((goal) => goal.status == GoalStatus.active).toList();
 
   List<FinancialGoal> get completedGoals => financialGoals
       .where((goal) => goal.status == GoalStatus.completed)
       .toList();
 
-  List<FinancialGoal> get pausedGoals => financialGoals
-      .where((goal) => goal.status == GoalStatus.paused)
-      .toList();
+  List<FinancialGoal> get pausedGoals =>
+      financialGoals.where((goal) => goal.status == GoalStatus.paused).toList();
 
   List<FinancialGoal> get abandonedGoals => financialGoals
       .where((goal) => goal.status == GoalStatus.abandoned)
@@ -57,9 +61,9 @@ class GoalsController extends GetxController {
   // CRUD operations
   Future<void> addGoal(FinancialGoal goal) async {
     try {
-      await _goalBox.put(goal.id, goal);
-      financialGoals.add(goal);
-      _updateGoalProgress(); // Update progress for new goal
+      IsarService.addGoal(goal); // Sync call
+      // financialGoals.add(goal); // Handled by watcher
+      _updateGoalProgress();
       Get.snackbar(
         'Succès',
         'Objectif ajouté avec succès',
@@ -78,12 +82,9 @@ class GoalsController extends GetxController {
 
   Future<void> updateGoal(FinancialGoal updatedGoal) async {
     try {
-      await _goalBox.put(updatedGoal.id, updatedGoal);
-      int index = financialGoals.indexWhere((goal) => goal.id == updatedGoal.id);
-      if (index != -1) {
-        financialGoals[index] = updatedGoal;
-      }
-      _updateGoalProgress(); // Update progress for updated goal
+      IsarService.updateGoal(updatedGoal);
+      // Watched automatically
+      _updateGoalProgress();
       Get.snackbar(
         'Succès',
         'Objectif mis à jour avec succès',
@@ -102,8 +103,8 @@ class GoalsController extends GetxController {
 
   Future<void> deleteGoal(String goalId) async {
     try {
-      await _goalBox.delete(goalId);
-      financialGoals.removeWhere((goal) => goal.id == goalId);
+      IsarService.deleteGoal(goalId);
+      // Handled by watcher
       Get.snackbar(
         'Succès',
         'Objectif supprimé avec succès',
@@ -122,15 +123,17 @@ class GoalsController extends GetxController {
 
   Future<void> setGoalStatus(String goalId, GoalStatus status) async {
     try {
-      final goal = _goalBox.get(goalId);
+      final goal = await IsarService.getGoalById(goalId);
       if (goal != null) {
         final updatedGoal = goal.copyWith(status: status);
         if (status == GoalStatus.completed) {
           updatedGoal.completedAt = DateTime.now();
-          _financialEventsService.emit(GoalEvent(FinancialEventType.goalCompleted, updatedGoal));
+          _financialEventsService
+              .emit(GoalEvent(FinancialEventType.goalCompleted, updatedGoal));
         } else if (status == GoalStatus.abandoned) {
           updatedGoal.completedAt = null;
-          _financialEventsService.emit(GoalEvent(FinancialEventType.goalAbandoned, updatedGoal));
+          _financialEventsService
+              .emit(GoalEvent(FinancialEventType.goalAbandoned, updatedGoal));
         } else {
           updatedGoal.completedAt = null;
         }
@@ -153,19 +156,28 @@ class GoalsController extends GetxController {
         double newCurrentAmount = 0.0;
 
         // For savings/purchase goals, rely on linkedCategoryId
-        if (goal.type == GoalType.savings || goal.type == GoalType.purchase || goal.type == GoalType.custom) {
+        if (goal.type == GoalType.savings ||
+            goal.type == GoalType.purchase ||
+            goal.type == GoalType.custom) {
           if (goal.linkedCategoryId != null) {
             newCurrentAmount = _financialContextService.allTransactions
                 .where((tx) =>
                     tx.categoryId == goal.linkedCategoryId &&
                     tx.date.isAfter(goal.createdAt))
-                .fold(0.0, (sum, tx) => sum + tx.amount.abs()); // Count both income and expense contributions
+                .fold(
+                    0.0,
+                    (sum, tx) =>
+                        sum +
+                        tx.amount
+                            .abs()); // Count both income and expense contributions
           }
         }
         // For debt payoff goals, sum specific debt repayment transactions
-        else if (goal.type == GoalType.debtPayoff && goal.linkedDebtId != null) {
+        else if (goal.type == GoalType.debtPayoff &&
+            goal.linkedDebtId != null) {
           // Verify the debt still exists
-          final debt = _financialContextService.allDebts.firstWhereOrNull((d) => d.id == goal.linkedDebtId);
+          final debt = _financialContextService.allDebts
+              .firstWhereOrNull((d) => d.id == goal.linkedDebtId);
           if (debt != null) {
             newCurrentAmount = _financialContextService.allTransactions
                 .where((tx) =>
@@ -183,23 +195,22 @@ class GoalsController extends GetxController {
           final newProgress = updatedGoal.progressPercentage;
 
           // Check for completion
-          if (updatedGoal.currentAmount >= updatedGoal.targetAmount && goal.status != GoalStatus.completed) {
+          if (updatedGoal.currentAmount >= updatedGoal.targetAmount &&
+              goal.status != GoalStatus.completed) {
             updatedGoal.status = GoalStatus.completed;
             updatedGoal.completedAt = DateTime.now();
-            _financialEventsService.emit(GoalEvent(FinancialEventType.goalCompleted, updatedGoal));
+            _financialEventsService
+                .emit(GoalEvent(FinancialEventType.goalCompleted, updatedGoal));
           } else {
-             // Check for milestones (e.g., every 25%)
-             if ((newProgress / 25).floor() > (oldProgress / 25).floor()) {
-               _financialEventsService.emit(GoalEvent(FinancialEventType.goalMilestoneReached, updatedGoal));
-             }
+            // Check for milestones (e.g., every 25%)
+            if ((newProgress / 25).floor() > (oldProgress / 25).floor()) {
+              _financialEventsService.emit(GoalEvent(
+                  FinancialEventType.goalMilestoneReached, updatedGoal));
+            }
           }
 
-          _goalBox.put(updatedGoal.id, updatedGoal);
-          // Update the observable list directly without triggering another listenable() event
-          int index = financialGoals.indexWhere((g) => g.id == updatedGoal.id);
-          if (index != -1) {
-            financialGoals[index] = updatedGoal;
-          }
+          IsarService.updateGoal(updatedGoal);
+          // Note: Watcher will update the list
         }
       }
     }
@@ -208,11 +219,12 @@ class GoalsController extends GetxController {
   // Calculate estimated completion date (simplified)
   DateTime? estimateCompletionDate(FinancialGoal goal) {
     if (goal.targetAmount <= goal.currentAmount) return DateTime.now();
-    
+
     final remainingAmount = goal.targetAmount - goal.currentAmount;
     // Assuming monthly savings. This needs to be more sophisticated, considering
     // average monthly savings or user-defined monthly contribution.
-    final monthlyContribution = _financialContextService.averageMonthlySavings.value; // Example, need to implement this getter
+    final monthlyContribution = _financialContextService
+        .averageMonthlySavings.value; // Example, need to implement this getter
 
     if (monthlyContribution <= 0) return null; // No progress, cannot estimate
 
@@ -221,15 +233,13 @@ class GoalsController extends GetxController {
   }
 
   // Method to get a specific goal by ID
-  FinancialGoal? getGoalById(String goalId) {
-    return _goalBox.get(goalId);
+  Future<FinancialGoal?> getGoalById(String goalId) async {
+    return IsarService.getGoalById(goalId);
   }
 
   // Clear all goals (for testing/reset)
   Future<void> clearAllGoals() async {
-    await _goalBox.clear();
+    IsarService.clearGoals();
     financialGoals.clear();
   }
 }
-
-
