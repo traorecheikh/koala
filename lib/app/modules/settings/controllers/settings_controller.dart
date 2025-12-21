@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:wakelock_plus/wakelock_plus.dart'; // Added WakelockPlus
 import 'package:restart_app/restart_app.dart'; // Optional: for cleaner restart, or just ask user
@@ -136,12 +137,14 @@ class SettingsController extends GetxController {
 
     // Load Hero Asset & Apply Theme
     final savedHeroAsset = _settingsBox.get('heroAsset');
-    if (savedHeroAsset != null && savedHeroAsset is String && savedHeroAsset.isNotEmpty) {
+    if (savedHeroAsset != null &&
+        savedHeroAsset is String &&
+        savedHeroAsset.isNotEmpty) {
       currentHeroAsset.value = savedHeroAsset;
       // Properly restore the Hero Theme Data for background persistence
       if (heroThemesData.containsKey(savedHeroAsset)) {
-         currentHeroTheme.value = heroThemesData[savedHeroAsset];
-         AppTheme.heroThemeNotifier.value = currentHeroTheme.value;
+        currentHeroTheme.value = heroThemesData[savedHeroAsset];
+        AppTheme.heroThemeNotifier.value = currentHeroTheme.value;
       }
     }
 
@@ -301,8 +304,8 @@ class SettingsController extends GetxController {
 
   Future<void> _loadCurrentVersion() async {
     try {
-      // currentVersion.value = packageInfo.version;
-      currentVersion.value = '1.0.0'; // MOCK FOR TESTING UPDATE FLOW
+      final packageInfo = await PackageInfo.fromPlatform();
+      currentVersion.value = packageInfo.version;
     } catch (e) {
       currentVersion.value = 'Unknown';
       // Silently fail, don't show snackbar on startup to avoid context issues
@@ -722,6 +725,6 @@ class SettingsController extends GetxController {
     } finally {
       // ALWAYS disable wakelock
       WakelockPlus.disable();
-  }
+    }
   }
 }
