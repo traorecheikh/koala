@@ -164,10 +164,10 @@ class SmartFinancialBrain extends GetxService {
       cashFlowPrediction: _predictCashFlow(
         input.transactions,
         input.debts,
-        max(
-            0,
-            input.monthlyIncome -
-                input.incomeReceivedSoFar), // Pass upcoming income only
+        // vital FIX: For a 30-day rolling forecast, we expect to receive ~1 month of income.
+        // Previously we subtracted incomeReceivedSoFar, which meant if you were paid on the 1st,
+        // the 30-day projection assumed ZERO income, leading to "Point Bas" crashes.
+        input.monthlyIncome,
         input.currentBalance,
         input.forecast,
       ),
