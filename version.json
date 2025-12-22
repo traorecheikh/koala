@@ -1,8 +1,8 @@
 {
-  "version": "1.7.1",
+  "version": "1.7.2",
   "apk_url": "https://github.com/traorecheikh/koala/raw/refs/heads/main/build/app/outputs/flutter-apk/app-release.apk",
   "checksum": "REPLACE_WITH_ACTUAL_SHA256_CHECKSUM",
-  "release_notes": "Hotfix 1.7.1 : Correction de l'Intelligence IA (catégories 'Autre'), migration des icônes brisées, et suppression des fausses alertes sur les dettes.",
+  "release_notes": "Hotfix 1.7.2 : Correction de l'Intelligence IA (catégories 'Autre'), migration des icônes brisées, et suppression des fausses alertes sur les dettes.",
   "min_supported_version": "1.2.0",
   "release_date": "2025-12-21"
 }

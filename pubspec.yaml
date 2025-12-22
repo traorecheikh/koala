@@ -2,7 +2,7 @@ name: koaa
 description: "A new Flutter project."
 
 
-version: 1.7.1+2
+version: 1.7.2+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

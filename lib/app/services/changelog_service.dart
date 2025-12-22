@@ -11,11 +11,15 @@ class ChangelogService {
   static const String _boxName = 'app_settings';
   static const String _lastSeenVersionKey = 'last_seen_version';
 
-  static String currentVersion = '1.7.0';
+  static String currentVersion = '1.7.2';
   static String currentBuildNumber = '1';
 
   /// Changelog entries - simple text only
   static const Map<String, List<String>> changelog = {
+    '1.7.2': [
+      '• Correctif critique "Data Rescue" pour anciens utilisateurs',
+      '• Stabilisation et sécurisation des sauvegardes',
+    ],
     '1.7.0': [
       '• Migration sécurisée des données (Jobs/Dettes)',
       '• Correctif critique "Data Rescue" pour anciens utilisateurs',
